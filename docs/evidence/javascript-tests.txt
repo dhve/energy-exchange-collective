@@ -1,0 +1,25 @@
+✔ standalone FastAPI page uses fetch, without Streamlit handshake (1.879333ms)
+✔ bridge waits for render, sends one JSON request and resolves matching response (0.654625ms)
+✔ bridge ignores foreign sources and rejects validated server errors (0.731875ms)
+✔ bridge has bounded pending requests and rejects unsupported routes (1.131625ms)
+✔ bridge needs no eval or remote code/assets (0.787208ms)
+✔ editing instruction while preview is pending invalidates its eventual response (2.63825ms)
+✔ editing structured policy-value invalidates a displayed draft (10.219833ms)
+✔ editing structured policy-field invalidates a displayed draft (1.9785ms)
+✔ selecting another controlled agent does not rewrite the completed experiment impact (2.10125ms)
+✔ no-change control requests a paired run with the original policy (1.217709ms)
+✔ utility chart reads the engine per-agent summaries (0.647417ms)
+✔ message and round metrics use engine counters (0.985958ms)
+✔ impact uses the engine causal classification when supplied (0.524792ms)
+✔ dragged household positions remain fixed across replay renders (0.590708ms)
+✔ round stepping moves to the adjacent recorded round (0.4815ms)
+✔ comparison visibility changes the SVG hidden attribute (0.618333ms)
+✔ exports expose a persistent direct download link containing the displayed data (31.319666ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 141.271333
