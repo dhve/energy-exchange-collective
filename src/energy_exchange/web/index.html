@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f4f5ef"><title>Collective energy exchange | NANDA</title>
+  <link rel="stylesheet" href="collective.css"><script src="streamlit-bridge.js" defer></script><script src="collective.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#workspace">Skip to workspace</a>
+<header class="masthead">
+  <a class="brand" href="#"><span class="brand-mark" aria-hidden="true">n</span><span>NANDA<span class="brand-sub">ENERGY RESEARCH</span></span></a>
+  <nav aria-label="Main navigation"><a class="active" href="#workspace">Workspace</a><a href="#analysis">Analysis</a><a href="#protocol">Protocol & evidence</a></nav>
+  <div class="header-actions"><span class="badge"><i></i>Synthetic simulation</span><button id="export" class="button light" disabled>Export experiment <span aria-hidden="true">↗</span></button></div>
+</header>
+<main>
+  <section class="intro"><div><div class="eyebrow">MULTI-AGENT ENERGY MARKET / LAB 02</div><h1>Collective energy exchange<span class="title-dot">.</span></h1><p>Change one household's policy. Follow the negotiations across the market.</p></div><div class="interval"><span>SIMULATED TRADING INTERVAL</span><strong>28 Oct 2026 · 14:00–16:00</strong><small>Asia/Kolkata · INR / kWh</small></div></section>
+  <form id="config-form" class="experiment-bar">
+    <label>Households<select id="population"><option>20</option><option selected>50</option><option>100</option></select></label>
+    <label>Discovery<select id="topology"><option value="local">Local network</option><option value="open">Open market</option></select></label>
+    <label class="compact">Seed<input id="seed" type="number" value="42" min="0" max="2147483647" required></label>
+    <label class="compact">Max rounds<input id="max-rounds" type="number" value="12" min="1" max="50" required></label>
+    <label class="compact">Max messages<input id="max-messages" type="number" value="4000" min="10" max="10000" required></label>
+    <label class="compact cap">Trading cap · kWh<input id="cap" type="number" value="120" min="0" max="1000" step="1" required></label>
+    <label class="compact">Price tick<select id="price-tick"><option value="0.01">₹0.01</option><option value="0.05" selected>₹0.05</option><option value="0.25">₹0.25</option></select></label>
+    <label class="switch-label"><input id="memory" type="checkbox" checked><span>Agent memory<small>Synthetic soft preferences</small></span></label>
+    <button class="button primary" id="reset" type="submit">Generate baseline <span aria-hidden="true">↗</span></button>
+  </form>
+  <div id="notice" class="notice" role="status" hidden></div>
+  <details id="export-preview" class="export-preview" hidden><summary id="export-title">View export text</summary><p>If the download does not save, select and copy the complete file below.</p><button id="select-export" class="button light" type="button">Select all text</button><textarea id="export-text" aria-label="Complete export file" readonly spellcheck="false"></textarea></details>
+  <section class="metric-strip" aria-label="Experiment summary">
+    <div><span>Matched energy</span><strong id="metric-energy">—</strong><small id="metric-energy-sub">Waiting for baseline</small></div>
+    <div><span>Unfilled demand</span><strong id="metric-demand">—</strong><small>Across the market</small></div>
+    <div><span>Affected households</span><strong id="metric-affected">—</strong><small id="metric-affected-sub">Allocation changes</small></div>
+    <div><span>Negotiation messages</span><strong id="metric-messages">—</strong><small id="metric-rounds">Recorded engine events</small></div>
+    <div class="resolution"><span>Resolution</span><strong id="metric-status">Preparing</strong><small id="metric-status-sub">Bounded bilateral protocol</small></div>
+  </section>
+  <section id="workspace" class="workspace">
+    <aside class="panel my-agent">
+      <div class="panel-top"><h2>My agent</h2><span class="section-number">01</span></div>
+      <div class="agent-select"><label for="controlled" class="sr-only">Controlled household</label><select id="controlled" disabled></select><span id="own-role" class="role-tag">Household</span></div>
+      <div class="own-identity"><div class="avatar" aria-hidden="true">☀</div><div><h3 id="own-name">Preparing households</h3><p id="own-id">A17 · Solar seller</p></div></div>
+      <p id="own-context" class="context-copy">A deterministic synthetic market is being generated.</p>
+      <p class="muted small context-copy">Policy at the original baseline</p>
+      <div id="own-bounds" class="bounds"></div>
+      <div class="divider"></div>
+      <div class="label-row"><h3>Update my policy</h3><span class="tiny-label">CONFIRM BEFORE APPLYING</span></div>
+      <p class="muted small">Describe a change, inspect the proposed rules, then start renegotiation.</p>
+      <label for="instruction" class="sr-only">Policy instruction</label>
+      <textarea id="instruction" rows="5" placeholder="Sell up to 4 kWh from 2–4 PM at at least ₹7/kWh; accept ₹6.50 only if at least 3 kWh is sold together."></textarea>
+      <button id="parse" class="button primary full" disabled>Preview policy <span aria-hidden="true">→</span></button>
+      <details class="examples"><summary>Supported instruction examples</summary><button type="button" data-example="Raise my minimum price to ₹9/kWh">Raise a seller's floor</button><button type="button" data-example="Sell up to 4 kWh from 2–4 PM at at least ₹7/kWh; accept ₹6.50 only if at least 3 kWh is sold together.">Add a conditional bundle</button><button type="button" data-example="Set my budget to INR 25">Tighten a buyer's budget</button><p class="muted small">Deterministic grammar. Unsupported conditions are rejected. No LLM is used.</p></details>
+      <section id="proposal" class="proposal" aria-live="polite" hidden></section>
+      <div class="divider"></div>
+      <h3>Explore a scenario</h3><p class="muted small">Each starts from the same baseline.</p>
+      <div class="scenario-grid"><button data-scenario="price"><span>↗</span>Price ripple</button><button data-scenario="supply"><span>☁</span>Supply shortfall</button><button data-scenario="budget"><span>₹</span>Buyer budget</button><button data-scenario="shock"><span>≋</span>Solar shock</button><button data-scenario="none" class="wide"><span>＝</span>No-change control</button></div>
+      <details class="advanced"><summary>Structured policy editor</summary><p class="muted small">Use these controls when a phrasing is unsupported. All changes still need confirmation.</p><label>Field<select id="policy-field"></select></label><label>New value<input id="policy-value" type="number" min="0" step="0.05" value="7"></label><button id="structured" class="button light full" type="button">Preview structured change</button></details>
+    </aside>
+    <section class="panel network-panel">
+      <div class="panel-top"><div><h2>The exchange network</h2><p id="graph-subtitle">Preparing a reproducible baseline</p></div><span class="section-number">02</span></div>
+      <div class="graph-toolbar"><div class="segmented" role="group" aria-label="Run view"><button data-view="baseline" class="selected">Baseline</button><button data-view="intervention">Intervention</button><button data-view="compare">Compare</button></div><div class="graph-tools"><button id="zoom-out" aria-label="Zoom out">−</button><button id="fit" title="Fit network">Fit</button><button id="zoom-in" aria-label="Zoom in">+</button></div></div>
+      <div class="graph-filters"><label class="search"><span aria-hidden="true">⌕</span><input id="search" placeholder="Find a household…" aria-label="Search household"></label><select id="role-filter" aria-label="Filter households by role"><option value="all">All roles</option><option value="seller">Sellers</option><option value="buyer">Buyers</option></select><label><input type="checkbox" id="discovery">Discovery links</label><label><input type="checkbox" id="only-affected">Affected only</label></div>
+      <div id="graph-wrap" class="graph-wrap"><div id="graph-loading" class="graph-loading"><span class="loading-orbit"></span><strong>Generating the market</strong><p>Same seed. Same households. Reproducible outcomes.</p></div><svg id="graph" viewBox="0 0 880 610" aria-label="Interactive logical energy trading network" role="group"></svg><svg id="compare-graph" viewBox="0 0 880 610" aria-label="Baseline network comparison" role="group" hidden></svg><div class="graph-caption" id="graph-caption">Logical trading relationships, not electricity paths.</div></div>
+      <div class="legend"><span><i class="seller"></i>Solar seller</span><span><i class="buyer"></i>Energy buyer</span><span><i class="controlled"></i>My agent</span><span><i class="affected"></i>Affected</span><span class="legend-edge">— Reserved trade</span></div>
+      <div class="event-strip" aria-live="polite"><span id="event-type" class="event-type">BASELINE</span><h3 id="event-title">Waiting for the engine</h3><p id="event-reason">All messages and outcomes come from recorded state transitions.</p><button id="causal" class="text-button" hidden>Highlight causal chain ↗</button></div>
+      <div class="playback"><button id="back" aria-label="Previous event">⏮</button><button id="play" class="play-button" aria-label="Play recorded events">▶</button><button id="next" aria-label="Next event">⏭</button><label class="sr-only" for="timeline">Replay position</label><input id="timeline" type="range" value="0" min="0" max="0"><span id="position">0 / 0</span><label class="sr-only" for="speed">Playback speed</label><select id="speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></div>
+      <div class="replay-foot"><span id="round-label">Round 0</span><button id="previous-round" class="text-button">Previous round</button><button id="next-round" class="text-button">Next round</button><button id="end" class="text-button">Final outcome</button></div>
+    </section>
+    <aside class="panel inspector">
+      <div class="panel-top"><h2>Agent inspector</h2><span class="section-number">03</span></div>
+      <label for="inspect-select" class="sr-only">Inspect household</label><select id="inspect-select" disabled></select>
+      <div id="inspection"><p class="muted">Select a household to examine its constraints and decisions.</p></div>
+      <div class="divider"></div><div class="label-row"><h3>Event log</h3><span id="log-count" class="tiny-label">0 EVENTS</span></div>
+      <label for="event-filter" class="sr-only">Filter event log</label><select id="event-filter"><option value="all">All market events</option><option value="agent">Selected agent only</option><option value="changes">Allocation changes</option></select>
+      <div id="event-log" class="event-log" tabindex="0" aria-label="Recorded event log"></div>
+    </aside>
+  </section>
+  <section id="analysis" class="analysis-section">
+    <div class="section-heading"><div><div class="eyebrow">COLLECTIVE RESPONSE</div><h2>From a local edit to a market outcome</h2></div><span id="paired-badge" class="badge neutral">Same seed · Same initial world</span></div>
+    <p id="comparison-caveat" class="notice" role="status" hidden></p>
+    <div id="causal-summary" class="causal-summary"><div><span>01</span><strong>Baseline ready</strong><small>Generate the initial market</small></div><span class="arrow">→</span><div><span>02</span><strong>Change a policy</strong><small>Review and confirm the interpretation</small></div><span class="arrow">→</span><div><span>03</span><strong>Follow the response</strong><small>Recorded negotiations and allocations</small></div></div>
+    <div class="analysis-grid"><article class="panel comparison-card"><h3>Baseline vs intervention</h3><p class="muted small">Paired experiments with unchanged exogenous inputs.</p><table><thead><tr><th>Measure</th><th>Baseline</th><th>Intervention</th><th>Change</th></tr></thead><tbody id="comparison-table"></tbody></table></article><article class="panel distribution-card"><h3>Household utility change</h3><p class="muted small">Utility in the disclosed model, not realized financial returns.</p><svg id="distribution" viewBox="0 0 600 200" role="img" aria-label="Utility change by household"></svg><div id="distribution-note" class="chart-note">Confirm an intervention to compare household outcomes.</div></article></div>
+    <div class="analysis-grid"><article class="panel trajectory-card"><h3>Matched energy during negotiation</h3><p class="muted small">Actual provisional reservations after each recorded event.</p><svg id="trajectory" viewBox="0 0 600 170" role="img" aria-label="Matched energy by event"></svg><div class="chart-note">Baseline <span class="key baseline"></span> Intervention <span class="key intervention"></span></div></article><article class="panel integrity-card"><h3>Experiment integrity</h3><div id="integrity"></div><div class="download-row"><button id="trace-export" class="button light" disabled>Trace JSONL ↓</button><button id="ledger-export" class="button light" disabled>Trade ledger CSV ↓</button></div></article></div>
+  </section>
+  <section id="protocol" class="protocol panel"><div><div class="eyebrow">METHOD & LIMITS</div><h2>A transparent, bounded experiment.</h2><p id="protocol-scope">The negotiation protocol enumerates an explicit set of feasible bilateral moves. Its stopping condition is reported for every run.</p><details><summary>Read the protocol and reproducibility manifest</summary><pre id="manifest"></pre></details></div><div class="protocol-notes"><p><strong>Synthetic households.</strong> No live customer data, meter readings, money, or actual energy transfer.</p><p><strong>Logical network.</strong> Discovery links represent allowed contact. They do not represent physical electricity paths.</p><p><strong>Separate stages.</strong> Provisional allocation, final commitment, and meter-supported settlement have distinct meanings. This workspace explores negotiation.</p><p>Built alongside the <a href="https://energy-exchange-lab.streamlit.app/" target="_blank" rel="noreferrer">Energy Exchange Lab ↗</a> and NandaTown research concepts.</p></div></section>
+  <footer><span>NANDA · Collective energy research</span><span id="footer-run">Reproducible by design</span><span>Research demo / October 2026</span></footer>
+</main>
+</body></html>

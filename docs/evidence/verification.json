@@ -1,0 +1,59 @@
+{
+  "date": "2026-10-27",
+  "python_tests": {
+    "passed": 99,
+    "failed": 0,
+    "command": ".venv/bin/python -m unittest discover -s tests -v"
+  },
+  "javascript_tests": {
+    "passed": 17,
+    "failed": 0,
+    "command": "node --test tests/test_collective_ui.cjs tests/collective_streamlit_bridge.test.js"
+  },
+  "scenario_cases": {
+    "passed": 54,
+    "failed": 0,
+    "runs": 108,
+    "locally_stable": 84,
+    "round_limited": 24,
+    "file": "scenario-matrix.json"
+  },
+  "browser": {
+    "local_fastapi": "http://127.0.0.1:8766/",
+    "local_streamlit": "http://127.0.0.1:8767/",
+    "sample_baseline_kwh": 50.1,
+    "sample_intervention_kwh": 51.15,
+    "affected_households": 4,
+    "indirect_households": 1,
+    "intervention_messages": 10,
+    "intervention_events": 28,
+    "comparison_graphs_verified": 2,
+    "streamlit_open_100_households": {
+      "kwh": 120,
+      "messages": 1143,
+      "rounds": 9,
+      "events": 1749,
+      "status": "locally_stable"
+    },
+    "console_errors_observed": 0
+  },
+  "exports": {
+    "complete_experiment_verified": true,
+    "trace_matches_experiment": true,
+    "ledger_matches_experiment": true,
+    "trace_events": 28,
+    "ledger_rows": 56,
+    "browser_note": "Codex in-app browser cancelled some direct downloads. The app provides complete export text as a fallback; all three payloads were extracted from that visible interface and independently verified."
+  },
+  "engine_source_sha256": "230633547b130a046307d62f4d2d4f4336411eff6c9e5dfbe242e1387685d3fe",
+  "upstream_commit": "0eea2ab1a7015e2cc6aa536d20a7ebd7c7875a41",
+  "limitations": [
+    "No tested generated world reached a cycle.",
+    "Deterministic policy grammar, no LLM parser.",
+    "One fixed interval; zero risk and shortfall penalties.",
+    "Conceptual NandaTown reuse; collective engine does not import NandaTown runtime.",
+    "Synthetic negotiation only; no physical grid, live customers, money transfer, or settlement.",
+    "Streamlit Cloud hosting awaits account sign-in."
+  ],
+  "review": "All six independent engine findings resolved; SVG comparison visibility corrected with a regression test."
+}

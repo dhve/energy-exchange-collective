@@ -1,71 +1,43 @@
-# Deploy the interactive lab with Streamlit
+# Collective Energy Exchange
+
+A working visual sandbox for studying how one household policy changes negotiations across a synthetic energy market. Built on [Energy Exchange Lab](https://github.com/dhruvsarkar/energy-exchange-lab), with a new deterministic collective engine and interactive workspace.
+
+![Collective energy exchange workspace](docs/assets/collective-workspace.jpg)
 
 ## Run locally
 
-Use Python 3.13 (tested) and Git:
-
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-streamlit run streamlit_app.py
+.venv/bin/python -m pip install -r requirements-collective.txt
+.venv/bin/python -m src.energy_exchange.collective_server --port 8766
 ```
 
-Open http://localhost:8501. Choose a preset or edit inputs, then click **Run
-simulation**. Editing inputs does not launch a simulation. Previous results
-stay visible with a warning until the next successful run. Downloads belong
-to the displayed run, and session results are not cached across visitors.
+Open **http://127.0.0.1:8766**. On macOS, `./Start-Collective.command` sets up the environment and starts the server.
 
-## Community Cloud
+## Explore
 
-1. Create a dedicated GitHub repository from the contents of the generated
-   `energy-lab-streamlit` folder. Do not upload this full research checkout:
-   it contains original project documents and history.
-2. Sign in to https://share.streamlit.io and complete account onboarding.
-3. Select **Create app**, then **Yup, I have an app**.
-4. Choose the new repository, its default branch, and `streamlit_app.py`.
-5. In **Advanced settings**, select Python **3.13**. No app secrets or API keys
-   are required. The requirements file pins Streamlit and the Nandatown revision.
-6. Deploy, wait for startup, and run the normal scenario. It should commit and
-   settle 9 kWh; the cloud-shortfall scenario commits 9 and settles 7 kWh.
+- Generate 20, 50, or 100 synthetic households with local or open discovery.
+- Preview a policy, inspect its exact changes, and confirm renegotiation against an unchanged baseline.
+- Replay actual offers, counteroffers, reservations, and atomic replacements. Select households, inspect decisions and memory, and follow causal events.
+- Compare allocations, utilities, message counts, and termination conditions.
+- Export complete experiments, event traces, and trade ledgers as JSON, JSONL, and CSV.
 
-Official deployment guide:
-https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy
+Try this with the default 50 households, seed 42, and agent A17:
 
-The archive contains runtime Python code, synthetic scenarios, dependency
-metadata, Streamlit theme, this README, and automated tests. It excludes
-`context/`, local Git history, generated traces, signing keys and local secrets.
-Create a repository in your own account; hosting and repository access settings
-are managed by the account owner. The app contains only synthetic data.
+> Sell up to 4 kWh from 2–4 PM at at least ₹7/kWh; accept ₹6.50 only if at least 3 kWh is sold together.
 
-## Execution and limits
+The checked example changes matched energy from **50.10 to 51.15 kWh**, affects **four households**, and records **28 intervention events**. Its complete evidence is in [docs/evidence](docs/evidence).
 
-Streamlit runs the Python interface and calls the same isolated Nandatown worker
-used by the FastAPI demo. There is no separate API service to deploy. Each run
-has a 15-second timeout and temporary signing keys/files that are cleaned up.
-A thread-safe process-wide gate allows two concurrent runs and 60 accepted runs
-per minute. Only capacity counters are shared; inputs and results remain per
-session. Each visitor retains their latest result plus the previous result's
-summary for comparison. No database or durable run storage is used.
+## Streamlit hosting
 
-The scientific scope is unchanged: six synthetic households, deterministic
-policies, one interval, INR/kWh, configurable missing-meter behavior, aggregate
-utility cap, no electrical power flow, no production integration and no LLM.
+The `deploy/collective/app.py` entry point hosts the same visual workspace through Streamlit. Use the requirements file in that directory. See [the run guide](README-COLLECTIVE.md) for deployment and local commands.
 
-## Validation
+## Validation and scope
 
-`python -m unittest discover -s tests -q` runs the complete suite in the full
-research checkout. The deployment archive includes the Streamlit and HTTP tests
-only; run the same command there. AppTest covers unrun edits, budget-dependent
-results, presets/reset, missing meters, session isolation, lifecycle navigation,
-download controls and error recovery. Backend tests verify native execution,
-input validation, cleanup, and concurrency. Remote deployment is complete only
-once the hosted URL has been opened and a fresh simulation has succeeded.
+[The run guide](README-COLLECTIVE.md) explains the protocol, exact stability claim, supported policy grammar, validation commands, export behavior, and limitations. Verification evidence and the scenario matrix are in [docs/evidence](docs/evidence). GitHub Actions runs the collective and legacy checks.
 
-## Network replay
+All households and trades are synthetic. The engine enforces budgets, reserves, price and bundle rules, time compatibility, and a shared trading cap. A locally stable result refers to the disclosed bounded bilateral move set. It does not establish a Nash equilibrium, a global optimum, or physical grid feasibility.
 
-Select a scenario in the sidebar and Run simulation. Play or step through the
-recorded offers, checks, commitments and settlements. Click a node to inspect
-its rules; click a trade to highlight it. Detailed inputs, results and evidence
-are expandable. The graph represents logical exchanges, not physical power
-lines. The current agents use deterministic policies without price bargaining.
+The collective engine uses NandaTown concepts but does not import its runtime. The [original six-household lab](README-LEGACY.md), including its NandaTown integration and meter-supported settlement, remains available through `streamlit_app.py`.
+
+Claude Fable 5.1 with Ultracode in the Claude desktop app handled engine implementation and review. Codex handled the policy interface, visual workspace, services, integration, and verification.

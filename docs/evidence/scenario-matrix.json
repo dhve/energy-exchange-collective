@@ -1,0 +1,4448 @@
+{
+  "summary": {
+    "rows": 54,
+    "passed": 54,
+    "failed": 0,
+    "status_counts": {
+      "locally_stable": 84,
+      "round_limited": 24
+    },
+    "cycle_path": "Unobserved in this bounded matrix; no claim of generated-cycle verification",
+    "source_before": "sha256:230633547b130a046307d62f4d2d4f4336411eff6c9e5dfbe242e1387685d3fe",
+    "source_after": "sha256:230633547b130a046307d62f4d2d4f4336411eff6c9e5dfbe242e1387685d3fe",
+    "scenario_semantics": "Named price/supply/budget/shock requests use engine presets; conditional request uses the actual parser; unchanged policy sets existing A17 floor without modifying it.",
+    "atomic_snapshot_tamper_regression": {
+      "test": "tests.test_collective_engine.GeneratedWorldTests.test_every_atomic_snapshot_preserves_payment_and_provenance",
+      "passed": true,
+      "tampered_fields": [
+        "payment",
+        "created_event_id",
+        "status"
+      ]
+    },
+    "review_findings": []
+  },
+  "rows": [
+    {
+      "config": {
+        "population": 20,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "conditional_policy",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "conditional_price": {
+            "floor": 6.5,
+            "minimum_kwh": 3.0
+          },
+          "max_offer_kwh": 4.0,
+          "min_price": 7.0,
+          "interval_start": "2026-10-28T14:00:00+05:30",
+          "interval_end": "2026-10-28T16:00:00+05:30"
+        }
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 16,
+          "trades": 9,
+          "kwh": 15.71,
+          "events": 66,
+          "state_hash": "sha256:5af6f9c1b529e60f2cb69b575a3560db24be92b1fbba3020dca5f2a52ed9abc8"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 9,
+          "kwh": 15.71,
+          "events": 5,
+          "state_hash": "sha256:5af6f9c1b529e60f2cb69b575a3560db24be92b1fbba3020dca5f2a52ed9abc8"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 0.008
+    },
+    {
+      "config": {
+        "population": 20,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "unchanged_policy",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "min_price": 6.5
+        }
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "unchanged_allocation": true,
+        "zero_changed_fields": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 16,
+          "trades": 9,
+          "kwh": 15.71,
+          "events": 66,
+          "state_hash": "sha256:5af6f9c1b529e60f2cb69b575a3560db24be92b1fbba3020dca5f2a52ed9abc8"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 9,
+          "kwh": 15.71,
+          "events": 5,
+          "state_hash": "sha256:5af6f9c1b529e60f2cb69b575a3560db24be92b1fbba3020dca5f2a52ed9abc8"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 0.007
+    },
+    {
+      "config": {
+        "population": 20,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "price",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 16,
+          "trades": 9,
+          "kwh": 15.71,
+          "events": 66,
+          "state_hash": "sha256:5af6f9c1b529e60f2cb69b575a3560db24be92b1fbba3020dca5f2a52ed9abc8"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 9,
+          "kwh": 15.71,
+          "events": 5,
+          "state_hash": "sha256:5af6f9c1b529e60f2cb69b575a3560db24be92b1fbba3020dca5f2a52ed9abc8"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 0.007
+    },
+    {
+      "config": {
+        "population": 20,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "supply",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "supply"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 16,
+          "trades": 9,
+          "kwh": 15.71,
+          "events": 66,
+          "state_hash": "sha256:5af6f9c1b529e60f2cb69b575a3560db24be92b1fbba3020dca5f2a52ed9abc8"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 2,
+          "messages": 2,
+          "trades": 10,
+          "kwh": 15.71,
+          "events": 11,
+          "state_hash": "sha256:3f8d53dad6317eddeb1114d70ef9e187b13c9f487ede357ab01d714541d2fbfb"
+        }
+      },
+      "comparison": {
+        "changed_trades": 3,
+        "affected_agents": [
+          "A01",
+          "A02",
+          "A17"
+        ],
+        "direct_agents": [
+          "A02"
+        ],
+        "indirect_agents": [
+          "A01"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 2
+      },
+      "passed": true,
+      "runtime_seconds": 0.007
+    },
+    {
+      "config": {
+        "population": 20,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "budget",
+      "intervention_request": {
+        "agent_id": "A18",
+        "scenario": "budget"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 16,
+          "trades": 9,
+          "kwh": 15.71,
+          "events": 66,
+          "state_hash": "sha256:5af6f9c1b529e60f2cb69b575a3560db24be92b1fbba3020dca5f2a52ed9abc8"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 9,
+          "kwh": 15.71,
+          "events": 5,
+          "state_hash": "sha256:5af6f9c1b529e60f2cb69b575a3560db24be92b1fbba3020dca5f2a52ed9abc8"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A18"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 0.007
+    },
+    {
+      "config": {
+        "population": 20,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "shock",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "shock"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 16,
+          "trades": 9,
+          "kwh": 15.71,
+          "events": 66,
+          "state_hash": "sha256:5af6f9c1b529e60f2cb69b575a3560db24be92b1fbba3020dca5f2a52ed9abc8"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 9,
+          "trades": 9,
+          "kwh": 13.01,
+          "events": 49,
+          "state_hash": "sha256:3887442e0a6d1129676d7fc38873b8d466257ff26bc0507e040e7507025f12fe"
+        }
+      },
+      "comparison": {
+        "changed_trades": 14,
+        "affected_agents": [
+          "A01",
+          "A02",
+          "A03",
+          "A05",
+          "A06",
+          "A08",
+          "A10",
+          "A11",
+          "A13",
+          "A16",
+          "A17",
+          "A18"
+        ],
+        "direct_agents": [
+          "A02",
+          "A06",
+          "A08",
+          "A10",
+          "A16",
+          "A18"
+        ],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A01",
+          "A03",
+          "A05",
+          "A07",
+          "A09",
+          "A11",
+          "A13",
+          "A15",
+          "A17",
+          "A19"
+        ],
+        "cascade_depth": 2
+      },
+      "passed": true,
+      "runtime_seconds": 0.009
+    },
+    {
+      "config": {
+        "population": 20,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 1,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "round_limit_1",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "round_limited",
+          "termination_reason": "max_rounds",
+          "rounds": 1,
+          "messages": 13,
+          "trades": 9,
+          "kwh": 15.71,
+          "events": 42,
+          "state_hash": "sha256:c47f0a30ae4073eb6b9e831abaf1a2ae8be695db300e7ecfc8d1dd693768ab3e"
+        },
+        "intervention": {
+          "status": "round_limited",
+          "termination_reason": "max_rounds",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 9,
+          "kwh": 15.71,
+          "events": 5,
+          "state_hash": "sha256:c47f0a30ae4073eb6b9e831abaf1a2ae8be695db300e7ecfc8d1dd693768ab3e"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 0,
+        "caveat": "baseline terminated round_limited; the intervention run may also contain continued baseline negotiation"
+      },
+      "passed": true,
+      "runtime_seconds": 0.004
+    },
+    {
+      "config": {
+        "population": 20,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 10,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "message_limit_10",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "round_limited",
+          "termination_reason": "max_messages",
+          "rounds": 1,
+          "messages": 10,
+          "trades": 7,
+          "kwh": 12.61,
+          "events": 27,
+          "state_hash": "sha256:bc63ea49f4fc6f05bf20c4a28ff7c3ebd74d5628d077ad0936a9a6999da97152"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 7,
+          "trades": 9,
+          "kwh": 15.71,
+          "events": 32,
+          "state_hash": "sha256:fa5a2ae31eaa78edf638c4ada2bffaa30d9d8af1ab189c21550d8d149b5dee30"
+        }
+      },
+      "comparison": {
+        "changed_trades": 6,
+        "affected_agents": [
+          "A01",
+          "A02",
+          "A05",
+          "A08",
+          "A13",
+          "A16",
+          "A17"
+        ],
+        "direct_agents": [
+          "A02",
+          "A16"
+        ],
+        "indirect_agents": [
+          "A01",
+          "A05",
+          "A08",
+          "A13"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 4,
+        "caveat": "baseline terminated round_limited; the intervention run may also contain continued baseline negotiation"
+      },
+      "passed": true,
+      "runtime_seconds": 0.005
+    },
+    {
+      "config": {
+        "population": 20,
+        "topology": "local",
+        "seed": 7,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": false,
+        "price_tick": 0.05
+      },
+      "case": "memory_off_seed_7",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 25,
+          "trades": 13,
+          "kwh": 22.22,
+          "events": 77,
+          "state_hash": "sha256:ed55e9503b382c16fed47b9e80b31d46bfdcf651e69e5fc8ed64d3f0a48f9405"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 12,
+          "kwh": 20.8,
+          "events": 7,
+          "state_hash": "sha256:90b2fd7b29924b8653302e69fcc2cbca5dae49f85dc9a98e0cc6621826c94fc7"
+        }
+      },
+      "comparison": {
+        "changed_trades": 1,
+        "affected_agents": [
+          "A17",
+          "A18"
+        ],
+        "direct_agents": [
+          "A18"
+        ],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 1
+      },
+      "passed": true,
+      "runtime_seconds": 0.009
+    },
+    {
+      "config": {
+        "population": 20,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "conditional_policy",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "conditional_price": {
+            "floor": 6.5,
+            "minimum_kwh": 3.0
+          },
+          "max_offer_kwh": 4.0,
+          "min_price": 7.0,
+          "interval_start": "2026-10-28T14:00:00+05:30",
+          "interval_end": "2026-10-28T16:00:00+05:30"
+        }
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 23,
+          "trades": 9,
+          "kwh": 16.04,
+          "events": 91,
+          "state_hash": "sha256:027c93371e9f634d6fa3700486e70650841d2666074d0f899362ed5099be9251"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 2,
+          "trades": 8,
+          "kwh": 15.54,
+          "events": 9,
+          "state_hash": "sha256:11f4bea0609b7bd7db436c253e299b6f3c20e30fd882d39cd5a84c73c6a34139"
+        }
+      },
+      "comparison": {
+        "changed_trades": 1,
+        "affected_agents": [
+          "A17",
+          "A18"
+        ],
+        "direct_agents": [
+          "A18"
+        ],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 1
+      },
+      "passed": true,
+      "runtime_seconds": 0.011
+    },
+    {
+      "config": {
+        "population": 20,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "unchanged_policy",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "min_price": 6.5
+        }
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "unchanged_allocation": true,
+        "zero_changed_fields": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 23,
+          "trades": 9,
+          "kwh": 16.04,
+          "events": 91,
+          "state_hash": "sha256:027c93371e9f634d6fa3700486e70650841d2666074d0f899362ed5099be9251"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 9,
+          "kwh": 16.04,
+          "events": 5,
+          "state_hash": "sha256:027c93371e9f634d6fa3700486e70650841d2666074d0f899362ed5099be9251"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 0.011
+    },
+    {
+      "config": {
+        "population": 20,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "price",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 23,
+          "trades": 9,
+          "kwh": 16.04,
+          "events": 91,
+          "state_hash": "sha256:027c93371e9f634d6fa3700486e70650841d2666074d0f899362ed5099be9251"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 6,
+          "trades": 8,
+          "kwh": 15.54,
+          "events": 13,
+          "state_hash": "sha256:11f4bea0609b7bd7db436c253e299b6f3c20e30fd882d39cd5a84c73c6a34139"
+        }
+      },
+      "comparison": {
+        "changed_trades": 1,
+        "affected_agents": [
+          "A17",
+          "A18"
+        ],
+        "direct_agents": [
+          "A18"
+        ],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 1
+      },
+      "passed": true,
+      "runtime_seconds": 0.011
+    },
+    {
+      "config": {
+        "population": 20,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "supply",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "supply"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 23,
+          "trades": 9,
+          "kwh": 16.04,
+          "events": 91,
+          "state_hash": "sha256:027c93371e9f634d6fa3700486e70650841d2666074d0f899362ed5099be9251"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 4,
+          "trades": 9,
+          "kwh": 14.0,
+          "events": 23,
+          "state_hash": "sha256:361d149ec2ec9044868a8d359603d21bb4287581e2ad2ea657d2a00ddd26974d"
+        }
+      },
+      "comparison": {
+        "changed_trades": 8,
+        "affected_agents": [
+          "A02",
+          "A04",
+          "A06",
+          "A09",
+          "A13",
+          "A17",
+          "A18"
+        ],
+        "direct_agents": [
+          "A02",
+          "A18"
+        ],
+        "indirect_agents": [
+          "A04",
+          "A06",
+          "A09",
+          "A13"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 4
+      },
+      "passed": true,
+      "runtime_seconds": 0.013
+    },
+    {
+      "config": {
+        "population": 20,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "budget",
+      "intervention_request": {
+        "agent_id": "A18",
+        "scenario": "budget"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 23,
+          "trades": 9,
+          "kwh": 16.04,
+          "events": 91,
+          "state_hash": "sha256:027c93371e9f634d6fa3700486e70650841d2666074d0f899362ed5099be9251"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 9,
+          "kwh": 16.04,
+          "events": 5,
+          "state_hash": "sha256:027c93371e9f634d6fa3700486e70650841d2666074d0f899362ed5099be9251"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A18"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 0.012
+    },
+    {
+      "config": {
+        "population": 20,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "shock",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "shock"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 23,
+          "trades": 9,
+          "kwh": 16.04,
+          "events": 91,
+          "state_hash": "sha256:027c93371e9f634d6fa3700486e70650841d2666074d0f899362ed5099be9251"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 15,
+          "trades": 8,
+          "kwh": 11.5,
+          "events": 74,
+          "state_hash": "sha256:a86db11a98b5fbe78b4e1c1a5ab7112d767b2f030553e75372ded248bcbffa69"
+        }
+      },
+      "comparison": {
+        "changed_trades": 17,
+        "affected_agents": [
+          "A01",
+          "A02",
+          "A04",
+          "A05",
+          "A06",
+          "A09",
+          "A10",
+          "A11",
+          "A12",
+          "A13",
+          "A16",
+          "A17",
+          "A18"
+        ],
+        "direct_agents": [
+          "A02",
+          "A04",
+          "A06",
+          "A10",
+          "A12",
+          "A16",
+          "A18"
+        ],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A01",
+          "A03",
+          "A05",
+          "A07",
+          "A09",
+          "A11",
+          "A13",
+          "A15",
+          "A17",
+          "A19"
+        ],
+        "cascade_depth": 2
+      },
+      "passed": true,
+      "runtime_seconds": 0.015
+    },
+    {
+      "config": {
+        "population": 20,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 1,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "round_limit_1",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "round_limited",
+          "termination_reason": "max_rounds",
+          "rounds": 1,
+          "messages": 16,
+          "trades": 7,
+          "kwh": 13.1,
+          "events": 59,
+          "state_hash": "sha256:85afa10bd3aa3e0edf23877a52278437d3c0482e686128df263d0151d6919a52"
+        },
+        "intervention": {
+          "status": "round_limited",
+          "termination_reason": "max_rounds",
+          "rounds": 1,
+          "messages": 3,
+          "trades": 7,
+          "kwh": 12.08,
+          "events": 11,
+          "state_hash": "sha256:90fe3dc8e604203838c1146d7a347af7354fb198c1486a5a996a0b2a3edf95f0"
+        }
+      },
+      "comparison": {
+        "changed_trades": 4,
+        "affected_agents": [
+          "A02",
+          "A06",
+          "A13",
+          "A17",
+          "A18"
+        ],
+        "direct_agents": [
+          "A02",
+          "A06",
+          "A18"
+        ],
+        "indirect_agents": [
+          "A13"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 2,
+        "caveat": "baseline terminated round_limited; the intervention run may also contain continued baseline negotiation"
+      },
+      "passed": true,
+      "runtime_seconds": 0.004
+    },
+    {
+      "config": {
+        "population": 20,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 10,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "message_limit_10",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "round_limited",
+          "termination_reason": "max_messages",
+          "rounds": 1,
+          "messages": 10,
+          "trades": 4,
+          "kwh": 9.5,
+          "events": 35,
+          "state_hash": "sha256:b7eb20a8ec89e847d7882bcfe1046f991755c30a917244ed7f643e264a417b94"
+        },
+        "intervention": {
+          "status": "round_limited",
+          "termination_reason": "max_messages",
+          "rounds": 4,
+          "messages": 10,
+          "trades": 5,
+          "kwh": 12.9,
+          "events": 36,
+          "state_hash": "sha256:c3d0fe673c62255aaa06e29f34d15244f44370bf01482894b97ee0a90b736731"
+        }
+      },
+      "comparison": {
+        "changed_trades": 5,
+        "affected_agents": [
+          "A02",
+          "A06",
+          "A08",
+          "A09",
+          "A13",
+          "A16"
+        ],
+        "direct_agents": [
+          "A02",
+          "A06"
+        ],
+        "indirect_agents": [
+          "A08",
+          "A09",
+          "A13",
+          "A16"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 4,
+        "caveat": "baseline terminated round_limited; the intervention run may also contain continued baseline negotiation"
+      },
+      "passed": true,
+      "runtime_seconds": 0.004
+    },
+    {
+      "config": {
+        "population": 20,
+        "topology": "open",
+        "seed": 7,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": false,
+        "price_tick": 0.05
+      },
+      "case": "memory_off_seed_7",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 60,
+          "trades": 13,
+          "kwh": 23.7,
+          "events": 143,
+          "state_hash": "sha256:78ec02552eea569db1ecc32890a34278c83f37d37901e5739807dc33d7894bbe"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 13,
+          "kwh": 23.7,
+          "events": 5,
+          "state_hash": "sha256:78ec02552eea569db1ecc32890a34278c83f37d37901e5739807dc33d7894bbe"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 0.018
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "conditional_policy",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "conditional_price": {
+            "floor": 6.5,
+            "minimum_kwh": 3.0
+          },
+          "max_offer_kwh": 4.0,
+          "min_price": 7.0,
+          "interval_start": "2026-10-28T14:00:00+05:30",
+          "interval_end": "2026-10-28T16:00:00+05:30"
+        }
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 119,
+          "trades": 28,
+          "kwh": 50.1,
+          "events": 274,
+          "state_hash": "sha256:e9a41b571f7da5a3ca998caad8e93e266c3b60150ed0c316cc371819e0128394"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 10,
+          "trades": 28,
+          "kwh": 51.15,
+          "events": 28,
+          "state_hash": "sha256:d6c9f1d5223a9c95f786fe19232b49c0f17f0da29c2bd2e55b43aa098e8f329c"
+        }
+      },
+      "comparison": {
+        "changed_trades": 4,
+        "affected_agents": [
+          "A17",
+          "A20",
+          "A22",
+          "A27"
+        ],
+        "direct_agents": [
+          "A18",
+          "A20",
+          "A22"
+        ],
+        "indirect_agents": [
+          "A27"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 2
+      },
+      "passed": true,
+      "runtime_seconds": 0.039
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "unchanged_policy",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "min_price": 6.5
+        }
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "unchanged_allocation": true,
+        "zero_changed_fields": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 119,
+          "trades": 28,
+          "kwh": 50.1,
+          "events": 274,
+          "state_hash": "sha256:e9a41b571f7da5a3ca998caad8e93e266c3b60150ed0c316cc371819e0128394"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 28,
+          "kwh": 50.1,
+          "events": 5,
+          "state_hash": "sha256:e9a41b571f7da5a3ca998caad8e93e266c3b60150ed0c316cc371819e0128394"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 0.037
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "price",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 119,
+          "trades": 28,
+          "kwh": 50.1,
+          "events": 274,
+          "state_hash": "sha256:e9a41b571f7da5a3ca998caad8e93e266c3b60150ed0c316cc371819e0128394"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 27,
+          "kwh": 47.6,
+          "events": 7,
+          "state_hash": "sha256:c4f7b1047ffeba180ca2feb2dc5bb8316731abf49506ac3ccf8fb158a41fcbe7"
+        }
+      },
+      "comparison": {
+        "changed_trades": 1,
+        "affected_agents": [
+          "A17",
+          "A20"
+        ],
+        "direct_agents": [
+          "A20"
+        ],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 1
+      },
+      "passed": true,
+      "runtime_seconds": 0.038
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "supply",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "supply"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 119,
+          "trades": 28,
+          "kwh": 50.1,
+          "events": 274,
+          "state_hash": "sha256:e9a41b571f7da5a3ca998caad8e93e266c3b60150ed0c316cc371819e0128394"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 2,
+          "messages": 2,
+          "trades": 27,
+          "kwh": 47.1,
+          "events": 16,
+          "state_hash": "sha256:edabbbd0c97a8b3d6825533ef733673ca4f2c7a910ff8e5612e36f6b31baee12"
+        }
+      },
+      "comparison": {
+        "changed_trades": 5,
+        "affected_agents": [
+          "A17",
+          "A20",
+          "A21",
+          "A22",
+          "A24"
+        ],
+        "direct_agents": [
+          "A20",
+          "A22"
+        ],
+        "indirect_agents": [
+          "A21",
+          "A24"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 2
+      },
+      "passed": true,
+      "runtime_seconds": 0.039
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "budget",
+      "intervention_request": {
+        "agent_id": "A18",
+        "scenario": "budget"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 119,
+          "trades": 28,
+          "kwh": 50.1,
+          "events": 274,
+          "state_hash": "sha256:e9a41b571f7da5a3ca998caad8e93e266c3b60150ed0c316cc371819e0128394"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 28,
+          "kwh": 50.1,
+          "events": 5,
+          "state_hash": "sha256:e9a41b571f7da5a3ca998caad8e93e266c3b60150ed0c316cc371819e0128394"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A18"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 0.038
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "shock",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "shock"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 119,
+          "trades": 28,
+          "kwh": 50.1,
+          "events": 274,
+          "state_hash": "sha256:e9a41b571f7da5a3ca998caad8e93e266c3b60150ed0c316cc371819e0128394"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 63,
+          "trades": 29,
+          "kwh": 40.77,
+          "events": 175,
+          "state_hash": "sha256:fc9bd9b5a2ee96ec2ca4517efb51f703cde15d56ae6be957bd46ee62a15cd9a7"
+        }
+      },
+      "comparison": {
+        "changed_trades": 35,
+        "affected_agents": [
+          "A02",
+          "A03",
+          "A05",
+          "A06",
+          "A10",
+          "A11",
+          "A13",
+          "A16",
+          "A17",
+          "A18",
+          "A20",
+          "A21",
+          "A24",
+          "A27",
+          "A28",
+          "A31",
+          "A33",
+          "A34",
+          "A35",
+          "A37",
+          "A40",
+          "A42",
+          "A43",
+          "A44",
+          "A45",
+          "A46",
+          "A47",
+          "A49",
+          "A50"
+        ],
+        "direct_agents": [
+          "A02",
+          "A06",
+          "A10",
+          "A16",
+          "A18",
+          "A20",
+          "A24",
+          "A28",
+          "A34",
+          "A40",
+          "A42",
+          "A44",
+          "A46",
+          "A50"
+        ],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A01",
+          "A03",
+          "A05",
+          "A07",
+          "A09",
+          "A11",
+          "A13",
+          "A15",
+          "A17",
+          "A19",
+          "A21",
+          "A23",
+          "A25",
+          "A27",
+          "A29",
+          "A31",
+          "A33",
+          "A35",
+          "A37",
+          "A39",
+          "A41",
+          "A43",
+          "A45",
+          "A47",
+          "A49"
+        ],
+        "cascade_depth": 3
+      },
+      "passed": true,
+      "runtime_seconds": 0.054
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 1,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "round_limit_1",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "round_limited",
+          "termination_reason": "max_rounds",
+          "rounds": 1,
+          "messages": 61,
+          "trades": 18,
+          "kwh": 37.83,
+          "events": 152,
+          "state_hash": "sha256:3e82bbe6b2b324b9c9932b8fc92ee5e532c5eb418297df72092e44dc41553bcc"
+        },
+        "intervention": {
+          "status": "round_limited",
+          "termination_reason": "max_rounds",
+          "rounds": 1,
+          "messages": 1,
+          "trades": 18,
+          "kwh": 35.83,
+          "events": 7,
+          "state_hash": "sha256:2cda88111f95a781669e234271a00e9b02a0813b7575e1fba4812d1c81126511"
+        }
+      },
+      "comparison": {
+        "changed_trades": 2,
+        "affected_agents": [
+          "A17",
+          "A20",
+          "A21"
+        ],
+        "direct_agents": [
+          "A20"
+        ],
+        "indirect_agents": [
+          "A21"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 2,
+        "caveat": "baseline terminated round_limited; the intervention run may also contain continued baseline negotiation"
+      },
+      "passed": true,
+      "runtime_seconds": 0.014
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 10,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "message_limit_10",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "round_limited",
+          "termination_reason": "max_messages",
+          "rounds": 1,
+          "messages": 10,
+          "trades": 6,
+          "kwh": 14.36,
+          "events": 28,
+          "state_hash": "sha256:a5969bbbd17acb00126b095d764ebd5b70e6d1e80a1a38f006c08a2cf4dc034e"
+        },
+        "intervention": {
+          "status": "round_limited",
+          "termination_reason": "max_messages",
+          "rounds": 5,
+          "messages": 10,
+          "trades": 12,
+          "kwh": 24.45,
+          "events": 30,
+          "state_hash": "sha256:85fd01ab9f226307ba7933a99d5e89ae3735506084e024d07aabf3d07c62dc8a"
+        }
+      },
+      "comparison": {
+        "changed_trades": 6,
+        "affected_agents": [
+          "A12",
+          "A13",
+          "A16",
+          "A21",
+          "A22",
+          "A24",
+          "A26",
+          "A27",
+          "A30"
+        ],
+        "direct_agents": [
+          "A12",
+          "A16",
+          "A22"
+        ],
+        "indirect_agents": [
+          "A13",
+          "A21",
+          "A24",
+          "A26",
+          "A27",
+          "A30"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 5,
+        "caveat": "baseline terminated round_limited; the intervention run may also contain continued baseline negotiation"
+      },
+      "passed": true,
+      "runtime_seconds": 0.007
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "local",
+        "seed": 7,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": false,
+        "price_tick": 0.05
+      },
+      "case": "memory_off_seed_7",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 94,
+          "trades": 36,
+          "kwh": 54.22,
+          "events": 255,
+          "state_hash": "sha256:8347baf128c7229de6aa6cf48aaabbe23e9c087a13fbf6992326c4fac412fc9a"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 36,
+          "kwh": 54.22,
+          "events": 5,
+          "state_hash": "sha256:8347baf128c7229de6aa6cf48aaabbe23e9c087a13fbf6992326c4fac412fc9a"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 0.046
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "conditional_policy",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "conditional_price": {
+            "floor": 6.5,
+            "minimum_kwh": 3.0
+          },
+          "max_offer_kwh": 4.0,
+          "min_price": 7.0,
+          "interval_start": "2026-10-28T14:00:00+05:30",
+          "interval_end": "2026-10-28T16:00:00+05:30"
+        }
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 5,
+          "messages": 396,
+          "trades": 32,
+          "kwh": 49.53,
+          "events": 630,
+          "state_hash": "sha256:91e2ddbefe5adf1a9142031421bc403d37a46c63ae5509a395c5435013c80283"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 43,
+          "trades": 32,
+          "kwh": 49.53,
+          "events": 56,
+          "state_hash": "sha256:ff31863f9d7bfbef5b6ec5ffed5bd2d5d73937dfbc2e4e5836c7dd1ff5b6da98"
+        }
+      },
+      "comparison": {
+        "changed_trades": 2,
+        "affected_agents": [
+          "A06",
+          "A09",
+          "A17"
+        ],
+        "direct_agents": [
+          "A06"
+        ],
+        "indirect_agents": [
+          "A09"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 2
+      },
+      "passed": true,
+      "runtime_seconds": 0.197
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "unchanged_policy",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "min_price": 6.5
+        }
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "unchanged_allocation": true,
+        "zero_changed_fields": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 5,
+          "messages": 396,
+          "trades": 32,
+          "kwh": 49.53,
+          "events": 630,
+          "state_hash": "sha256:91e2ddbefe5adf1a9142031421bc403d37a46c63ae5509a395c5435013c80283"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 32,
+          "kwh": 49.53,
+          "events": 5,
+          "state_hash": "sha256:91e2ddbefe5adf1a9142031421bc403d37a46c63ae5509a395c5435013c80283"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 0.173
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "price",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 5,
+          "messages": 396,
+          "trades": 32,
+          "kwh": 49.53,
+          "events": 630,
+          "state_hash": "sha256:91e2ddbefe5adf1a9142031421bc403d37a46c63ae5509a395c5435013c80283"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 8,
+          "messages": 129,
+          "trades": 34,
+          "kwh": 47.5,
+          "events": 165,
+          "state_hash": "sha256:dd98e68095d6d7031e5f74e343ec674aedf2763fe822766752d3d2f191e5dd95"
+        }
+      },
+      "comparison": {
+        "changed_trades": 10,
+        "affected_agents": [
+          "A04",
+          "A06",
+          "A09",
+          "A17",
+          "A27",
+          "A28",
+          "A33",
+          "A41",
+          "A44"
+        ],
+        "direct_agents": [
+          "A06",
+          "A44"
+        ],
+        "indirect_agents": [
+          "A04",
+          "A09",
+          "A27",
+          "A28",
+          "A33",
+          "A41"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 6
+      },
+      "passed": true,
+      "runtime_seconds": 0.23
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "supply",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "supply"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 5,
+          "messages": 396,
+          "trades": 32,
+          "kwh": 49.53,
+          "events": 630,
+          "state_hash": "sha256:91e2ddbefe5adf1a9142031421bc403d37a46c63ae5509a395c5435013c80283"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 7,
+          "messages": 123,
+          "trades": 35,
+          "kwh": 47.5,
+          "events": 162,
+          "state_hash": "sha256:16f2a6234a99ea0d54d0b6d57bc2f995dd73d5dc57b1b4abe8258ceeff500882"
+        }
+      },
+      "comparison": {
+        "changed_trades": 13,
+        "affected_agents": [
+          "A04",
+          "A06",
+          "A09",
+          "A17",
+          "A24",
+          "A27",
+          "A28",
+          "A33",
+          "A41",
+          "A44"
+        ],
+        "direct_agents": [
+          "A06",
+          "A24",
+          "A44"
+        ],
+        "indirect_agents": [
+          "A04",
+          "A09",
+          "A27",
+          "A28",
+          "A33",
+          "A41"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 5
+      },
+      "passed": true,
+      "runtime_seconds": 0.238
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "budget",
+      "intervention_request": {
+        "agent_id": "A18",
+        "scenario": "budget"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 5,
+          "messages": 396,
+          "trades": 32,
+          "kwh": 49.53,
+          "events": 630,
+          "state_hash": "sha256:91e2ddbefe5adf1a9142031421bc403d37a46c63ae5509a395c5435013c80283"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 32,
+          "kwh": 49.53,
+          "events": 5,
+          "state_hash": "sha256:91e2ddbefe5adf1a9142031421bc403d37a46c63ae5509a395c5435013c80283"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A18"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 0.171
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "shock",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "shock"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 5,
+          "messages": 396,
+          "trades": 32,
+          "kwh": 49.53,
+          "events": 630,
+          "state_hash": "sha256:91e2ddbefe5adf1a9142031421bc403d37a46c63ae5509a395c5435013c80283"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 6,
+          "messages": 367,
+          "trades": 33,
+          "kwh": 38.18,
+          "events": 620,
+          "state_hash": "sha256:a9467834c7bdd241d96f64a3cc2dc291dcce7892872e6ee0c63e1149052f425a"
+        }
+      },
+      "comparison": {
+        "changed_trades": 61,
+        "affected_agents": [
+          "A02",
+          "A04",
+          "A05",
+          "A06",
+          "A09",
+          "A10",
+          "A11",
+          "A12",
+          "A13",
+          "A16",
+          "A17",
+          "A21",
+          "A22",
+          "A24",
+          "A26",
+          "A27",
+          "A28",
+          "A29",
+          "A30",
+          "A31",
+          "A33",
+          "A35",
+          "A37",
+          "A39",
+          "A40",
+          "A41",
+          "A42",
+          "A43",
+          "A44",
+          "A45",
+          "A46",
+          "A47",
+          "A48",
+          "A49",
+          "A50"
+        ],
+        "direct_agents": [
+          "A02",
+          "A04",
+          "A06",
+          "A10",
+          "A12",
+          "A16",
+          "A22",
+          "A24",
+          "A26",
+          "A28",
+          "A30",
+          "A40",
+          "A42",
+          "A44",
+          "A46",
+          "A48",
+          "A50"
+        ],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A01",
+          "A03",
+          "A05",
+          "A07",
+          "A09",
+          "A11",
+          "A13",
+          "A15",
+          "A17",
+          "A19",
+          "A21",
+          "A23",
+          "A25",
+          "A27",
+          "A29",
+          "A31",
+          "A33",
+          "A35",
+          "A37",
+          "A39",
+          "A41",
+          "A43",
+          "A45",
+          "A47",
+          "A49"
+        ],
+        "cascade_depth": 5
+      },
+      "passed": true,
+      "runtime_seconds": 0.261
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 1,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "round_limit_1",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "round_limited",
+          "termination_reason": "max_rounds",
+          "rounds": 1,
+          "messages": 92,
+          "trades": 18,
+          "kwh": 36.76,
+          "events": 202,
+          "state_hash": "sha256:4b870cc74acfa7fc971d2b104f2fc7b6179367b18117389ae2a2645385a0364c"
+        },
+        "intervention": {
+          "status": "round_limited",
+          "termination_reason": "max_rounds",
+          "rounds": 1,
+          "messages": 6,
+          "trades": 17,
+          "kwh": 35.01,
+          "events": 16,
+          "state_hash": "sha256:b72cd2461c19574e23c4107968a3811cc473ed6c30ffec0d632d78be22f1f4e9"
+        }
+      },
+      "comparison": {
+        "changed_trades": 5,
+        "affected_agents": [
+          "A02",
+          "A11",
+          "A17",
+          "A39",
+          "A44",
+          "A48"
+        ],
+        "direct_agents": [
+          "A02",
+          "A44"
+        ],
+        "indirect_agents": [
+          "A11",
+          "A39",
+          "A48"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 2,
+        "caveat": "baseline terminated round_limited; the intervention run may also contain continued baseline negotiation"
+      },
+      "passed": true,
+      "runtime_seconds": 0.025
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 10,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "message_limit_10",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "round_limited",
+          "termination_reason": "max_messages",
+          "rounds": 1,
+          "messages": 10,
+          "trades": 5,
+          "kwh": 18.41,
+          "events": 21,
+          "state_hash": "sha256:777e58a46460fd4e488c9533946ef455fbe15933922fc9fd7d383ebd4064fb02"
+        },
+        "intervention": {
+          "status": "round_limited",
+          "termination_reason": "max_messages",
+          "rounds": 4,
+          "messages": 10,
+          "trades": 6,
+          "kwh": 19.57,
+          "events": 25,
+          "state_hash": "sha256:10db3f48a6ab9c842c1b5f2dc3e0edf8ff1dd1d87aaec285a3293e122c523847"
+        }
+      },
+      "comparison": {
+        "changed_trades": 5,
+        "affected_agents": [
+          "A03",
+          "A04",
+          "A17",
+          "A26",
+          "A30",
+          "A45",
+          "A47"
+        ],
+        "direct_agents": [
+          "A26",
+          "A30"
+        ],
+        "indirect_agents": [
+          "A03",
+          "A04",
+          "A45",
+          "A47"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 3,
+        "caveat": "baseline terminated round_limited; the intervention run may also contain continued baseline negotiation"
+      },
+      "passed": true,
+      "runtime_seconds": 0.006
+    },
+    {
+      "config": {
+        "population": 50,
+        "topology": "open",
+        "seed": 7,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": false,
+        "price_tick": 0.05
+      },
+      "case": "memory_off_seed_7",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 200,
+          "trades": 34,
+          "kwh": 52.33,
+          "events": 374,
+          "state_hash": "sha256:dd2e91c620fba1c53597265340a8fb60f09280573f812f7c66911c790fd25fd4"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 2,
+          "trades": 34,
+          "kwh": 52.33,
+          "events": 7,
+          "state_hash": "sha256:dd2e91c620fba1c53597265340a8fb60f09280573f812f7c66911c790fd25fd4"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 0.151
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "conditional_policy",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "conditional_price": {
+            "floor": 6.5,
+            "minimum_kwh": 3.0
+          },
+          "max_offer_kwh": 4.0,
+          "min_price": 7.0,
+          "interval_start": "2026-10-28T14:00:00+05:30",
+          "interval_end": "2026-10-28T16:00:00+05:30"
+        }
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 230,
+          "trades": 68,
+          "kwh": 120.0,
+          "events": 582,
+          "state_hash": "sha256:98e6824c07b296887e4aecb37edc491a7e77a66e0be4f4864a98b76ef9947dfe"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 15,
+          "trades": 68,
+          "kwh": 120.0,
+          "events": 38,
+          "state_hash": "sha256:825fe2595dfcfec6776bbe9d489aa38f410f17db8c431b41b0cb51edcdb297f1"
+        }
+      },
+      "comparison": {
+        "changed_trades": 6,
+        "affected_agents": [
+          "A17",
+          "A20",
+          "A22",
+          "A24",
+          "A27"
+        ],
+        "direct_agents": [
+          "A18",
+          "A20",
+          "A22"
+        ],
+        "indirect_agents": [
+          "A24",
+          "A27"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 3
+      },
+      "passed": true,
+      "runtime_seconds": 0.163
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "unchanged_policy",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "min_price": 6.5
+        }
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "unchanged_allocation": true,
+        "zero_changed_fields": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 230,
+          "trades": 68,
+          "kwh": 120.0,
+          "events": 582,
+          "state_hash": "sha256:98e6824c07b296887e4aecb37edc491a7e77a66e0be4f4864a98b76ef9947dfe"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 68,
+          "kwh": 120.0,
+          "events": 5,
+          "state_hash": "sha256:98e6824c07b296887e4aecb37edc491a7e77a66e0be4f4864a98b76ef9947dfe"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 0.159
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "price",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 230,
+          "trades": 68,
+          "kwh": 120.0,
+          "events": 582,
+          "state_hash": "sha256:98e6824c07b296887e4aecb37edc491a7e77a66e0be4f4864a98b76ef9947dfe"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 29,
+          "trades": 72,
+          "kwh": 120.0,
+          "events": 56,
+          "state_hash": "sha256:5c1cf6b394dda1657d4e034d73297954e7a4cfff37d77c274ec8ac31fcc3a87e"
+        }
+      },
+      "comparison": {
+        "changed_trades": 6,
+        "affected_agents": [
+          "A01",
+          "A17",
+          "A20",
+          "A54",
+          "A57",
+          "A60",
+          "A75",
+          "A76",
+          "A77",
+          "A96"
+        ],
+        "direct_agents": [
+          "A20"
+        ],
+        "indirect_agents": [
+          "A01",
+          "A54",
+          "A57",
+          "A60",
+          "A75",
+          "A76",
+          "A77",
+          "A96"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 3
+      },
+      "passed": true,
+      "runtime_seconds": 0.18
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "supply",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "supply"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 230,
+          "trades": 68,
+          "kwh": 120.0,
+          "events": 582,
+          "state_hash": "sha256:98e6824c07b296887e4aecb37edc491a7e77a66e0be4f4864a98b76ef9947dfe"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 60,
+          "trades": 73,
+          "kwh": 120.0,
+          "events": 96,
+          "state_hash": "sha256:f655eef4bc1dccb7a348f304440fb058ad05934b7dcf6b750fd4d1100eff3d57"
+        }
+      },
+      "comparison": {
+        "changed_trades": 11,
+        "affected_agents": [
+          "A01",
+          "A17",
+          "A20",
+          "A21",
+          "A22",
+          "A24",
+          "A54",
+          "A57",
+          "A60",
+          "A75",
+          "A76",
+          "A77",
+          "A89",
+          "A94",
+          "A96"
+        ],
+        "direct_agents": [
+          "A20",
+          "A22"
+        ],
+        "indirect_agents": [
+          "A01",
+          "A21",
+          "A24",
+          "A54",
+          "A57",
+          "A60",
+          "A75",
+          "A76",
+          "A77",
+          "A89",
+          "A94",
+          "A96"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 4
+      },
+      "passed": true,
+      "runtime_seconds": 0.185
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "budget",
+      "intervention_request": {
+        "agent_id": "A18",
+        "scenario": "budget"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 230,
+          "trades": 68,
+          "kwh": 120.0,
+          "events": 582,
+          "state_hash": "sha256:98e6824c07b296887e4aecb37edc491a7e77a66e0be4f4864a98b76ef9947dfe"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 68,
+          "kwh": 120.0,
+          "events": 5,
+          "state_hash": "sha256:98e6824c07b296887e4aecb37edc491a7e77a66e0be4f4864a98b76ef9947dfe"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A18"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 0.156
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "shock",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "shock"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 4,
+          "messages": 230,
+          "trades": 68,
+          "kwh": 120.0,
+          "events": 582,
+          "state_hash": "sha256:98e6824c07b296887e4aecb37edc491a7e77a66e0be4f4864a98b76ef9947dfe"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 5,
+          "messages": 151,
+          "trades": 71,
+          "kwh": 98.47,
+          "events": 411,
+          "state_hash": "sha256:5b9af13c7ba6082897719711f5191011f4d5f1882622a0b9d90fb25734f6da2d"
+        }
+      },
+      "comparison": {
+        "changed_trades": 107,
+        "affected_agents": [
+          "A01",
+          "A02",
+          "A03",
+          "A05",
+          "A06",
+          "A09",
+          "A10",
+          "A100",
+          "A11",
+          "A13",
+          "A15",
+          "A16",
+          "A17",
+          "A18",
+          "A20",
+          "A21",
+          "A24",
+          "A27",
+          "A28",
+          "A31",
+          "A33",
+          "A34",
+          "A35",
+          "A37",
+          "A40",
+          "A42",
+          "A43",
+          "A44",
+          "A45",
+          "A46",
+          "A47",
+          "A49",
+          "A50",
+          "A51",
+          "A52",
+          "A53",
+          "A54",
+          "A56",
+          "A57",
+          "A58",
+          "A60",
+          "A61",
+          "A62",
+          "A63",
+          "A64",
+          "A65",
+          "A66",
+          "A67",
+          "A69",
+          "A71",
+          "A72",
+          "A73",
+          "A75",
+          "A76",
+          "A77",
+          "A78",
+          "A79",
+          "A80",
+          "A81",
+          "A83",
+          "A85",
+          "A86",
+          "A87",
+          "A88",
+          "A89",
+          "A90",
+          "A91",
+          "A92",
+          "A93",
+          "A95",
+          "A96",
+          "A98",
+          "A99"
+        ],
+        "direct_agents": [
+          "A02",
+          "A06",
+          "A10",
+          "A100",
+          "A16",
+          "A18",
+          "A20",
+          "A24",
+          "A28",
+          "A34",
+          "A40",
+          "A42",
+          "A44",
+          "A46",
+          "A50",
+          "A52",
+          "A54",
+          "A56",
+          "A58",
+          "A60",
+          "A62",
+          "A64",
+          "A66",
+          "A72",
+          "A76",
+          "A78",
+          "A80",
+          "A86",
+          "A88",
+          "A90",
+          "A92",
+          "A96",
+          "A98"
+        ],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A01",
+          "A03",
+          "A05",
+          "A07",
+          "A09",
+          "A11",
+          "A13",
+          "A15",
+          "A17",
+          "A19",
+          "A21",
+          "A23",
+          "A25",
+          "A27",
+          "A29",
+          "A31",
+          "A33",
+          "A35",
+          "A37",
+          "A39",
+          "A41",
+          "A43",
+          "A45",
+          "A47",
+          "A49",
+          "A51",
+          "A53",
+          "A55",
+          "A57",
+          "A59",
+          "A61",
+          "A63",
+          "A65",
+          "A67",
+          "A69",
+          "A71",
+          "A73",
+          "A75",
+          "A77",
+          "A79",
+          "A81",
+          "A83",
+          "A85",
+          "A87",
+          "A89",
+          "A91",
+          "A93",
+          "A95",
+          "A97",
+          "A99"
+        ],
+        "cascade_depth": 4
+      },
+      "passed": true,
+      "runtime_seconds": 0.246
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 1,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "round_limit_1",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "round_limited",
+          "termination_reason": "max_rounds",
+          "rounds": 1,
+          "messages": 127,
+          "trades": 42,
+          "kwh": 83.14,
+          "events": 321,
+          "state_hash": "sha256:347bab405f66a5e1b073d7af90553b4f6562f52d426ba1b2f060a17d3286d572"
+        },
+        "intervention": {
+          "status": "round_limited",
+          "termination_reason": "max_rounds",
+          "rounds": 1,
+          "messages": 1,
+          "trades": 42,
+          "kwh": 81.14,
+          "events": 7,
+          "state_hash": "sha256:d77d446b54fb9fac571381563189eefe29d3387a8f221fa8576d6c502164584d"
+        }
+      },
+      "comparison": {
+        "changed_trades": 2,
+        "affected_agents": [
+          "A17",
+          "A20",
+          "A21"
+        ],
+        "direct_agents": [
+          "A20"
+        ],
+        "indirect_agents": [
+          "A21"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 2,
+        "caveat": "baseline terminated round_limited; the intervention run may also contain continued baseline negotiation"
+      },
+      "passed": true,
+      "runtime_seconds": 0.054
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "local",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 10,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "message_limit_10",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "round_limited",
+          "termination_reason": "max_messages",
+          "rounds": 1,
+          "messages": 10,
+          "trades": 7,
+          "kwh": 17.71,
+          "events": 25,
+          "state_hash": "sha256:87d300a2f662178ab328d75d8fd20bc422b07f9afad3fe4823b14cfeeb9affb9"
+        },
+        "intervention": {
+          "status": "round_limited",
+          "termination_reason": "max_messages",
+          "rounds": 5,
+          "messages": 10,
+          "trades": 13,
+          "kwh": 27.8,
+          "events": 30,
+          "state_hash": "sha256:0402c608479c2baa0600e12edbe978d055be981187488b0b2aa72112b82d8569"
+        }
+      },
+      "comparison": {
+        "changed_trades": 6,
+        "affected_agents": [
+          "A12",
+          "A13",
+          "A16",
+          "A21",
+          "A22",
+          "A24",
+          "A26",
+          "A27",
+          "A30"
+        ],
+        "direct_agents": [
+          "A12",
+          "A16",
+          "A22"
+        ],
+        "indirect_agents": [
+          "A13",
+          "A21",
+          "A24",
+          "A26",
+          "A27",
+          "A30"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 5,
+        "caveat": "baseline terminated round_limited; the intervention run may also contain continued baseline negotiation"
+      },
+      "passed": true,
+      "runtime_seconds": 0.012
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "local",
+        "seed": 7,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": false,
+        "price_tick": 0.05
+      },
+      "case": "memory_off_seed_7",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 5,
+          "messages": 247,
+          "trades": 71,
+          "kwh": 113.27,
+          "events": 545,
+          "state_hash": "sha256:e1544a36573f884b86172b1aaa95a7fdb004caa0c50886b7c0c0c8ffc9f492c9"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 71,
+          "kwh": 113.27,
+          "events": 5,
+          "state_hash": "sha256:e1544a36573f884b86172b1aaa95a7fdb004caa0c50886b7c0c0c8ffc9f492c9"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 0.149
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "conditional_policy",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "conditional_price": {
+            "floor": 6.5,
+            "minimum_kwh": 3.0
+          },
+          "max_offer_kwh": 4.0,
+          "min_price": 7.0,
+          "interval_start": "2026-10-28T14:00:00+05:30",
+          "interval_end": "2026-10-28T16:00:00+05:30"
+        }
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 9,
+          "messages": 1143,
+          "trades": 67,
+          "kwh": 120.0,
+          "events": 1749,
+          "state_hash": "sha256:d9919d7b2a60406968c796f887a342003a84583c40f26e03e03170f89949df3b"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 67,
+          "kwh": 120.0,
+          "events": 5,
+          "state_hash": "sha256:d9919d7b2a60406968c796f887a342003a84583c40f26e03e03170f89949df3b"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 1.412
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "unchanged_policy",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "min_price": 6.5
+        }
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "unchanged_allocation": true,
+        "zero_changed_fields": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 9,
+          "messages": 1143,
+          "trades": 67,
+          "kwh": 120.0,
+          "events": 1749,
+          "state_hash": "sha256:d9919d7b2a60406968c796f887a342003a84583c40f26e03e03170f89949df3b"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 67,
+          "kwh": 120.0,
+          "events": 5,
+          "state_hash": "sha256:d9919d7b2a60406968c796f887a342003a84583c40f26e03e03170f89949df3b"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 1.647
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "price",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 9,
+          "messages": 1143,
+          "trades": 67,
+          "kwh": 120.0,
+          "events": 1749,
+          "state_hash": "sha256:d9919d7b2a60406968c796f887a342003a84583c40f26e03e03170f89949df3b"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 9,
+          "messages": 157,
+          "trades": 70,
+          "kwh": 120.0,
+          "events": 199,
+          "state_hash": "sha256:18c07272cba4609c077a86aef3d666a884d94832b2a92165d921976a3499445c"
+        }
+      },
+      "comparison": {
+        "changed_trades": 11,
+        "affected_agents": [
+          "A09",
+          "A13",
+          "A17",
+          "A27",
+          "A28",
+          "A46",
+          "A58",
+          "A77",
+          "A79",
+          "A83"
+        ],
+        "direct_agents": [
+          "A46",
+          "A58"
+        ],
+        "indirect_agents": [
+          "A09",
+          "A13",
+          "A27",
+          "A28",
+          "A77",
+          "A79",
+          "A83"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 7
+      },
+      "passed": true,
+      "runtime_seconds": 1.725
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "supply",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "supply"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 9,
+          "messages": 1143,
+          "trades": 67,
+          "kwh": 120.0,
+          "events": 1749,
+          "state_hash": "sha256:d9919d7b2a60406968c796f887a342003a84583c40f26e03e03170f89949df3b"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 9,
+          "messages": 254,
+          "trades": 70,
+          "kwh": 120.0,
+          "events": 316,
+          "state_hash": "sha256:a919d4450cd55b413e7d5e22d2d195fe4ee65327ef8e710bb4da3f6202a7270f"
+        }
+      },
+      "comparison": {
+        "changed_trades": 11,
+        "affected_agents": [
+          "A09",
+          "A12",
+          "A17",
+          "A28",
+          "A40",
+          "A48",
+          "A51",
+          "A58",
+          "A73",
+          "A75",
+          "A79"
+        ],
+        "direct_agents": [
+          "A12",
+          "A58"
+        ],
+        "indirect_agents": [
+          "A09",
+          "A28",
+          "A40",
+          "A48",
+          "A51",
+          "A73",
+          "A75",
+          "A79"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 5
+      },
+      "passed": true,
+      "runtime_seconds": 2.269
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "budget",
+      "intervention_request": {
+        "agent_id": "A18",
+        "scenario": "budget"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 9,
+          "messages": 1143,
+          "trades": 67,
+          "kwh": 120.0,
+          "events": 1749,
+          "state_hash": "sha256:d9919d7b2a60406968c796f887a342003a84583c40f26e03e03170f89949df3b"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 1,
+          "messages": 0,
+          "trades": 67,
+          "kwh": 120.0,
+          "events": 5,
+          "state_hash": "sha256:d9919d7b2a60406968c796f887a342003a84583c40f26e03e03170f89949df3b"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A18"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 1.532
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "shock",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "shock"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 9,
+          "messages": 1143,
+          "trades": 67,
+          "kwh": 120.0,
+          "events": 1749,
+          "state_hash": "sha256:d9919d7b2a60406968c796f887a342003a84583c40f26e03e03170f89949df3b"
+        },
+        "intervention": {
+          "status": "round_limited",
+          "termination_reason": "max_rounds",
+          "rounds": 12,
+          "messages": 1973,
+          "trades": 83,
+          "kwh": 95.76,
+          "events": 2828,
+          "state_hash": "sha256:a8b3a7ae0be26c95d5e7e11ee160c824fd8925bb8158d772feb1dc745db47b40"
+        }
+      },
+      "comparison": {
+        "changed_trades": 146,
+        "affected_agents": [
+          "A01",
+          "A02",
+          "A05",
+          "A06",
+          "A09",
+          "A10",
+          "A100",
+          "A11",
+          "A12",
+          "A13",
+          "A15",
+          "A16",
+          "A17",
+          "A21",
+          "A22",
+          "A24",
+          "A26",
+          "A27",
+          "A28",
+          "A29",
+          "A30",
+          "A31",
+          "A33",
+          "A35",
+          "A37",
+          "A39",
+          "A40",
+          "A41",
+          "A42",
+          "A43",
+          "A44",
+          "A45",
+          "A46",
+          "A47",
+          "A48",
+          "A49",
+          "A50",
+          "A51",
+          "A52",
+          "A53",
+          "A54",
+          "A55",
+          "A56",
+          "A57",
+          "A58",
+          "A59",
+          "A60",
+          "A61",
+          "A62",
+          "A63",
+          "A64",
+          "A65",
+          "A66",
+          "A69",
+          "A71",
+          "A72",
+          "A73",
+          "A74",
+          "A75",
+          "A76",
+          "A77",
+          "A78",
+          "A79",
+          "A80",
+          "A81",
+          "A83",
+          "A85",
+          "A86",
+          "A87",
+          "A88",
+          "A89",
+          "A90",
+          "A91",
+          "A92",
+          "A93",
+          "A94",
+          "A95",
+          "A96",
+          "A97",
+          "A98",
+          "A99"
+        ],
+        "direct_agents": [
+          "A02",
+          "A06",
+          "A10",
+          "A100",
+          "A12",
+          "A16",
+          "A22",
+          "A24",
+          "A26",
+          "A28",
+          "A30",
+          "A40",
+          "A42",
+          "A44",
+          "A46",
+          "A48",
+          "A50",
+          "A52",
+          "A54",
+          "A56",
+          "A58",
+          "A60",
+          "A62",
+          "A64",
+          "A66",
+          "A72",
+          "A74",
+          "A76",
+          "A78",
+          "A80",
+          "A86",
+          "A88",
+          "A90",
+          "A92",
+          "A94",
+          "A96",
+          "A98"
+        ],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A01",
+          "A03",
+          "A05",
+          "A07",
+          "A09",
+          "A11",
+          "A13",
+          "A15",
+          "A17",
+          "A19",
+          "A21",
+          "A23",
+          "A25",
+          "A27",
+          "A29",
+          "A31",
+          "A33",
+          "A35",
+          "A37",
+          "A39",
+          "A41",
+          "A43",
+          "A45",
+          "A47",
+          "A49",
+          "A51",
+          "A53",
+          "A55",
+          "A57",
+          "A59",
+          "A61",
+          "A63",
+          "A65",
+          "A67",
+          "A69",
+          "A71",
+          "A73",
+          "A75",
+          "A77",
+          "A79",
+          "A81",
+          "A83",
+          "A85",
+          "A87",
+          "A89",
+          "A91",
+          "A93",
+          "A95",
+          "A97",
+          "A99"
+        ],
+        "cascade_depth": 12
+      },
+      "passed": true,
+      "runtime_seconds": 2.255
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 1,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "round_limit_1",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "round_limited",
+          "termination_reason": "max_rounds",
+          "rounds": 1,
+          "messages": 164,
+          "trades": 34,
+          "kwh": 83.49,
+          "events": 397,
+          "state_hash": "sha256:a8490119c2fcbf91314ab7218844b4e2a6caaae09124be97ab639a98dd893678"
+        },
+        "intervention": {
+          "status": "round_limited",
+          "termination_reason": "max_rounds",
+          "rounds": 1,
+          "messages": 1,
+          "trades": 35,
+          "kwh": 87.49,
+          "events": 5,
+          "state_hash": "sha256:d41a8afbcd87c3f59dee3038bb941a06efc167960a06858c611a6b3630d2b47f"
+        }
+      },
+      "comparison": {
+        "changed_trades": 1,
+        "affected_agents": [
+          "A17",
+          "A58"
+        ],
+        "direct_agents": [
+          "A58"
+        ],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 1,
+        "caveat": "baseline terminated round_limited; the intervention run may also contain continued baseline negotiation"
+      },
+      "passed": true,
+      "runtime_seconds": 0.099
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "open",
+        "seed": 42,
+        "max_rounds": 12,
+        "max_messages": 10,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05
+      },
+      "case": "message_limit_10",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "round_limited",
+          "termination_reason": "max_messages",
+          "rounds": 1,
+          "messages": 10,
+          "trades": 8,
+          "kwh": 27.43,
+          "events": 26,
+          "state_hash": "sha256:2c11a13e0321aee6ff9c4d548fadb103d682666588c8d9af708a540dc71cd7e8"
+        },
+        "intervention": {
+          "status": "round_limited",
+          "termination_reason": "max_messages",
+          "rounds": 3,
+          "messages": 10,
+          "trades": 11,
+          "kwh": 31.13,
+          "events": 25,
+          "state_hash": "sha256:71cfc11bbfb30b7219a875cfb447116036a82d3b93bd0961b6dc3fb0058ac151"
+        }
+      },
+      "comparison": {
+        "changed_trades": 7,
+        "affected_agents": [
+          "A02",
+          "A03",
+          "A17",
+          "A21",
+          "A30",
+          "A56",
+          "A62",
+          "A92"
+        ],
+        "direct_agents": [
+          "A56",
+          "A62",
+          "A92"
+        ],
+        "indirect_agents": [
+          "A02",
+          "A03",
+          "A21",
+          "A30"
+        ],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 3,
+        "caveat": "baseline terminated round_limited; the intervention run may also contain continued baseline negotiation"
+      },
+      "passed": true,
+      "runtime_seconds": 0.018
+    },
+    {
+      "config": {
+        "population": 100,
+        "topology": "open",
+        "seed": 7,
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": false,
+        "price_tick": 0.05
+      },
+      "case": "memory_off_seed_7",
+      "intervention_request": {
+        "agent_id": "A17",
+        "scenario": "price"
+      },
+      "checks": {
+        "verify_result": true,
+        "inputs_immutable": true,
+        "baseline_round_bound": true,
+        "baseline_message_bound": true,
+        "baseline_cap_bound": true,
+        "intervention_round_bound": true,
+        "intervention_message_bound": true,
+        "intervention_cap_bound": true,
+        "no_unresolved": true
+      },
+      "findings": [],
+      "runs": {
+        "baseline": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 9,
+          "messages": 1070,
+          "trades": 69,
+          "kwh": 117.48,
+          "events": 1629,
+          "state_hash": "sha256:dd617035b4afc58c3a8b4cbabf56e96134ab13a3ab35d46598a97fb4062b0f4f"
+        },
+        "intervention": {
+          "status": "locally_stable",
+          "termination_reason": "sweep_clean",
+          "rounds": 3,
+          "messages": 44,
+          "trades": 69,
+          "kwh": 117.48,
+          "events": 54,
+          "state_hash": "sha256:dd617035b4afc58c3a8b4cbabf56e96134ab13a3ab35d46598a97fb4062b0f4f"
+        }
+      },
+      "comparison": {
+        "changed_trades": 0,
+        "affected_agents": [],
+        "direct_agents": [],
+        "indirect_agents": [],
+        "origin_agents": [
+          "A17"
+        ],
+        "cascade_depth": 0
+      },
+      "passed": true,
+      "runtime_seconds": 1.726
+    }
+  ]
+}
