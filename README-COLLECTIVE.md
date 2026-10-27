@@ -2,6 +2,8 @@
 
 The collective workspace lets you change a household policy and inspect the resulting negotiations. It supports 20, 50, or 100 synthetic households, recorded replay, baseline comparison, agent inspection, and evidence exports.
 
+[Open the hosted workspace](https://energy-exchange-collective.streamlit.app/).
+
 ## Run locally
 
 Use Python 3.11 or newer. The collective workspace has no JavaScript build step, model API key, or NandaTown runtime dependency.
@@ -35,7 +37,7 @@ Open http://127.0.0.1:8767. To host on Streamlit Community Cloud, sign in at htt
 - Python: `3.12`
 - Secrets: none
 
-The requirements file beside the entry point keeps collective deployment independent of the legacy NandaTown dependency. Follow the [official Streamlit deployment steps](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy). Cloud deployment requires a signed-in Streamlit account; the checked local app does not establish that a hosted deployment is live.
+The requirements file beside the entry point keeps collective deployment independent of the legacy NandaTown dependency. Follow the [official Streamlit deployment steps](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy). Deploying another copy requires signing into Streamlit and connecting the GitHub account that can deploy the repository. A Google sign-in to Streamlit alone does not connect GitHub.
 
 ## Try the demonstration
 

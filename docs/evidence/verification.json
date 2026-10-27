@@ -52,8 +52,43 @@
     "Deterministic policy grammar, no LLM parser.",
     "One fixed interval; zero risk and shortfall penalties.",
     "Conceptual NandaTown reuse; collective engine does not import NandaTown runtime.",
-    "Synthetic negotiation only; no physical grid, live customers, money transfer, or settlement.",
-    "Streamlit Cloud hosting awaits account sign-in."
+    "Synthetic negotiation only; no physical grid, live customers, money transfer, or settlement."
   ],
-  "review": "All six independent engine findings resolved; SVG comparison visibility corrected with a regression test."
+  "review": "All six independent engine findings resolved; SVG comparison visibility corrected with a regression test.",
+  "hosted_streamlit": {
+    "url": "https://energy-exchange-collective.streamlit.app/",
+    "verified_date": "2026-10-27",
+    "tested_source_commit": "ede0377caecbf7605c9540a83cc8227cd8abbb25",
+    "branch": "main",
+    "entry_point": "deploy/collective/app.py",
+    "python": "3.12.15",
+    "requirements": "deploy/collective/requirements.txt",
+    "baseline_50_households": {
+      "kwh": 50.1,
+      "messages": 119,
+      "rounds": 4,
+      "events": 274
+    },
+    "sample_policy_intervention": {
+      "kwh": 51.15,
+      "affected_households": 4,
+      "indirect_households": 1,
+      "messages": 10,
+      "rounds": 3,
+      "events": 28,
+      "status": "locally_stable"
+    },
+    "comparison_graphs_visible": 2,
+    "open_100_households": {
+      "kwh": 120,
+      "messages": 1143,
+      "rounds": 9,
+      "events": 1749,
+      "rendered_household_nodes": 100,
+      "status": "locally_stable"
+    },
+    "console_errors_observed": 0,
+    "screenshot": "../assets/collective-hosted.jpg",
+    "visibility": "public and searchable, verified in Streamlit Sharing settings"
+  }
 }

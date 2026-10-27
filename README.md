@@ -2,6 +2,8 @@
 
 A working visual sandbox for studying how one household policy changes negotiations across a synthetic energy market. Built on [Energy Exchange Lab](https://github.com/dhruvsarkar/energy-exchange-lab), with a new deterministic collective engine and interactive workspace.
 
+[Open the hosted workspace](https://energy-exchange-collective.streamlit.app/).
+
 ![Collective energy exchange workspace](docs/assets/collective-workspace.jpg)
 
 ## Run locally
@@ -30,7 +32,7 @@ The checked example changes matched energy from **50.10 to 51.15 kWh**, affects 
 
 ## Streamlit hosting
 
-The `deploy/collective/app.py` entry point hosts the same visual workspace through Streamlit. Use the requirements file in that directory. See [the run guide](README-COLLECTIVE.md) for deployment and local commands.
+The [public Streamlit app](https://energy-exchange-collective.streamlit.app/) runs `deploy/collective/app.py` from this repository's `main` branch with Python 3.12. It hosts the same visual workspace as the local server. See [the run guide](README-COLLECTIVE.md) for deployment and local commands.
 
 ## Validation and scope
 
