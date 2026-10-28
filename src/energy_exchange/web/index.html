@@ -16,9 +16,9 @@
         <h2 id="prompt-title">What would you like to change?</h2>
         <p class="prompt-home" id="prompt-help">Your home is getting ready.</p>
         <label for="instruction" class="input-label">Your instruction</label>
-        <textarea id="instruction" rows="4" aria-describedby="instruction-help" placeholder="Sell up to 4 kWh at at least ₹7/kWh."></textarea>
-        <p id="instruction-help" class="helper">Try an example below, then edit the amount.</p>
-        <div class="quick-examples" aria-label="Example instructions"><button id="example-0" type="button" data-example-index="0" data-example="Raise my minimum price to ₹8/kWh">Sell at a higher price</button><button id="example-1" type="button" data-example-index="1" data-example="Sell up to 3 kWh">Offer less energy</button><button id="example-2" type="button" data-example-index="2" data-example="Keep at least 2 kWh in reserve">Keep some energy</button></div>
+        <textarea id="instruction" rows="4" maxlength="2000" aria-describedby="instruction-help" placeholder="Type your instruction here…"></textarea>
+        <p id="instruction-help" class="helper">Choose an example, then edit the amount.</p>
+        <div class="quick-examples" aria-label="Example instructions"><button id="example-0" type="button" data-example-index="0" data-example="Raise my minimum price to ₹8/kWh">Sell at a higher price</button><button id="example-1" type="button" data-example-index="1" data-example="Sell up to 3 kWh">Offer less energy</button><button id="example-2" type="button" data-example-index="2" data-example="Keep 3 kWh in reserve">Keep some energy</button></div>
         <button id="parse" class="button primary full" disabled>Review my change <span aria-hidden="true">→</span></button>
         <section id="proposal" class="proposal" aria-live="polite" hidden></section>
         <details class="home-options"><summary>About your home</summary>
@@ -32,14 +32,17 @@
     <section class="panel network-panel" aria-labelledby="network-title">
       <div class="panel-top"><div><h2 id="network-title">Your neighbourhood</h2><p id="graph-subtitle">Getting the simulation ready</p></div></div>
       <div id="notice" class="notice" role="status" hidden></div>
-      <div class="graph-toolbar"><div id="run-view" class="segmented" role="group" aria-label="Run view" hidden><button data-view="baseline" class="selected">Before</button><button data-view="intervention">After</button><button data-view="compare">Compare</button></div><div class="graph-tools"><button id="zoom-out" aria-label="Zoom out">−</button><button id="fit" title="Fit network">Fit</button><button id="zoom-in" aria-label="Zoom in">+</button></div></div>
+      <div class="graph-toolbar"><div id="run-view" class="segmented" role="group" aria-label="Run view" hidden><button data-view="baseline" class="selected">Before</button><button data-view="intervention">After</button><button data-view="compare">Compare</button></div><button id="play" class="play-button" aria-label="Play the simulation">▶ Play the simulation</button></div>
+      <a class="skip-network" href="#timeline">Skip the network and go to playback</a>
       <div id="graph-wrap" class="graph-wrap"><div id="graph-loading" class="graph-loading"><span class="loading-orbit"></span><strong>Getting your neighbourhood ready</strong><p>This usually takes a few seconds.</p></div><svg id="graph" viewBox="0 0 880 610" aria-label="Interactive logical energy trading network" role="group"></svg><svg id="compare-graph" viewBox="0 0 880 610" aria-label="Baseline network comparison" role="group" hidden></svg><div class="graph-caption" id="graph-caption">Lines show energy agreements between homes.</div></div>
       <div class="legend"><span><i class="seller"></i>Selling energy</span><span><i class="buyer"></i>Buying energy</span><span><i class="controlled"></i>Your home</span><span><i class="affected"></i>Changed</span></div>
-      <div class="playback"><button id="play" class="play-button" aria-label="Play the simulation">▶ Play the simulation</button><label class="sr-only" for="timeline">Replay position</label><input id="timeline" type="range" value="0" min="0" max="0"><span id="position">Getting ready</span></div>
-      <section class="simple-results" aria-label="Experiment summary"><div><span>Energy shared</span><strong id="metric-energy">—</strong><small id="metric-energy-sub">Getting ready</small></div><div><span>Homes affected</span><strong id="metric-affected">—</strong><small id="metric-affected-sub">After your change</small></div></section>
+      <div class="playback"><label class="sr-only" for="timeline">Replay position</label><input id="timeline" type="range" value="0" min="0" max="0"><span id="position">Getting ready</span></div>
+      <p id="replay-caption" class="replay-caption" aria-live="polite" aria-atomic="true">Each shape is a home. Lines show their energy agreements.</p>
+      <section class="simple-results" aria-label="Experiment summary"><div><span>Energy shared</span><strong id="metric-energy">—</strong><small id="metric-energy-sub">Getting ready</small></div><div id="affected-result" hidden><span>Homes affected</span><strong id="metric-affected">—</strong><small id="metric-affected-sub">After your change</small></div></section>
       <p id="simple-outcome" class="simple-outcome" aria-live="polite">Write an instruction to try a change.</p>
+      <details id="affected-list" class="affected-list" hidden><summary>See the homes affected</summary><p id="affected-names"></p></details>
       <p id="comparison-caveat" class="notice" role="status" hidden></p>
-      <details class="network-options"><summary>More ways to explore</summary>
+      <details class="network-options"><summary>More ways to explore</summary><div class="graph-tools"><button id="zoom-out" aria-label="Zoom out">−</button><button id="fit" title="Fit network">Fit</button><button id="zoom-in" aria-label="Zoom in">+</button></div>
         <div class="graph-filters"><label class="search"><input id="search" placeholder="Find a household…" aria-label="Search household"></label><select id="role-filter" aria-label="Filter households by role"><option value="all">All roles</option><option value="seller">Sellers</option><option value="buyer">Buyers</option></select><label><input type="checkbox" id="discovery">Possible connections</label><label><input type="checkbox" id="only-affected">Changed homes only</label></div>
         <div class="replay-foot"><button id="back" aria-label="Previous event">Previous step</button><button id="next" aria-label="Next event">Next step</button><label>Replay speed<select id="speed"><option value="0.5">0.5×</option><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select></label><span id="round-label">Round 0</span><button id="previous-round" class="text-button">Previous round</button><button id="next-round" class="text-button">Next round</button><button id="end" class="text-button">Show final result</button></div>
         <div class="event-strip"><span id="event-type" class="event-type">READY</span><h3 id="event-title">Getting ready</h3><p id="event-reason">You can inspect every recorded step here.</p><button id="causal" class="text-button" hidden>Highlight linked events</button></div>
@@ -58,7 +61,7 @@
     <label class="compact cap">Trading cap · kWh<input id="cap" type="number" value="120" min="0" max="1000" step="1" required></label>
     <label class="compact">Price tick<select id="price-tick"><option value="0.01">₹0.01</option><option value="0.05" selected>₹0.05</option><option value="0.25">₹0.25</option></select></label>
     <label class="switch-label"><input id="memory" type="checkbox" checked><span>Agent memory<small>Synthetic soft preferences</small></span></label>
-    <button class="button primary" id="reset" type="submit">Generate baseline <span aria-hidden="true">↗</span></button>
+    <button class="button primary" id="reset" type="submit">Build the market <span aria-hidden="true">↗</span></button>
   </form>
 
       <h3>Try a prepared scenario</h3><div class="scenario-grid"><button data-scenario="price">Raise a selling price</button><button data-scenario="supply">Less solar energy</button><button data-scenario="budget">Lower a buying budget</button><button data-scenario="shock">Less sun for everyone</button><button data-scenario="none">Keep everything the same</button></div>

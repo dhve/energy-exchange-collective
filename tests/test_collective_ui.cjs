@@ -152,3 +152,103 @@ test('exports expose a persistent direct download link containing the displayed 
   assert.match(f.element('export-title').textContent,/experiment\.json/);
   URL.revokeObjectURL(link.href);
 });
+
+test('suggested instructions match the selected household role', () => {
+  const f=fixture();
+  const seller=JSON.parse(f.evaluate("JSON.stringify(suggestedInstructions({role:'seller'}))"));
+  const buyer=JSON.parse(f.evaluate("JSON.stringify(suggestedInstructions({role:'buyer'}))"));
+  assert.equal(seller.length,3);
+  assert.match(seller[0].text,/minimum price/);
+  assert.match(seller[1].text,/Sell/);
+  assert.match(buyer[0].text,/budget/);
+  assert.match(buyer[1].text,/Buy/);
+  assert.match(buyer[2].text,/maximum price/);
+});
+
+test('choosing an example clears a prior confirmation without applying any change', () => {
+  const f=fixture();
+  f.evaluate("displayDraft({agent_id:'A17',scenario:'custom',changes:{min_price:8}}); api=()=>{throw Error('An example must not send a request');}; useExample(0);");
+  assert.match(f.element('instruction').value,/minimum price/);
+  assert.equal(f.evaluate('state.draft'),null);
+  assert.equal(f.element('proposal').hidden,true);
+  assert.equal(f.element('parse').disabled,false);
+});
+
+test('an empty instruction is caught before a request is sent', async () => {
+  const f=fixture();
+  f.element('instruction').value='  ';
+  f.evaluate("api=()=>{throw Error('Empty instructions must not reach the server');}; globalThis.pending=preview();");
+  await f.context.pending;
+  assert.match(f.element('instruction-help').textContent,/type|example/i);
+  assert.equal(f.element('parse').disabled,true);
+  assert.equal(f.evaluate('state.draft'),null);
+});
+
+test('examples and review are disabled while changed settings need rebuilding', () => {
+  const f=fixture();
+  f.element('instruction').value='Sell up to 3 kWh';
+  f.evaluate('state.dirty=true;setBusy(false);');
+  assert.equal(f.element('parse').disabled,true);
+  for(let i=0;i<3;i++) assert.equal(f.element(`example-${i}`).disabled,true);
+});
+
+test('plain outcome reports a decrease correctly and discloses a search limit', () => {
+  const f=fixture();
+  f.evaluate(`
+    state.result.baseline={trades:[{seller_id:'A17',buyer_id:'A02',quantity_kwh:4}],events:[],status:'locally_stable'};
+    state.result.intervention={trades:[{seller_id:'A17',buyer_id:'A02',quantity_kwh:3}],events:[],status:'round_limited'};
+    state.result.comparison={affected_agents:['A17','A02']};
+    renderOutcome();
+  `);
+  assert.match(f.element('simple-outcome').textContent,/1\.00 kWh less/);
+  assert.match(f.element('simple-outcome').textContent,/2 homes/);
+  assert.match(f.element('simple-outcome').textContent,/limit/);
+  assert.doesNotMatch(f.element('simple-outcome').textContent,/no better trade/i);
+  assert.equal(f.element('run-view').hidden,false);
+});
+
+test('an initial run hides comparison and affected-home controls', () => {
+  const f=fixture();
+  f.evaluate("state.result.baseline={trades:[],events:[],status:'locally_stable'};renderOutcome();");
+  assert.equal(f.element('run-view').hidden,true);
+  assert.equal(f.element('affected-result').hidden,true);
+  assert.equal(f.element('affected-list').hidden,true);
+});
+
+test('a message budget stop is described as a message limit', () => {
+  const f=fixture();
+  f.evaluate("state.result.baseline={trades:[],events:[],status:'locally_stable'};state.result.intervention={trades:[],events:[],status:'round_limited',termination_reason:'max_messages'};renderOutcome();");
+  assert.match(f.element('simple-outcome').textContent,/message limit/);
+  assert.doesNotMatch(f.element('simple-outcome').textContent,/round limit/);
+});
+
+test('a no-change review identifies unchanged rules without promising unchanged trades', () => {
+  const f=fixture();
+  f.evaluate("displayDraft({agent_id:'A17',scenario:'custom',changes:{min_price:6}});");
+  assert.match(f.element('proposal').innerHTML,/rules.*same/i);
+  assert.doesNotMatch(f.element('proposal').innerHTML,/trades.*same/i);
+});
+
+test('reviewing another change explains that it replaces the last intervention', () => {
+  const f=fixture();
+  f.evaluate("state.result.intervention={trades:[],events:[]};displayDraft({agent_id:'A17',scenario:'custom',changes:{min_price:8}});");
+  assert.match(f.element('proposal').innerHTML,/replaces your previous change/i);
+  assert.match(f.element('proposal').innerHTML,/starting simulation/i);
+});
+
+test('replay does not describe an unresolved simulation as a search limit', () => {
+  const f=fixture();
+  f.evaluate("state.result.baseline={status:'unresolved',termination_reason:'invariant_failure',events:[]};");
+  const caption=f.evaluate("eventDescription({type:'terminated'})");
+  assert.match(caption,/could not complete/i);
+  assert.doesNotMatch(caption,/limit|repeated pattern/);
+});
+
+test('an unresolved experiment does not present provisional trades as an outcome', () => {
+  const f=fixture();
+  f.evaluate("state.result.baseline={trades:[],events:[],status:'locally_stable'};state.result.intervention={trades:[{seller_id:'A17',buyer_id:'A02',quantity_kwh:3}],events:[],status:'unresolved',termination_reason:'invariant_failed'};renderOutcome();");
+  assert.match(f.element('simple-outcome').textContent,/no final energy agreements/i);
+  assert.doesNotMatch(f.element('simple-outcome').textContent,/homes share|different agreements/);
+  assert.equal(f.element('affected-result').hidden,true);
+  assert.equal(f.element('affected-list').hidden,true);
+});

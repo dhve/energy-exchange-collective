@@ -6,7 +6,7 @@ const words = s => String(s ?? '').replaceAll('_', ' ');
 const label = s => words(s).replace(/^./, c => c.toUpperCase());
 const ns = 'http://www.w3.org/2000/svg';
 const state = {result:null, config:null, controlled:'A17', selected:'A17', view:'baseline', index:0, frames:[], timer:null, draft:null, draftRevision:0, interventionRoots:[], busy:false, dirty:false, zoom:1, pan:{x:0,y:0}, nodeOffsets:{}, causal:new Set(), request:0};
-const fieldNames = {min_price:'Minimum price',max_price:'Maximum price',budget:'Budget',max_offer_kwh:'Maximum offer',forecast_surplus_kwh:'Forecast surplus',reserve_kwh:'Minimum reserve',demand_kwh:'Energy requirement',deadline_round:'Deadline round',conditional_price:'Conditional bundle',interval_start:'Interval start',interval_end:'Interval end'};
+const fieldNames = {min_price:'Lowest selling price',max_price:'Highest buying price',budget:'Spending limit',max_offer_kwh:'Energy offered for sale',forecast_surplus_kwh:'Expected spare energy',reserve_kwh:'Energy kept for your home',demand_kwh:'Energy to buy',deadline_round:'Last round to trade',conditional_price:'Discount for a larger purchase',interval_start:'Trading starts',interval_end:'Trading ends'};
 const tradeKey = t => `${t.seller_id}|${t.buyer_id}`;
 const qty = trades => (trades || []).reduce((n,t) => n + Number(t.quantity_kwh || 0), 0);
 const spend = trades => (trades || []).reduce((n,t) => n + Number(t.payment ?? t.price * t.quantity_kwh), 0);
@@ -34,9 +34,10 @@ function readConfig() {
 function setBusy(value) {
   state.busy = value;
   for (const id of ['reset','parse','structured','controlled','population','topology','seed','max-rounds','max-messages','cap','memory','price-tick']) $(id).disabled = value;
-  document.querySelectorAll('[data-scenario]').forEach(b => b.disabled=value || !state.result);
+  document.querySelectorAll('[data-scenario]').forEach(b => b.disabled=value || !state.result || state.dirty);
+  for(let i=0;i<3;i++) $(`example-${i}`).disabled=value || !state.result || state.dirty;
   if ($('confirm')) $('confirm').disabled = value;
-  $('parse').disabled = value || !state.result || state.dirty;
+  $('parse').disabled = value || !state.result || state.dirty || !$('instruction').value.trim();
   $('structured').disabled = value || !state.result || state.dirty;
 }
 async function api(path, payload) {
@@ -50,13 +51,14 @@ async function api(path, payload) {
 function clearDraft() { state.draft = null; state.draftRevision++; $('proposal').hidden = true; }
 function invalidate() {
   state.dirty = true; clearDraft(); stop(); setBusy(false);
-  notify('Experiment controls have changed. The displayed results belong to the previous run. Generate a new baseline before applying a policy.');
+  $('instruction-help').textContent='Settings changed. Select “Build the market” in Simulation settings before trying an instruction.';
+  notify('These results use the previous settings. Build the market again to use your new settings.');
 }
 async function run(intervention = null) {
   stop(); setBusy(true); const request = ++state.request;
   try {
     const config = intervention ? state.config : readConfig();
-    notify(intervention ? 'Running the confirmed intervention against a clone of the baseline…' : 'Generating households and negotiating the baseline…');
+    notify(intervention ? 'Trying your change. The homes are finding new agreements…' : 'Getting your neighbourhood ready…');
     const result = await api('/api/experiment', {config,intervention:intervention ? {...intervention,confirmed:true} : null});
     if (request !== state.request) return;
     state.result = result; state.config = config; state.dirty = false;
@@ -65,11 +67,12 @@ async function run(intervention = null) {
     state.view = intervention && result.intervention ? 'intervention' : 'baseline';
     state.causal.clear(); clearDraft(); $('graph-loading').hidden=true;
     initializeAgents(); rebuildFrames(); state.index=Math.max(0,currentEvents().length-1);
-    render(); notify(intervention ? 'Intervention complete. Replay the recorded negotiations or compare the paired outcomes.' : 'Baseline ready. Select an agent or preview a policy change to begin an experiment.');
+    render(); notify(intervention ? 'Your change is ready to explore. Play it back or compare before and after.' : 'Ready. Try an instruction, or play the simulation.');
+    $('instruction-help').textContent='Choose an example, then edit the amount.';
     for(const id of ['export','trace-export','ledger-export']) $(id).disabled=false;
   } catch(error) {
     notify(error.message,true);
-    if (!state.result) { $('graph-loading').innerHTML = `<strong>Could not generate the baseline</strong><p>${esc(error.message)}</p>`; $('metric-status').textContent='Unavailable'; }
+    if (!state.result) { $('graph-loading').innerHTML = `<strong>The simulation could not start</strong><p>${esc(error.message)}</p>`; $('metric-status').textContent='Unavailable'; }
   } finally { if (request === state.request) setBusy(false); }
 }
 function initializeAgents() {
@@ -114,19 +117,56 @@ function render() {
   if(!state.result) return;
   document.querySelectorAll('[data-view]').forEach(b=>{b.classList.toggle('selected',b.dataset.view===state.view); b.setAttribute('aria-pressed',String(b.dataset.view===state.view)); b.disabled=b.dataset.view!=='baseline'&&!state.result.intervention;});
   const run=currentRun(), m=metrics(run,agents(state.view!=='baseline')), delta=changed();
-  $('metric-energy').textContent=`${fmt(m.energy)} kWh`;
-  $('metric-energy-sub').textContent='Final allocation in selected run';
+  $('metric-energy').textContent=run.status==='unresolved'?'Not final':`${fmt(m.energy)} kWh`;
+  $('metric-energy-sub').textContent=run.status==='unresolved'?'No final agreements':state.result.intervention?(state.view==='baseline'?'Before your change':'After your change'):'In the starting simulation';
   $('metric-demand').textContent=`${fmt(m.demand)} kWh`;
   $('metric-affected').textContent=delta.affected.size;
-  $('metric-affected-sub').textContent=`${delta.indirect.length} indirect · ${fmt(delta.changed_kwh)} kWh changed`;
+  $('metric-affected-sub').textContent='With different agreements';
   $('metric-messages').textContent=fmt(m.messages,0); $('metric-rounds').textContent=`${m.rounds} rounds · ${run.events.length} trace events`;
   $('metric-status').textContent=label(run.status || 'complete');
   $('metric-status-sub').textContent=run.status==='locally_stable'?'Within the declared move set':words(run.termination_reason || 'Search stopped before stability');
-  $('graph-subtitle').textContent=`${agents().length} households · ${state.config.topology==='local'?'Bounded local discovery':'Open discovery'} · Seed ${state.config.seed}`;
-  renderOwn(); renderFrame(); renderAnalysis();
+  $('graph-subtitle').textContent=`${agents().length} simulated homes ${state.config.topology==='local'?'trading with nearby homes':'able to trade across the neighbourhood'}`;
+  renderOwn(); renderFrame(); renderAnalysis(); renderOutcome();
   $('manifest').textContent=JSON.stringify(state.result.manifest,null,2);
   $('protocol-scope').textContent=typeof run.stability_scope==='string'?run.stability_scope:JSON.stringify(run.stability_scope || state.result.manifest?.protocol || 'See the manifest for protocol scope.');
   $('footer-run').textContent=`Seed ${state.config.seed} · ${state.result.manifest?.protocol_version || state.result.manifest?.version || 'Deterministic bilateral protocol'}`;
+}
+function renderOutcome() {
+  const before=state.result.baseline, after=state.result.intervention, delta=changed();
+  $('run-view').hidden=!after;
+  $('affected-result').hidden=!after;
+  $('affected-list').hidden=!after || !delta.affected.size;
+  if((after || before).status==='unresolved'){
+    $('affected-result').hidden=true;$('affected-list').hidden=true;
+    $('simple-outcome').textContent='The simulation could not complete. No final energy agreements were produced. Open detailed results for the reason.';
+    return;
+  }
+  if(!after){$('simple-outcome').textContent='Write an instruction to see how the agreements change.';return;}
+  const difference=qty(after.trades)-qty(before.trades);
+  const energy=Math.abs(difference)<.005?'The total energy shared is unchanged.':`After your change, homes share ${fmt(Math.abs(difference))} kWh ${difference>0?'more':'less'} energy.`;
+  const homes=delta.affected.size?`${delta.affected.size} ${delta.affected.size===1?'home has':'homes have'} different agreements.`:'No homes changed their agreements.';
+  const ending=after.status==='locally_stable'?'No better trade was found under this simulation’s rules.':after.status==='cycle_detected'?'The simulation stopped because trades started repeating.':after.termination_reason==='max_messages'?'The simulation reached its message limit; further changes may be possible.':after.status==='round_limited'?'The simulation reached its round limit; further changes may be possible.':'The simulation stopped before its search was complete.';
+  $('simple-outcome').textContent=`${energy} ${homes} ${ending}`;
+  $('affected-names').textContent=[...delta.affected].map(id=>`${agentById(id)?.name || 'Home'} (${id})`).join(', ');
+}
+function suggestedInstructions(agent) {
+  return agent?.role==='buyer' ? [
+    {label:'Spending limit',text:'Set my budget to ₹25'},
+    {label:'Energy to buy',text:'Buy up to 3 kWh'},
+    {label:'Buying price',text:'Set my maximum price to ₹8/kWh'},
+  ] : [
+    {label:'Selling price',text:'Raise my minimum price to ₹8/kWh'},
+    {label:'Energy for sale',text:'Sell up to 3 kWh'},
+    {label:'Keep some energy',text:'Keep 3 kWh in reserve'},
+  ];
+}
+function useExample(index) {
+  if(state.busy || state.dirty || !state.result)return;
+  const example=suggestedInstructions(agentById(state.controlled))[index];
+  if(!example)return;
+  $('instruction').value=example.text;clearDraft();setBusy(false);
+  $('instruction-help').textContent='You can edit the amount, then select “Review my change”.';
+  $('instruction').focus();
 }
 function bounds(a) {
   if(!a) return [];
@@ -138,6 +178,9 @@ function renderOwn() {
   if(!a) return;
   $('own-name').textContent=a.name || a.id; $('own-id').textContent=`${a.id} · ${a.role==='seller'?'Solar seller':'Energy buyer'}`;
   $('own-role').textContent=a.role==='seller'?'SELLER':'BUYER';
+  $('prompt-help').textContent=`You are guiding ${a.name || a.id}’s home, which ${a.role==='seller'?'sells spare solar energy':'buys energy'}.`;
+  $('instruction').placeholder='Type your instruction here…';
+  suggestedInstructions(a).forEach((example,index)=>{$(`example-${index}`).textContent=example.label;});
   $('own-context').textContent=typeof a.context==='string'?a.context:'Synthetic household preferences for this research experiment.';
   $('own-bounds').innerHTML=boundHTML(a);
   document.querySelector('.avatar').textContent=a.role==='seller'?'☀':'⌂';
@@ -149,7 +192,8 @@ function renderOwn() {
 function renderFrame() {
   const events=currentEvents(), event=events[state.index];
   $('timeline').max=Math.max(0,events.length-1); $('timeline').value=state.index;
-  $('position').textContent=`${events.length?state.index+1:0} / ${events.length}`;
+  $('position').textContent=state.index>=events.length-1?'Final result':`Step ${state.index+1} of ${events.length}`;
+  $('replay-caption').textContent=eventDescription(event);
   $('back').disabled=state.index===0; $('next').disabled=state.index>=events.length-1;
   $('round-label').textContent=`Round ${event?.round ?? 0}`;
   $('event-type').textContent=words(event?.type || 'baseline').toUpperCase();
@@ -158,13 +202,29 @@ function renderFrame() {
   $('causal').hidden=!event?.caused_by?.length; $('causal').textContent=state.causal.size?'Clear causal highlight':'Highlight causal chain ↗';
   $('graph-wrap').classList.toggle('comparing',state.view==='compare'); $('compare-graph').toggleAttribute('hidden',state.view!=='compare');
   const trades=state.frames[state.index] || currentRun()?.trades || [];
-  drawGraph($('graph'),trades,event,state.view==='baseline'?'BASELINE':'INTERVENTION');
+  drawGraph($('graph'),trades,event,state.view==='baseline'?'Before your change':'After your change');
   if(state.view==='compare') {
     const frames=runFrames(state.result.baseline), round=event?.round ?? 0;
     let ix=state.result.baseline.events.findLastIndex(e=>e.round<=round);
-    drawGraph($('compare-graph'),frames[ix] || [],state.result.baseline.events[ix],'BASELINE · SAME ROUND');
+    drawGraph($('compare-graph'),frames[ix] || [],state.result.baseline.events[ix],'Before, at the same round');
   }
   renderInspector(); renderDecisionAudit(); renderLog();
+}
+function eventDescription(event) {
+  if(!event)return 'Each shape is a home. Lines show their energy agreements.';
+  if(event.type==='terminated'){
+    const run=currentRun();
+    if(run?.status==='locally_stable')return 'The homes have finished finding trades under these rules.';
+    if(run?.status==='cycle_detected')return 'The simulation stopped because trades started repeating.';
+    if(run?.status==='round_limited')return `The simulation reached its ${run.termination_reason==='max_messages'?'message':'round'} limit. Further changes may be possible.`;
+    return 'The simulation could not complete. Open detailed results for the reason.';
+  }
+  if(event.type==='offer_rejected')return 'An offer was not accepted. The homes can look for another trade.';
+  if(/released/.test(event.type))return 'An earlier energy agreement is being changed.';
+  if(/reserved|replaced/.test(event.type))return `${event.actor_id || 'A home'} and ${event.counterparty_id || 'another home'} agree on a trade.`;
+  if(/offer_sent|counteroffer_sent/.test(event.type))return `${event.actor_id || 'A home'} is discussing a trade with ${event.counterparty_id || 'another home'}.`;
+  if(event.type==='commitment_finalized')return 'The final energy agreements are recorded.';
+  return 'The homes are checking which trades fit their rules.';
 }
 function svgEl(tag, attrs={}, parent, text) { const n=document.createElementNS(ns,tag); for(const [k,v] of Object.entries(attrs)) n.setAttribute(k,String(v)); if(text!==undefined)n.textContent=text; if(parent)parent.append(n); return n; }
 function positions() {
@@ -177,10 +237,9 @@ function positions() {
 function drawGraph(svg,trades,event,caption) {
   svg.replaceChildren(); const pos=positions(), delta=changed(), search=$('search').value.trim().toLowerCase(), only=$('only-affected').checked;
   const root=svgEl('g',{transform:`translate(${state.pan.x} ${state.pan.y}) translate(440 300) scale(${state.zoom}) translate(-440 -300)`},svg);
-  svgEl('text',{x:440,y:25,'text-anchor':'middle',fill:'#8b9784','font-size':9,'letter-spacing':2},root,caption);
-  for(let c=0;c<5;c++){const theta=-Math.PI/2+c*2*Math.PI/5,x=440+190*Math.cos(theta),y=290+172*Math.sin(theta);svgEl('circle',{cx:x,cy:y,r:98,fill:'none',stroke:'#e4e9dc','stroke-dasharray':'3 6'},root);svgEl('text',{x,y:y-106,'text-anchor':'middle',fill:'#a2ae97','font-size':8,'letter-spacing':1.7},root,`CLUSTER 0${c+1}`);}
-  svgEl('text',{x:440,y:285,'text-anchor':'middle',fill:'#aab79e','font-size':26,'font-weight':400},root,String(agents().length));
-  svgEl('text',{x:440,y:304,'text-anchor':'middle',fill:'#9aa88e','font-size':7,'letter-spacing':1.8},root,'HOUSEHOLDS');
+  const textScale=Math.max(.25,Math.min((svg.clientWidth||880)/880,(svg.clientHeight||610)/610));
+  svgEl('text',{x:440,y:25,'text-anchor':'middle',fill:'#4c624c','font-size':14/textScale},root,caption);
+  for(let c=0;c<5;c++){const theta=-Math.PI/2+c*2*Math.PI/5,x=440+190*Math.cos(theta),y=290+172*Math.sin(theta);svgEl('circle',{cx:x,cy:y,r:98,fill:'none',stroke:'#e4e9dc','stroke-dasharray':'3 6'},root);}
   const edges=svgEl('g',{},root), nodes=svgEl('g',{},root);
   function edge(from,to,attrs={}) { const a=pos.get(from),b=pos.get(to);if(!a||!b)return; return svgEl('path',{d:`M${a.x},${a.y} Q${(a.x+b.x)/2+18},${(a.y+b.y)/2-18} ${b.x},${b.y}`,fill:'none',...attrs},edges); }
   if($('discovery').checked) for(const item of state.result.world.discovery_edges || []) { const from=Array.isArray(item)?item[0]:item.source || item.seller_id || item.from, to=Array.isArray(item)?item[1]:item.target || item.buyer_id || item.to; edge(from,to,{stroke:'#cbd4c0','stroke-width':.7,'stroke-dasharray':'3 6',opacity:.3}); }
@@ -192,11 +251,12 @@ function drawGraph(svg,trades,event,caption) {
     if(own)svgEl('circle',{r:19,fill:'none',stroke:'#40654d','stroke-width':1.6},g);
     if(selected)svgEl('circle',{r:24,fill:'#dfe9c7',opacity:.6},g);
     const attrs={fill:a.role==='seller'?'#c59a55':'#5c9287',stroke:affected?'#718eb9':selected?'#254936':'#fffef9','stroke-width':affected?3:2,class:'node-shape'};
-    if(a.role==='seller')svgEl('circle',{r:11,...attrs},g);else svgEl('rect',{x:-10,y:-10,width:20,height:20,rx:6,...attrs},g);
+    const radius=agents().length<=50?14:10;
+    if(a.role==='seller')svgEl('circle',{r:radius,...attrs},g);else svgEl('rect',{x:-radius,y:-radius,width:radius*2,height:radius*2,rx:5,...attrs},g);
     if(own)svgEl('text',{'text-anchor':'middle',y:3,fill:'white','font-size':9,'font-weight':600},g,'✦');
-    if(agents().length<100||selected||own||affected||search)svgEl('text',{'text-anchor':'middle',y:29,fill:selected?'#254936':'#7a8a70','font-size':9,'font-weight':own?700:400},g,a.id);
+    if(selected||own||affected||(search&&match))svgEl('text',{'text-anchor':'middle',y:37,fill:'#405a3e','font-size':14/textScale,'font-weight':own?700:500},g,own?'Your home':a.id);
     svgEl('title',{},g,`${a.id} · ${a.name} · ${a.role}`);
-    const select=()=>{state.selected=a.id;$('inspect-select').value=a.id;renderFrame();};g.addEventListener('click',select);g.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();select();}});
+    const select=()=>{state.selected=a.id;$('inspect-select').value=a.id;renderFrame();$('household-details').open=true;$('household-details').scrollIntoView?.({block:'nearest'});};g.addEventListener('click',select);g.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();select();}});
   }
 }
 function renderInspector() {
@@ -245,7 +305,7 @@ function renderAnalysis() {
   drawDistribution(hasUtilities?values:[]); drawTrajectory();
   const run=currentRun(), violations=run.metrics?.hard_constraint_violations ?? run.metrics?.constraint_violations ?? run.metrics?.violations ?? 'Unreported';
   $('integrity').innerHTML=[['Hard-constraint violations',Array.isArray(violations)?violations.length:violations],['Baseline / intervention seed',String(state.config.seed)],['Allocation changes',String(delta.affected.size)+' households'],['Released reservations',String(state.result.comparison?.displaced_count ?? 0)],['Causal cascade depth',String(state.result.comparison?.cascade_depth ?? 0)],['Termination',label(run.status)],['Recorded events',String(run.events.length)],['Engine runtime',fmt(run.metrics?.runtime_seconds,4)+' s']].map(([k,v])=>`<div class="integrity-line"><i>·</i><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join('');
-  const caveat=b&&state.result.baseline.status!=='locally_stable'?'The baseline stopped before local stability. Differences may include continued baseline negotiation as well as the policy change.':'';
+  const caveat=b&&state.result.baseline.status!=='locally_stable'?'The starting simulation stopped early. Some differences may come from continuing it, as well as your change.':'';
   $('comparison-caveat').textContent=caveat;$('comparison-caveat').hidden=!caveat;
 }
 function drawDistribution(values) {
@@ -266,18 +326,21 @@ function drawTrajectory() {
 function displayDraft(draft, recognized=[]) {
   state.draft={...draft,fingerprint:JSON.stringify(state.config),controlled:state.controlled,revision:state.draftRevision};
   const entries=Object.entries(draft.changes || {}), a=agentById(draft.agent_id);
+  const modified=entries.filter(([key,value])=>JSON.stringify(a?.[key])!==JSON.stringify(value));
+  const unchanged=entries.filter(([key,value])=>JSON.stringify(a?.[key])===JSON.stringify(value));
   const scenarioDiff=draft.previewChanges?.length?`<details><summary>Inspect all ${draft.previewChanges.length} forecast changes</summary>${draft.previewChanges.map(c=>`<div class="diff"><span>${esc(c.agent_id)}<br><small>Was ${fmt(c.before)} kWh</small></span><strong>${fmt(c.after)} kWh</strong></div>`).join('')}</details>`:'';
   $('proposal').className='proposal'; $('proposal').hidden=false;
-  $('proposal').innerHTML=`<h4>Review proposed policy</h4><p>${esc(draft.description || 'Changes apply to a clone of the baseline.')} ${esc(draft.agent_id || '')}</p>${entries.map(([k,v])=>`<div class="diff"><span>${esc(fieldNames[k] || label(k))}<br><small>Was ${esc(policyValue(k,a?.[k]))}</small></span><strong>${esc(policyValue(k,v))}</strong></div>`).join('')}${scenarioDiff}${recognized.length?`<p>${esc(recognized.join(' · '))}</p>`:''}<button id="confirm" class="button primary full">Confirm & renegotiate →</button><button id="cancel" class="button light full">Cancel</button>`;
+  $('proposal').innerHTML=`<h4>Check your change</h4><p>For ${esc(a?.name || 'home')} (${esc(draft.agent_id || '')}). Nothing changes until you apply it.</p>${state.result?.intervention?'<p>This replaces your previous change. The result is compared with the starting simulation.</p>':''}${draft.description?`<p>${esc(draft.description)}</p>`:''}${modified.map(([k,v])=>`<div class="diff"><span>${esc(fieldNames[k] || label(k))}<br><small>Before: ${esc(policyValue(k,a?.[k]))}</small></span><strong>${esc(policyValue(k,v))}</strong></div>`).join('')}${!modified.length&&!draft.previewChanges?.length?'<p>This keeps your home’s rules the same.</p>':''}${unchanged.length?`<details><summary>Rules that stay the same</summary>${unchanged.map(([k,v])=>`<p>${esc(fieldNames[k])}: ${esc(policyValue(k,v))}</p>`).join('')}</details>`:''}${scenarioDiff}<button id="confirm" class="button primary full">Apply and see the result →</button><button id="cancel" class="button light full">Cancel</button>`;
   $('confirm').onclick=()=>{if(!state.draft||state.dirty||state.draft.revision!==state.draftRevision||state.draft.fingerprint!==JSON.stringify(state.config)||state.draft.controlled!==state.controlled){clearDraft();notify('The preview is out of date. Preview the policy again.',true);return;}const {fingerprint,controlled,description,revision,previewChanges,...intervention}=state.draft;run(intervention);};
-  $('cancel').onclick=clearDraft;
+  $('cancel').onclick=()=>{clearDraft();$('parse').focus();};
 }
 async function preview(text=$('instruction').value) {
   if(state.busy||state.dirty)return;
+  if(!text.trim()){clearDraft();$('instruction-help').textContent='Type an instruction or choose an example first.';setBusy(false);$('instruction').focus();return;}
   stop();clearDraft();setBusy(true);const controlled=state.controlled, revision=state.draftRevision;
   try{const result=await api('/api/policy',{config:state.config,agent_id:controlled,text});
     if(revision!==state.draftRevision || controlled!==state.controlled || state.dirty)return;
-    if(result.errors.length){state.draft=null;$('proposal').className='proposal error';$('proposal').hidden=false;$('proposal').innerHTML=`<h4>No changes applied</h4>${result.errors.map(e=>`<p>${esc(e)}</p>`).join('')}`;}
+    if(result.errors.length){state.draft=null;$('proposal').className='proposal error';$('proposal').hidden=false;$('proposal').innerHTML=`<h4>No changes applied</h4>${result.errors.map(e=>`<p>${esc(e)}</p>`).join('')}<p>Use a short instruction like the examples above, then edit the numbers.</p>`;}
     else displayDraft({agent_id:controlled,scenario:'custom',changes:result.changes},result.recognized);
   }catch(e){notify(e.message,true);}finally{setBusy(false);}
 }
@@ -300,21 +363,21 @@ function stepRound(direction) {
   if(next>=0)state.index=next;
   renderFrame();
 }
-function stop(){clearInterval(state.timer);state.timer=null;$('play').textContent='▶';$('play').setAttribute('aria-label','Play recorded events');}
-function play(){if(state.timer){stop();return;}if(!currentEvents().length)return;if(state.index>=currentEvents().length-1)state.index=0;$('play').textContent='Ⅱ';$('play').setAttribute('aria-label','Pause replay');renderFrame();state.timer=setInterval(()=>{if(state.index>=currentEvents().length-1){stop();return;}state.index++;renderFrame();},700/Number($('speed').value));}
+function stop(){clearInterval(state.timer);state.timer=null;$('replay-caption').setAttribute('aria-live','polite');$('play').textContent='▶ Play the simulation';$('play').setAttribute('aria-label','Play the simulation');}
+function play(){if(state.timer){stop();return;}if(!currentEvents().length)return;$('replay-caption').setAttribute('aria-live','off');if(state.index>=currentEvents().length-1)state.index=0;$('play').textContent='Ⅱ Pause';$('play').setAttribute('aria-label','Pause the simulation');renderFrame();state.timer=setInterval(()=>{if(state.index>=currentEvents().length-1){stop();return;}state.index++;renderFrame();},700/Number($('speed').value));}
 function download(name,text,type){if(state.exportURL)URL.revokeObjectURL(state.exportURL);state.exportURL=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement('a');a.href=state.exportURL;a.download=name;a.textContent=`Download ${name}`;notify('Your export is ready. ');$('notice').append(a);$('export-title').textContent=`View or copy ${name}`;$('export-text').value=text;$('export-preview').hidden=false;$('notice').scrollIntoView?.({block:'nearest'});}
 function exportLedger(){const q=s=>`"${String(s??'').replaceAll('"','""')}"`;const columns=['run','id','seller_id','buyer_id','quantity_kwh','price','payment','status'];const rows=[columns.join(',')];for(const name of ['baseline','intervention'])for(const t of state.result[name]?.trades||[])rows.push([name,...columns.slice(1).map(k=>t[k])].map(q).join(','));download('energy-trade-ledger.csv',rows.join('\n'),'text/csv');}
 function bindPan(svg){let drag=null;svg.addEventListener('pointerdown',e=>{if(e.target.closest('.trade-edge'))return;const node=e.target.closest('.node'),id=node?.getAttribute('data-agent'),origin=id?(state.nodeOffsets[id]||{x:0,y:0}):state.pan;drag={x:e.clientX,y:e.clientY,px:origin.x,py:origin.y,id};if(id){state.selected=id;$('inspect-select').value=id;}svg.setPointerCapture(e.pointerId);});svg.addEventListener('pointermove',e=>{if(!drag)return;const rect=svg.getBoundingClientRect(),scale=1/Math.min(rect.width/880,rect.height/610)/(drag.id?state.zoom:1),next={x:drag.px+(e.clientX-drag.x)*scale,y:drag.py+(e.clientY-drag.y)*scale};if(drag.id)state.nodeOffsets[drag.id]=next;else state.pan=next;renderFrame();});svg.addEventListener('pointerup',()=>{drag=null;if(state.result)renderFrame();});svg.addEventListener('pointercancel',()=>drag=null);}
 $('config-form').onsubmit=e=>{e.preventDefault();state.zoom=1;state.pan={x:0,y:0};state.nodeOffsets={};run();};
 for(const id of ['population','topology','seed','max-rounds','max-messages','cap','memory','price-tick'])$(id).addEventListener('change',invalidate);
-$('instruction').addEventListener('input',clearDraft);
+$('instruction').addEventListener('input',()=>{const hadDraft=!!state.draft;clearDraft();setBusy(state.busy);if(hadDraft)$('instruction-help').textContent='Your instruction changed. Review it again before applying.';});
 $('policy-value').addEventListener('input',clearDraft);
 $('policy-field').addEventListener('change',clearDraft);
 $('controlled').onchange=()=>{state.controlled=$('controlled').value;state.selected=state.controlled;$('inspect-select').value=state.selected;clearDraft();state.causal.clear();render();};
 $('inspect-select').onchange=()=>{state.selected=$('inspect-select').value;renderFrame();};
 $('parse').onclick=()=>preview();
-$('structured').onclick=()=>{const v=$('policy-value').value,f=$('policy-field').value,phrases={min_price:`Set my minimum price to INR ${v}`,max_price:`Set my maximum price to INR ${v}`,max_offer_kwh:`Sell up to ${v} kWh`,forecast_surplus_kwh:`Set my surplus to ${v} kWh`,reserve_kwh:`Keep at least ${v} kWh in reserve`,budget:`Set my budget to INR ${v}`,demand_kwh:`Buy ${v} kWh`,deadline_round:`Set my deadline to round ${v}`};$('instruction').value=phrases[f];preview(phrases[f]);};
-document.querySelectorAll('[data-example]').forEach(b=>b.onclick=()=>{$('instruction').value=b.dataset.example;clearDraft();$('instruction').focus();});
+$('structured').onclick=()=>{const v=$('policy-value').value,f=$('policy-field').value,phrases={min_price:`Set my minimum price to INR ${v}`,max_price:`Set my maximum price to INR ${v}`,max_offer_kwh:`Sell up to ${v} kWh`,forecast_surplus_kwh:`Set my surplus to ${v} kWh`,reserve_kwh:`Keep ${v} kWh in reserve`,budget:`Set my budget to INR ${v}`,demand_kwh:`Buy ${v} kWh`,deadline_round:`Set my deadline to round ${v}`};$('instruction').value=phrases[f];preview(phrases[f]);};
+document.querySelectorAll('[data-example-index]').forEach(b=>b.onclick=()=>useExample(Number(b.dataset.exampleIndex)));
 document.querySelectorAll('[data-scenario]').forEach(b=>b.onclick=()=>preset(b.dataset.scenario));
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{if(!state.result)return;stop();state.view=b.dataset.view;state.causal.clear();rebuildFrames();state.index=Math.min(state.index,Math.max(0,currentEvents().length-1));render();});
 $('timeline').oninput=()=>{stop();state.index=Number($('timeline').value);renderFrame();};
