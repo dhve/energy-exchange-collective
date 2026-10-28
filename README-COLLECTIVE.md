@@ -1,6 +1,6 @@
 # Collective energy exchange sandbox
 
-The collective workspace lets you change a household policy and inspect the resulting negotiations. It supports 20, 50, or 100 synthetic households, recorded replay, baseline comparison, agent inspection, and evidence exports.
+The workspace starts with two panels: an instruction box and a neighbourhood simulation. Choose an example or write an instruction, review the change, and see what happens. Settings, household details, research results, and downloads stay closed until you need them. The simulation supports 20, 50, or 100 synthetic homes.
 
 [Open the hosted workspace](https://energy-exchange-collective.streamlit.app/).
 
@@ -41,18 +41,20 @@ The requirements file beside the entry point keeps collective deployment indepen
 
 ## Try the demonstration
 
-1. Keep 50 households, local discovery, and seed 42, then generate a baseline.
-2. Keep household A17 selected and enter the instruction below.
-3. Select **Preview policy**, check the proposed changes, and select **Confirm & renegotiate**.
-4. Step through the event timeline or play the recorded events. Click a household to inspect its current reservations and latest decision.
-5. Select **Compare** to see both networks at the same logical round. Scroll to Analysis for final allocation and utility differences.
-6. Select an export button, then its **Download** link for the experiment JSON, event JSONL, or trade ledger CSV. The JSON contains both worlds, both runs, the exact changed fields, and reproducibility checksums. **View or copy** exposes the complete file if the browser cancels a download. Some downloads were cancelled by the Codex in-app browser during verification; the export text and the packaged examples were checked directly.
+1. Open the page. It prepares 50 homes using local discovery and seed 42, with A17 selected.
+2. Choose an example or enter the instruction below. Examples fill the box without applying a change.
+3. Select **Review my change**, check the proposed rules, and select **Apply and see the result**.
+4. Select **Play the simulation** above the graph. **Before**, **After**, and **Compare** appear once a change has run. Comparison shows both networks at the same recorded round.
+5. Open **More ways to explore** for zoom, filters, and individual replay steps. Select a home in the graph to open its details.
+6. Open **Detailed results and downloads** for the comparison table, charts, and exports. Select an export button, then its **Download** link. **View or copy** exposes the complete file if the browser cancels a download.
+
+To change the number of homes or other research settings, open **Simulation settings** and select **Build the market**. The prompt comes first on a phone. Main text and controls are larger, and a keyboard skip link bypasses the network's interactive shapes.
 
 ```text
 Sell up to 4 kWh from 2–4 PM at at least ₹7/kWh; accept ₹6.50 only if at least 3 kWh is sold together.
 ```
 
-Each intervention starts from the original baseline. Editing an instruction or experiment setting invalidates its previous confirmation preview. A failed request leaves the last successful result visible.
+Each intervention starts from the original baseline. Reviewing a second instruction explains that it replaces the previous change. Editing an instruction or experiment setting invalidates its previous confirmation preview. A failed request leaves the last successful result visible.
 
 ## Supported instructions
 
@@ -63,7 +65,7 @@ The parser uses an explicit grammar and rejects unsupported clauses. It does not
 | Seller price | Raise my minimum price to ₹9/kWh |
 | Seller offer | Sell up to 4 kWh |
 | Forecast | Set my surplus to 3 kWh |
-| Reserve | Keep at least 1 kWh in reserve |
+| Reserve | Keep 1 kWh in reserve |
 | Buyer price | Set my maximum price to INR 10 |
 | Buyer budget | Set my budget to INR 25 |
 | Buyer requirement | Buy 3 kWh |
@@ -100,7 +102,7 @@ node --test tests/test_collective_ui.cjs tests/collective_streamlit_bridge.test.
 
 The engine tests use hand-checked fixtures for prices, budgets, reserves, bundle conditions, displacement, and baseline cloning. Scale checks cover all supported populations and discovery modes. The engine's `verify_result` function independently checks exported allocations and causal references. Browser regression tests execute the actual application script for confirmation and result handling.
 
-The complete original and collective Python suite also needs the original `requirements.txt` dependencies. The checked build passed 99 Python tests and 17 JavaScript tests. The additional scenario matrix passed all 54 cases; see `docs/evidence/verification.json`.
+The complete original and collective Python suite also needs the original `requirements.txt` dependencies. The checked build passed 99 Python tests and 28 JavaScript tests. The additional scenario matrix passed all 54 cases; see `docs/evidence/verification.json`.
 
 The cycle detection path is implemented, but no tested generated world produced a cycle. The workspace provides energy-by-event and final utility charts. Configurable utility penalties, arbitrary time windows, live meters, settlement, and production deployment are outside this version.
 

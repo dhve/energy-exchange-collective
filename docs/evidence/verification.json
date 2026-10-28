@@ -6,7 +6,7 @@
     "command": ".venv/bin/python -m unittest discover -s tests -v"
   },
   "javascript_tests": {
-    "passed": 17,
+    "passed": 28,
     "failed": 0,
     "command": "node --test tests/test_collective_ui.cjs tests/collective_streamlit_bridge.test.js"
   },
@@ -90,5 +90,62 @@
     "console_errors_observed": 0,
     "screenshot": "../assets/collective-hosted.jpg",
     "visibility": "public and searchable, verified in Streamlit Sharing settings"
+  },
+  "ui_simplification": {
+    "source_commit": "f4c5e3de385e302a7b31c164f3710bef22e259a8",
+    "date": "2026-10-27",
+    "default_panels": [
+      "Instruction",
+      "Neighbourhood simulation"
+    ],
+    "desktop_viewport": [
+      1280,
+      900
+    ],
+    "mobile_viewport": [
+      390,
+      844
+    ],
+    "horizontal_overflow": false,
+    "visible_buttons_minimum_height_px": 44,
+    "instruction_font_px": 18,
+    "keyboard_network_skip_target": "timeline",
+    "role_example_parser_checks": 150,
+    "local_fastapi_checked": [
+      "empty instruction disabled",
+      "example fills without applying",
+      "rejected unsupported clause",
+      "sample instruction review and apply",
+      "before/after comparison",
+      "replay",
+      "buyer examples",
+      "settings invalidation and rebuild",
+      "keyboard skip"
+    ],
+    "local_streamlit_checked": [
+      "reserve example review",
+      "sample instruction apply",
+      "full export: 50.10 kWh before, 51.15 kWh after, 28 intervention events"
+    ],
+    "review": "Claude desktop usability review incorporated. Independent code review found no remaining high or medium issues after fixes. Actual screen-reader testing was not performed.",
+    "hosted_url": "https://energy-exchange-collective.streamlit.app/",
+    "hosted_checked": [
+      "fresh landing page",
+      "sample instruction preview and apply: 51.15 kWh, 4 homes affected",
+      "two comparison graphs",
+      "repeat-change explanation",
+      "stacked comparison at 390 px",
+      "no console errors observed"
+    ],
+    "github_ci": {
+      "url": "https://github.com/dhve/energy-exchange-collective/actions/runs/40607302744",
+      "conclusion": "success",
+      "jobs": [
+        "collective (3.11)",
+        "collective (3.12)",
+        "collective (3.14)",
+        "legacy"
+      ]
+    }
   }
 }

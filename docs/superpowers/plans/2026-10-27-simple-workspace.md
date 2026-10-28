@@ -31,9 +31,9 @@
 
 **Interfaces:** Preserve all existing IDs consumed by `collective.js`. Add `run-view`, `simple-outcome`, `prompt-help`, `household-details`, and three `example-N` buttons.
 
-- [ ] Build the prompt and graph layout, with closed disclosures for optional tools.
-- [ ] Check retained IDs, keyboard order, narrow and desktop layouts in the browser.
-- [ ] Commit the layout as a focused change.
+- [x] Build the prompt and graph layout, with closed disclosures for optional tools.
+- [x] Check retained IDs, keyboard order, narrow and desktop layouts in the browser.
+- [x] Commit the layout as a focused change.
 
 ### Task 2: Guide the interaction
 
@@ -41,15 +41,15 @@
 
 **Interfaces:** `suggestedInstructions(agent)` returns three `{label,text}` entries. `useExample(index)` fills the current role's instruction and clears a draft without making an API request. `renderOutcome()` derives its visible summary from the completed paired results.
 
-- [ ] Add failing tests for role-aware examples, stale-preview invalidation, result direction, and truthful limits.
-- [ ] Add guidance and simplify the review, status, and playback wording.
-- [ ] Run the JavaScript suite and commit the interaction changes.
+- [x] Add failing tests for role-aware examples, stale-preview invalidation, result direction, and truthful limits.
+- [x] Add guidance and simplify the review, status, and playback wording.
+- [x] Run the JavaScript suite and commit the interaction changes.
 
 ### Task 3: Verify and publish
 
 **Files:** README/run guide, screenshots, verification evidence.
 
-- [ ] Review Claude's independent usability findings and the final diff.
-- [ ] Verify the sample instruction, rejected instructions, replay, comparison, optional settings, and exports locally in both hosts.
-- [ ] Run all Python and JavaScript tests.
-- [ ] Publish focused commits, check GitHub CI and the hosted app, then update the downloadable source bundle.
+- [x] Review Claude's independent usability findings and the final diff.
+- [x] Verify the sample instruction, rejected instructions, replay, comparison, optional settings, and exports locally in both hosts.
+- [x] Run all Python and JavaScript tests.
+- [x] Publish focused commits, check GitHub CI and the hosted app, then update the downloadable source bundle.
