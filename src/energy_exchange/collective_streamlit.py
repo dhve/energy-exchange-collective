@@ -1,6 +1,6 @@
 """Session-local Streamlit transport for the shared collective workspace.
 
-The existing request models and 20-second subprocess worker remain the trust
+The existing request models and bounded subprocess worker remain the trust
 boundary. This module neither evaluates browser code nor starts a web server.
 """
 from __future__ import annotations
@@ -24,7 +24,7 @@ class BridgeRequest(StrictModel):
     payload: dict
 
 
-def handle_request(raw, session):
+def handle_request(raw, session, server_env=None):
     """Return (response, changed); repeated renders never repeat a worker.
 
     ``session`` belongs to one Streamlit session. Only the latest response is
@@ -65,7 +65,7 @@ def handle_request(raw, session):
                        'intervention': intervention}
         # A Streamlit script thread has no running asyncio loop. Reuse the same
         # isolated worker, termination deadline, and error mapping as FastAPI.
-        response['body'] = asyncio.run(worker(payload))
+        response['body'] = asyncio.run(worker(payload, server_env) if server_env else worker(payload))
     except ValidationError as exc:
         response.update(status=422, body={'detail': [
             {'loc': list(error['loc']), 'msg': error['msg']} for error in exc.errors()
@@ -95,7 +95,14 @@ def main():
     component = components.declare_component('collective_workspace', path=str(WEB))
     session = st.session_state.setdefault('collective_transport', {})
     request = component(response=session.get('response'), key='collective_workspace', default=None)
-    _, changed = handle_request(request, session)
+    # Pass secrets only to the server-side subprocess environment. They never
+    # become component arguments, session responses or browser messages.
+    from .collective_server import SERVER_ENV_KEYS
+    try:
+        server_env = {key:str(st.secrets[key]) for key in SERVER_ENV_KEYS if key in st.secrets}
+    except FileNotFoundError:
+        server_env = {}
+    _, changed = handle_request(request, session, server_env)
     if changed:
         st.rerun()
 

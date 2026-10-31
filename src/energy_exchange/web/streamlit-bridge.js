@@ -23,7 +23,7 @@
       entry.timeout = setTimeout(() => {
         pending.delete(id);
         reject(Error('The host timed out. Preview or run the experiment again.'));
-      }, 45000);
+      }, 75000);
       pending.set(id, entry);
       if (ready) sendRequest(entry);
     });

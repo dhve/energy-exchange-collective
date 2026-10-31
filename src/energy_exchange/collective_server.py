@@ -30,11 +30,17 @@ class Config(StrictModel):
     utility_cap_kwh: float = Field(default=120, ge=0, le=1000)
     memory_enabled: bool = True
     price_tick: float = Field(default=0.05, gt=0, le=1)
+    negotiation_mode: Literal['midpoint', 'bargaining'] = 'bargaining'
 
 
 class Bundle(StrictModel):
     floor: float = Field(ge=0, le=100)
     minimum_kwh: float = Field(gt=0, le=1000)
+
+
+class TimePrice(StrictModel):
+    after: str = Field(min_length=10, max_length=50)
+    floor: float = Field(ge=0, le=100)
 
 
 class Changes(StrictModel):
@@ -46,6 +52,7 @@ class Changes(StrictModel):
     reserve_kwh: float | None = Field(default=None, ge=0, le=1000)
     demand_kwh: float | None = Field(default=None, ge=0, le=1000)
     conditional_price: Bundle | None = None
+    time_price: TimePrice | None = None
     deadline_round: int | None = Field(default=None, ge=1, le=50)
     interval_start: str | None = Field(default=None, max_length=50)
     interval_end: str | None = Field(default=None, max_length=50)
@@ -53,7 +60,7 @@ class Changes(StrictModel):
     @model_validator(mode='after')
     def no_null_numbers(self):
         for key in self.model_fields_set:
-            if key != 'conditional_price' and getattr(self, key) is None:
+            if key not in ('conditional_price', 'time_price') and getattr(self, key) is None:
                 raise ValueError(f'{key} cannot be null')
         return self
 
@@ -89,15 +96,22 @@ class PolicyRequest(StrictModel):
     text: str = Field(min_length=1, max_length=2000)
 
 
-async def worker(payload):
+SERVER_ENV_KEYS = {'OPENAI_API_KEY', 'ENERGY_LLM_MODEL', 'ENERGY_LLM_CACHE', 'ENERGY_LLM_DAILY_CALLS'}
+
+
+async def worker(payload, server_env=None):
+    environment = os.environ.copy()
+    if server_env:
+        environment.update({k:str(v) for k,v in server_env.items() if k in SERVER_ENV_KEYS})
     process = await asyncio.create_subprocess_exec(
         sys.executable, '-m', 'src.energy_exchange.collective_server', '--worker',
         stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
         cwd=str(Path(__file__).resolve().parents[2]),
+        env=environment,
     )
     try:
-        stdout, _ = await asyncio.wait_for(process.communicate(json.dumps(payload).encode()), 20)
+        stdout, _ = await asyncio.wait_for(process.communicate(json.dumps(payload).encode()), 60)
         if process.returncode:
             raise HTTPException(500, 'The simulation failed. Your previous result is unchanged.')
         result = json.loads(stdout)
@@ -144,7 +158,8 @@ def create_app():
 
     @app.get('/healthz')
     async def health():
-        return {'status': 'ok', 'mode': 'synthetic', 'llm': False}
+        from .collective_llm import get_llm_status
+        return {'status': 'ok', 'mode': 'synthetic', 'llm': get_llm_status()}
 
     @app.get('/assets/{name}')
     @app.get('/{name}')
@@ -177,24 +192,44 @@ def create_app():
     return app
 
 
-def execute_worker():
+def execute_task(raw):
     from .collective_engine import build_world, run_experiment
-    from .collective_policy import PARSER_VERSION, parse_instruction
-    raw = json.load(sys.stdin)
+    from .collective_policy import PARSER_VERSION
+    from .collective_llm import (TRANSLATOR_VERSION, get_llm_status,
+                                 prepare_strategy_plan, translate_instruction)
+    world = build_world(raw['config'])
+    if raw['task'] == 'policy':
+        agent = next((a for a in world['agents'] if a['id'] == raw['agent_id']), None)
+        if agent is None:
+            raise ValueError('Select an agent in the current population')
+        result = translate_instruction(raw['text'], agent, raw['config']['price_tick'])
+        result['agent'] = agent
+        return result
+    plan = prepare_strategy_plan(world) if raw['config'].get('negotiation_mode') == 'bargaining' else None
+    result = run_experiment(raw['config'], raw.get('intervention'), world=world, strategy_plan=plan)
+    if raw['config'].get('negotiation_mode') == 'bargaining':
+        reference = run_experiment({**raw['config'], 'negotiation_mode':'midpoint'},
+                                   raw.get('intervention'), world=world)
+        metric_keys = ('committed_kwh', 'unfilled_demand_kwh', 'payments', 'message_count')
+        result['method_comparison'] = {
+            'world_checksum': result['manifest']['checksums']['world'],
+            'note': 'Same household profiles, delivery windows and change. Each method forms its own initial allocation. These figures do not establish a generally better method.',
+            **{stage: {method: {key:run[stage]['metrics'][key] for key in metric_keys}
+                       for method,run in [('bargaining',result),('midpoint',reference)]}
+               if result.get(stage) else None for stage in ('baseline','intervention')},
+        }
+    result['manifest']['policy_interface'] = {
+        'mode': 'validated_translation', 'parser_version': PARSER_VERSION,
+        'translator_version': TRANSLATOR_VERSION,
+        'confirmation': 'Explicit confirmation is required for interventions',
+        'llm': get_llm_status(),
+    }
+    return result
+
+
+def execute_worker():
     try:
-        if raw['task'] == 'policy':
-            world = build_world(raw['config'])
-            agent = next((a for a in world['agents'] if a['id'] == raw['agent_id']), None)
-            if agent is None:
-                raise ValueError('Select an agent in the current population')
-            result = parse_instruction(raw['text'], agent, raw['config']['price_tick'])
-            result['agent'] = agent
-        else:
-            result = run_experiment(raw['config'], raw.get('intervention'))
-            result['manifest']['policy_interface'] = {
-                'mode': 'deterministic_grammar', 'parser_version': PARSER_VERSION,
-                'confirmation': 'Explicit confirmation is required for interventions',
-            }
+        result = execute_task(json.load(sys.stdin))
         print(json.dumps(result, allow_nan=False, separators=(',', ':')))
     except (ValueError, KeyError, TypeError) as exc:
         print(json.dumps({'_error': str(exc)[:350]}))

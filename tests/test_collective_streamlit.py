@@ -76,6 +76,18 @@ class CollectiveStreamlitTests(unittest.TestCase):
         self.assertTrue(changed)
         self.assertEqual(response['status'], 200)
 
+    def test_server_credentials_never_enter_component_payload_or_session(self):
+        secret_env = {'OPENAI_API_KEY':'private-test-key'}
+        fake = AsyncMock(return_value={'ok':True})
+        with patch.object(self.host, 'worker', fake):
+            response, _ = self.host.handle_request(
+                {'id':'secret-test','path':'/api/experiment','payload':{}}, self.session, secret_env)
+        payload, environment = fake.await_args.args
+        self.assertEqual(environment, secret_env)
+        self.assertNotIn('private-test-key', str(payload))
+        self.assertNotIn('private-test-key', str(response))
+        self.assertNotIn('private-test-key', str(self.session))
+
     def test_same_single_entry_and_relative_assets_work_in_http_host(self):
         from html.parser import HTMLParser
         class Assets(HTMLParser):
