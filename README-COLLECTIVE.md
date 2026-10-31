@@ -1,12 +1,28 @@
 # Collective energy exchange sandbox
 
-The workspace starts with two panels: an instruction box and a neighbourhood simulation. Choose an example or write an instruction, review the change, and see what happens. Settings, household details, research results, and downloads stay closed until you need them. The simulation supports 20, 50, or 100 synthetic homes.
+The workspace lets you change one synthetic home's requirements and follow the resulting negotiation. It starts with 50 homes in five neighbourhoods, with Yash's home, A17, under your control. Selecting another home opens its details without changing control. Research settings also support 20 or 100 homes and local or open discovery.
 
 [Open the hosted workspace](https://energy-exchange-collective.streamlit.app/).
 
+## Try the demonstration
+
+1. Choose an example or write a requirement in the instruction box. Examples fill the box without applying a change.
+2. Select **Review my change** and check the proposed rules. Answer any clarification before continuing.
+3. Select **Apply and see the result** to confirm the change.
+4. Play the replay or select a stage. The stages show starting agreements, the revised requirement, the directly affected agreement, offers and responses, and the final allocation.
+5. Open household details or detailed results to inspect decisions, compare outcomes, and download records.
+
+```text
+Sell up to 4 kWh from 2 to 4 PM at at least ₹7/kWh; accept ₹6.50 only if at least 3 kWh is sold together.
+```
+
+Replay uses recorded events, including actual offers, counteroffers, acceptances, rejections, and replacements. When a stage has no corresponding event, the workspace says so. Communication arrows show who contacted whom, while energy agreements show accepted trades.
+
+Every intervention starts from the original baseline and uses the same frozen household strategies. A second instruction replaces the previous intervention. Editing an instruction or experiment setting invalidates its previous confirmation. A failed request leaves the last successful result visible.
+
 ## Run locally
 
-Use Python 3.11 or newer. The collective workspace has no JavaScript build step, model API key, or NandaTown runtime dependency.
+Use Python 3.11 or newer. The workspace has no JavaScript build step or NandaTown runtime dependency.
 
 ```bash
 python3 -m venv .venv
@@ -14,51 +30,36 @@ python3 -m venv .venv
 .venv/bin/python -m src.energy_exchange.collective_server --port 8766
 ```
 
-Open http://127.0.0.1:8766. The server binds to your computer by default. Stop it with Control-C in its terminal.
+Open http://127.0.0.1:8766. The server binds to your computer by default. Stop it with Control-C in its terminal. On macOS, `./Start-Collective.command` creates the environment and installs dependencies when needed.
 
-On macOS, you can run `./Start-Collective.command` instead. It creates the local Python environment and installs the collective dependencies when needed.
-
-The original six-household Streamlit lab remains available through the original `requirements.txt` and `streamlit_app.py`. Its meter and settlement stages are separate from the collective negotiation workspace.
+The workspace runs without an API key using rules-based translation and bargaining fallback. To enable model assistance, set `OPENAI_API_KEY` in the server environment. `ENERGY_LLM_MODEL` defaults to `gpt-6-luna`, the currently supported model. Keep credentials on the server and never commit them or send them to the browser.
 
 ## Run or deploy with Streamlit
 
-The Streamlit entry point uses the same HTML, CSS, JavaScript, engine, and parser. It sends requests through a session-local component bridge. Each request still passes the strict policy validation and the isolated 20-second worker.
+The Streamlit entry point uses the same workspace and engine through a session-local component bridge.
 
 ```bash
 .venv/bin/python -m pip install -r deploy/collective/requirements.txt
 .venv/bin/python -m streamlit run deploy/collective/app.py --server.port 8767
 ```
 
-Open http://127.0.0.1:8767. To host on Streamlit Community Cloud, sign in at https://share.streamlit.io and create an app with:
+Open http://127.0.0.1:8767. For Streamlit Community Cloud, create an app with these settings:
 
-- Repository: `dhve/energy-exchange-collective`
-- Branch: `main`
-- Main file: `deploy/collective/app.py`
-- Python: `3.12`
-- Secrets: none
+| Setting | Value |
+| --- | --- |
+| Repository | `dhve/energy-exchange-collective` |
+| Branch | `main` |
+| Main file | `deploy/collective/app.py` |
+| Python | `3.12` |
+| Secrets | Optional server configuration shown below |
 
-The requirements file beside the entry point keeps collective deployment independent of the legacy NandaTown dependency. Follow the [official Streamlit deployment steps](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy). Deploying another copy requires signing into Streamlit and connecting the GitHub account that can deploy the repository. A Google sign-in to Streamlit alone does not connect GitHub.
+Add `OPENAI_API_KEY` and `ENERGY_LLM_MODEL` through Streamlit's Secrets settings to enable model assistance. [The example file](deploy/collective/secrets.example.toml) contains placeholders only. Never commit an actual key. Without a key, the app reports its fallback method.
 
-## Try the demonstration
+The requirements file beside the entry point keeps deployment independent of the legacy NandaTown dependency. Follow the [official Streamlit deployment steps](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy). Deploying a copy requires a connected GitHub account with access to the repository.
 
-1. Open the page. It prepares 50 homes using local discovery and seed 42, with A17 selected.
-2. Choose an example or enter the instruction below. Examples fill the box without applying a change.
-3. Select **Review my change**, check the proposed rules, and select **Apply and see the result**.
-4. Select **Play the simulation** above the graph. **Before**, **After**, and **Compare** appear once a change has run. Comparison shows both networks at the same recorded round.
-5. Open **More ways to explore** for zoom, filters, and individual replay steps. Select a home in the graph to open its details.
-6. Open **Detailed results and downloads** for the comparison table, charts, and exports. Select an export button, then its **Download** link. **View or copy** exposes the complete file if the browser cancels a download.
+## Instructions and delivery windows
 
-To change the number of homes or other research settings, open **Simulation settings** and select **Build the market**. The prompt comes first on a phone. Main text and controls are larger, and a keyboard skip link bypasses the network's interactive shapes.
-
-```text
-Sell up to 4 kWh from 2–4 PM at at least ₹7/kWh; accept ₹6.50 only if at least 3 kWh is sold together.
-```
-
-Each intervention starts from the original baseline. Reviewing a second instruction explains that it replaces the previous change. Editing an instruction or experiment setting invalidates its previous confirmation preview. A failed request leaves the last successful result visible.
-
-## Supported instructions
-
-The parser uses an explicit grammar and rejects unsupported clauses. It does not use an LLM. The structured policy editor offers the same validation and confirmation flow.
+Clear supported instructions use an explicit grammar without a paid model call. For other wording, the server can use OpenAI's Responses API with strict Structured Outputs to propose a validated policy. Ambiguous parties, EV energy quantities, or delivery times produce questions. No model proposal applies without confirmation. The structured policy editor uses the same validation and confirmation.
 
 | Purpose | Example |
 | --- | --- |
@@ -72,42 +73,52 @@ The parser uses an explicit grammar and rejects unsupported clauses. It does not
 | Deadline | Set my deadline to round 6 |
 | Remove conditional floor | Remove my bundle discount |
 
-Prices use the configured tick, INR 0.05 by default. Budgets use whole paise and energy inputs use whole watt-hours. The interface uses the fixed synthetic interval of 28 October 2026, 14:00 to 16:00 in Asia/Kolkata.
+Prices use the configured tick, INR 0.05 by default. Budgets use whole paise and energy inputs use whole watt-hours. Delivery windows use the fixed synthetic day of 28 October 2026 in Asia/Kolkata. Negotiation rounds are separate from delivery time.
 
-## What the model means
+Partially overlapping windows can trade within their overlap. Windows that only touch cannot trade. Sellers can specify a lower price floor after a delivery time, and accepted trades record their delivery interval. Each home has one flexible total energy pool over its window. There is no hourly availability, power, or device capacity model.
 
-The protocol ranks feasible offers by the proposing agent's surplus. A new reservation can replace at most one trade from each participating agent in a single atomic transition. The proposing agent must improve its utility, and a responder that displaces a trade must also improve. A displaced third party can lose utility.
+## Bargaining and comparisons
 
-Prices follow a midpoint rule rounded to the configured tick. Conditional bundle discounts apply to one trade with one buyer. A household's utility is its price surplus times quantity. Shortfall, risk, and missed-requirement penalties are zero in this version.
+Bargaining is the default method. The server prepares a validated plan with three price positions per household, then the engine executes offers and concessions from those positions. Model plans are cached, and their source, model, versions, usage, and provenance are recorded. A rules-based fallback is disclosed when the model is unavailable. Plans, including fallback plans, stay frozen for each generated world and its interventions.
 
-"Locally stable" means the final search found no improving proposal within the declared bilateral move set and discovery graph. It does not establish a Nash equilibrium, a global optimum, or physical grid feasibility. Round limits, message limits, and cycles are reported separately. A valid final allocation can be committed even when negotiation stops at a limit.
+The engine ranks feasible proposals by the proposing home's surplus. One atomic replacement can remove at most one agreement from each participating home. The proposer must improve its utility, and a responder that displaces an agreement must also improve. A displaced third party can lose utility. Bundle discounts apply to one trade with one buyer. Utility is price surplus times quantity, with no shortfall, risk, or missed-requirement penalties.
 
-The intervention clones the baseline's final allocation, applies confirmed changes, and revalidates reservations. If the baseline stopped before local stability, the comparison also includes any continued baseline negotiation. The interface displays that caveat.
+The midpoint comparison method uses the middle of the feasible price range, rounded to the price tick. The comparison runs both methods on the same household profiles, delivery windows, and intervention. Each method forms its own starting allocation. The table reports actual traded energy, unmet demand, payments, and message counts, without claiming that either method always performs better.
 
-Agent memory only breaks ties between feasible alternatives. The event trace records retrieved memory IDs. The inspector exposes synthetic private context for research inspection, but negotiation messages exclude private household text, reserves, budgets, and conditional policy fields.
+"Locally stable" means no further improving move was found under the recorded strategy, discovery graph, and bounded bilateral move set. It does not establish a Nash equilibrium or global optimum. Round limits, message limits, and cycles are reported separately. A valid allocation can be committed when negotiation stops at a limit.
 
-The complete research export includes private synthetic profiles and before/after policy values. It is not a public message transcript. Changed kWh measures the volume of removed plus added trades, while the matched-energy difference measures the net allocation change.
+An intervention starts with the baseline's final allocation, then revalidates agreements against the confirmed change. If the baseline stopped before local stability, the result may include further negotiation that the baseline had not completed. The workspace displays that caveat.
 
-All households, preferences, allocations, and payments are synthetic. No electricity or money is transferred. Discovery links describe permitted communication and do not describe electrical lines.
+## Model use and cost controls
 
-## Validation
+User instructions may be sent to OpenAI for translation. Synthetic household context may be sent to prepare bargaining plans. Replay and inspection make no paid calls. Requests use no model tools and set `store: false`. Translation output is limited to 1,800 tokens, and strategy output to 6,500 tokens.
 
-Install the test dependency into the same environment and run the collective tests.
+The default model is `gpt-6-luna`. Its [official Standard rates](https://developers.openai.com/api/docs/models/gpt-6-luna) were $0.10 per million input tokens and $0.50 per million output tokens on 30 October 2026. Actual charges depend on token use and current API pricing.
+
+A SQLite cache with a file lock shares cached results and call limits across workers on one host. The default limit is 100 paid-call attempts per UTC day and 10 per minute. Cache hits use no paid attempt, while failed requests consume an attempt. `ENERGY_LLM_DAILY_CALLS` sets the daily limit, and `ENERGY_LLM_CACHE` sets the cache path.
+
+The limits are a cost guard for one host, not an account billing cap. Multiple hosts have separate limits. An ephemeral disk can lose its cache and counters on restart or redeploy. Set account-level controls separately when needed. API requests time out after 22 seconds, workers after 60 seconds, and Streamlit bridge requests after 75 seconds.
+
+## Evidence, exports, and limits
+
+Detailed results include household gains and losses, event traces, and trade ledgers. Agent memory only breaks ties between feasible alternatives, and traces record retrieved memory IDs. The inspector exposes private synthetic context for research, while negotiation messages exclude private household text, reserves, budgets, and conditional policy fields.
+
+Complete research exports include private synthetic profiles, policy changes, and strategy provenance. Changed kWh counts removed plus added trades, while matched-energy difference measures the net change. Exports contain no API credentials.
+
+Run the collective checks after installing the test dependency:
 
 ```bash
 .venv/bin/python -m pip install httpx==0.28.1
-.venv/bin/python -m unittest tests.test_collective_engine tests.test_collective_policy tests.test_collective_server -v
+.venv/bin/python -m unittest tests.test_collective_engine tests.test_collective_policy tests.test_collective_server tests.test_collective_llm tests.test_collective_bargaining tests.test_collective_streamlit -v
 node --test tests/test_collective_ui.cjs tests/collective_streamlit_bridge.test.js
 ```
 
-The engine tests use hand-checked fixtures for prices, budgets, reserves, bundle conditions, displacement, and baseline cloning. Scale checks cover all supported populations and discovery modes. The engine's `verify_result` function independently checks exported allocations and causal references. Browser regression tests execute the actual application script for confirmation and result handling.
+Tests cover constraints, delivery overlap, bargaining, confirmation, fallback, cost guards, and result handling. The engine's `verify_result` function independently checks allocations and causal references. The complete original and collective Python suite also needs the original `requirements.txt` dependencies. See [verification evidence](docs/evidence) for checked runs and the scenario matrix.
 
-The complete original and collective Python suite also needs the original `requirements.txt` dependencies. The checked build passed 99 Python tests and 28 JavaScript tests. The additional scenario matrix passed all 54 cases; see `docs/evidence/verification.json`.
-
-The cycle detection path is implemented, but no tested generated world produced a cycle. The workspace provides energy-by-event and final utility charts. Configurable utility penalties, arbitrary time windows, live meters, settlement, and production deployment are outside this version.
+All homes, preferences, allocations, and payment totals are synthetic. No electricity or money is transferred. Discovery links describe permitted communication, not electrical lines. The collective workspace has no physical flow model, live meters, live weather, payment settlement, or REP or Tata market integration.
 
 ## Implementation and attribution
 
-The collective engine is a new implementation within the Energy Exchange Lab repository. It follows the existing lab's lifecycle and rounding patterns and NandaTown's event and evidence concepts. It does not import or claim to run NandaTown's runtime, negotiation layer, payment layer, or visualizer. The original lab remains the reference for its NandaTown runtime integration and settlement workflow.
+The collective engine follows the original Energy Exchange Lab's lifecycle and rounding patterns, along with NandaTown's event and evidence concepts. It does not import NandaTown's runtime. The [original six-household lab](README-LEGACY.md) remains available through `requirements.txt` and `streamlit_app.py`, including its separate meter and settlement workflow.
 
-Claude Fable 5.1 with Ultracode in the Claude desktop app handled the engine review and implementation. Codex handled policy parsing, the HTTP service, the visual workspace, integration, and verification. Source documents were treated as requirements material, not as permission to publish or contact anyone.
+Claude Fable 5.1 with Ultracode reviewed the source PDF and engine. The Codex team implemented the refined negotiation flow, policy interface, services, visual workspace, integration, and verification.
