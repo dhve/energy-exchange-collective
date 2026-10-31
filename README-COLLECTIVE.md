@@ -130,3 +130,14 @@ All homes, preferences, allocations, and payment totals are synthetic. No electr
 The collective engine follows the original Energy Exchange Lab's lifecycle and rounding patterns, along with NandaTown's event and evidence concepts. It does not import NandaTown's runtime. The [original six-household lab](README-LEGACY.md) remains available through `requirements.txt` and `streamlit_app.py`, including its separate meter and settlement workflow.
 
 Claude Fable 5.1 with Ultracode reviewed the source PDF and engine. The Codex team implemented the refined negotiation flow, policy interface, services, visual workspace, integration, and verification.
+
+
+## NandaTown animation and negotiation history
+
+The desktop workspace runs the actual NandaTown marketplace/auction Player from commit `b7adc6121868742cf0f00cfebbf2d38bdb349057`. See [source provenance and adaptations](frontend/vendor/nandatown/README.md). Original source and artwork are retained with checksums and Apache 2.0 attribution.
+
+Select Watch negotiations to replay recorded offers and responses. The panel on the right retains every negotiation entry through the displayed step. Scrolling upward stops automatic following; Follow latest resumes it. Hover or keyboard-focus a message to highlight both homes. The sender's color matches its home in the animation and comparison maps. Agreement outcomes remain visible but do not produce invented message flights.
+
+Price explanations distinguish the recorded offer from the seller's private quantity and time rules. Missing quantities or delivery times are shown as unknown eligibility. A qualifying rule does not imply that an actual discount was offered. Replay does not make LLM calls.
+
+For browser-source changes, run `npm ci`, `npm run build`, and `npm test`. Commit the generated assets in `src/energy_exchange/web`; Streamlit needs no Node runtime. CI rebuilds the assets and checks for differences. The JavaScript tests include the actual bundled Player's clock, run switching, completion, and data/history regressions. Reduced-motion preferences suppress decorative animation.

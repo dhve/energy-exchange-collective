@@ -1,0 +1,19 @@
+{
+  "repository": "https://github.com/projnanda/nandatown",
+  "commit": "b7adc6121868742cf0f00cfebbf2d38bdb349057",
+  "files": {
+    "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "globals.css": "77c459ecc2191789455bebffeb9f35e16db5f4e972c9860affd4326628975ba7",
+    "nodes/node_auctioneer_v2.png": "7030ab505ddebff247e37fe25e83e6922976848f208392355328cd995f523e1e",
+    "nodes/node_buyer_v2.png": "1981629197cb195718e55698bcc7295fbdee3e280239c4f8b16eede2a01777a7",
+    "nodes/node_coordinator_v2.png": "23745c4aa273af22e8dfa1590b26dc3f7f2cd5544f12b7f508b7f3c4830e9c19",
+    "nodes/node_distributor_v2.png": "20c6cdafc27612ec4f46212ba293cf797c53998378c4ec9d9f90f7e084c76e34",
+    "nodes/node_manufacturer_v2.png": "8daef0c4d83d9e2e65f8c578a104d66a9d5f53ca725a55c2e6244708b4504681",
+    "nodes/node_proposer_v2.png": "9cf810f13f04e74781b9364e4ee95311e8f626cd9c0e3db8a74ae2f6ae1606e7",
+    "nodes/node_retailer_v2.png": "68310d2eb8fe8d4cfead51236c9d278d63c5e94dd4b1bfc018f902e76a2dca79",
+    "nodes/node_seller_v2.png": "78166351a17938dd6160d1c6b758a8583a8449b3908be5f75127a9ccc358d72e",
+    "nodes/node_supplier_v2.png": "04b0410235e6ade818cddf722820b3a233fb539852ccee73f90a68b4f8e651fa",
+    "nodes/node_voter_v2.png": "68d6c47da827df781a5459b52666360b28f65033732fab5fadda53dedbb2fcf5",
+    "page.tsx": "cb4aac4cd7db65ae77404e030fdec9812d1a5d4958f20ecec73ef93888d620bf"
+  }
+}

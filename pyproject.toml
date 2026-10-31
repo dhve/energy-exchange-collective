@@ -20,4 +20,4 @@ energy-serve = "src.energy_exchange.server:main"
 include = ["src", "src.*"]
 
 [tool.setuptools.package-data]
-"src.energy_exchange" = ["web/*.html", "web/*.css", "web/*.js"]
+"src.energy_exchange" = ["web/*.html", "web/*.css", "web/*.js", "web/*.txt", "web/town-assets/*.png", "web/town-assets/*.txt"]

@@ -1,7 +1,10 @@
-.venv/
+.venv
 __pycache__/
 *.pyc
 *.egg-info/
 .env
 .streamlit/secrets.toml
 .DS_Store
+node_modules/
+frontend/generated/
+.superpowers/

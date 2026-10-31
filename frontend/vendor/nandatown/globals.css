@@ -1,0 +1,198 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+ *  Nanda Town design system — warm, editorial, Anthropic-inspired
+ *
+ *  Palette notes:
+ *    cream     — page background, warm off-white
+ *    paper     — card / accent surfaces, slightly darker cream
+ *    ink       — body text + headings (warm black, never pure black)
+ *    rust      — single accent, used sparingly
+ *  Type:
+ *    serif     — Instrument Serif (display headlines, italics)
+ *    sans      — Geist Sans (body)
+ *    mono      — Geist Mono (code + metadata)
+ * ------------------------------------------------------------------ */
+
+@theme inline {
+  /* Surface */
+  --color-cream-50:  #F7F5EF;   /* page bg, lightest */
+  --color-cream-100: #F0EDE4;   /* default page bg */
+  --color-cream-200: #E8E4D6;   /* card / panel bg */
+  --color-cream-300: #DDD7C5;   /* hover panel bg */
+  --color-cream-400: #C9C1AB;   /* borders */
+
+  /* Ink (warm grays / blacks) */
+  --color-ink-50:    #EBE7DD;
+  --color-ink-100:   #D7D2C5;
+  --color-ink-200:   #B5AE9F;
+  --color-ink-300:   #8C8576;
+  --color-ink-400:   #6B6557;
+  --color-ink-500:   #4D4940;
+  --color-ink-600:   #353129;
+  --color-ink-700:   #221F1A;
+  --color-ink-800:   #181614;
+  --color-ink-900:   #141312;
+
+  /* Accent */
+  --color-rust:        #C45A3C;
+  --color-rust-light:  #D77452;
+  --color-rust-soft:   #E89674;
+  --color-rust-bg:     #F1DCD0;
+
+  /* Status colors — restrained, warm tones */
+  --color-sage:    #6B8559;
+  --color-amber:   #B58432;
+
+  /* Legacy aliases for in-flight refactor (kept until pages migrate) */
+  --color-warm-50:  var(--color-cream-50);
+  --color-warm-100: var(--color-cream-100);
+  --color-warm-200: var(--color-cream-200);
+  --color-warm-300: var(--color-cream-300);
+  --color-warm-400: var(--color-ink-200);
+  --color-warm-500: var(--color-ink-300);
+  --color-warm-600: var(--color-ink-400);
+  --color-warm-700: var(--color-ink-500);
+  --color-warm-800: var(--color-ink-700);
+  --color-warm-900: var(--color-ink-800);
+  --color-warm-950: var(--color-ink-900);
+  --color-crimson:       var(--color-rust);
+  --color-crimson-light: var(--color-rust-light);
+  --color-crimson-dark:  #9A4329;
+
+  --font-sans:   var(--font-geist-sans);
+  --font-mono:   var(--font-geist-mono);
+  --font-serif:  var(--font-instrument), "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-display: var(--font-instrument), "Source Serif 4", Georgia, serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-cream-100);
+  color: var(--color-ink-900);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--color-ink-900);
+  color: var(--color-cream-50);
+}
+
+/* Display headings — Instrument Serif, generous tracking */
+.font-display {
+  font-family: var(--font-display);
+  font-feature-settings: "ss01";
+  letter-spacing: -0.018em;
+}
+
+/* Subtle hairline borders consistent across the site */
+.hairline {
+  border-color: var(--color-cream-400);
+}
+
+/* ------------------------------------------------------------------
+ *  Animations
+ * ------------------------------------------------------------------ */
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+
+@keyframes grain-shift {
+  0%   { background-position: 0 0; }
+  100% { background-position: 200px 100px; }
+}
+
+.animate-fade-in  { animation: fade-in 0.7s ease-out both; }
+.animate-slide-up { animation: slide-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+.stagger-1 { animation-delay: 0.08s; }
+.stagger-2 { animation-delay: 0.18s; }
+.stagger-3 { animation-delay: 0.28s; }
+.stagger-4 { animation-delay: 0.38s; }
+.stagger-5 { animation-delay: 0.48s; }
+.stagger-6 { animation-delay: 0.58s; }
+
+/* ------------------------------------------------------------------
+ *  Decorative paper/grain texture (very subtle, like Anthropic)
+ *  Used by the .paper-texture utility on hero sections.
+ * ------------------------------------------------------------------ */
+
+.paper-texture {
+  position: relative;
+}
+.paper-texture::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(20, 19, 18, 0.045) 1px, transparent 0);
+  background-size: 22px 22px;
+  opacity: 0.65;
+  mix-blend-mode: multiply;
+}
+
+/* ------------------------------------------------------------------
+ *  Buttons — Anthropic-inspired pill / square
+ * ------------------------------------------------------------------ */
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--color-ink-900);
+  color: var(--color-cream-50);
+  padding: 0.7rem 1.25rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  transition: background 0.18s ease;
+}
+.btn-primary:hover { background: var(--color-ink-700); }
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  color: var(--color-ink-900);
+  padding: 0.7rem 1.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-cream-400);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.btn-secondary:hover {
+  background: var(--color-cream-200);
+  border-color: var(--color-ink-300);
+}
+
+/* Tiny meta label (uppercase, sparse tracking) used everywhere */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-ink-400);
+}

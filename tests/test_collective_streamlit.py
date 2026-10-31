@@ -105,6 +105,9 @@ class CollectiveStreamlitTests(unittest.TestCase):
             self.assertIsNotNone(asset,'Inline scripts are not needed')
             self.assertFalse(asset.startswith(('/', 'http:', 'https:', '//')))
             self.assertEqual(client.get('/'+asset).status_code,200)
+        for name in ['node_buyer_v2.png','node_seller_v2.png','LICENSE.txt']:
+            self.assertEqual(client.get('/town-assets/'+name).status_code,200)
+        self.assertEqual(client.get('/town-assets/not-a-real-file.png').status_code,404)
         web=Path(self.host.WEB)
         self.assertEqual(response.text,(web/'index.html').read_text())
         self.assertFalse((web/'collective.html').exists(),'There must be one HTML source')
