@@ -24,7 +24,7 @@ import urllib.request
 from .collective_policy import parse_instruction, validate_policy_changes
 
 MODEL = 'gpt-6-luna'
-TRANSLATOR_VERSION = 'household-translator-v1'
+TRANSLATOR_VERSION = 'household-translator-v2'
 PLANNER_VERSION = 'household-price-planner-v2'
 ENDPOINT = 'https://api.openai.com/v1/responses'
 ALLOWED_MODELS = {'gpt-6-luna'}
@@ -70,8 +70,10 @@ implicit arithmetic need clarification to an exact amount. For set, value is the
 Evidence MUST be an exact quote from the request supporting each update, including its quantity and meaning.
 Do not drop exceptions such as 'unless it rains' or 'only if'. A bundle discount is conditional_price {floor,minimum_kwh}.
 A lower price for later delivery is time_price {after,floor}. Clear applies only to these two conditional fields.
-Time windows need start and end, AM/PM or unambiguous 24-hour times. Use the current synthetic date and Asia/Kolkata
-offset +05:30. Do not use today's real date. Times describe delivery, not negotiation rounds. 'deadline_round' only
+Time windows need start and end, AM/PM or unambiguous 24-hour times. The context's synthetic_date is an ALREADY KNOWN
+default for all delivery times. Do NOT ask which date applies when the user supplies new times: apply synthetic_date
+and Asia/Kolkata offset +05:30. Changing a 2–4 PM window to 8–10 PM on that same synthetic day is supported.
+Do not use today's real date. Times describe delivery, not negotiation rounds. 'deadline_round' only
 when the visitor explicitly says a negotiation round. Do not invent a starting time from a lone deadline.
 Do not round quantities or prices; validation will explain invalid increments. Leave unmentioned fields unchanged.
 normalized_prompt must plainly state the requested change, with units and times; questions and unhandled must be empty
@@ -413,7 +415,8 @@ def translate_instruction(text, agent, price_tick=0.05, *, client=None):
         return result
     client = client or LLMClient()
     try:
-        context = {'request':text, 'household': {k:v for k,v in agent.items() if k in FIELDS+['id','role']},
+        context = {'request':text, 'synthetic_date':agent['interval_start'][:10],
+                   'household': {k:v for k,v in agent.items() if k in FIELDS+['id','role']},
                    'price_tick':price_tick, 'units':{'energy':'kWh','money':'INR','price':'INR/kWh'}}
         artifact = client.request(TRANSLATOR_VERSION, TRANSLATOR_INSTRUCTIONS, context,
                                   TRANSLATION_SCHEMA, 1800)
