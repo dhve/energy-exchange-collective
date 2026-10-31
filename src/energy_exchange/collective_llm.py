@@ -25,7 +25,7 @@ from .collective_policy import parse_instruction, validate_policy_changes
 
 MODEL = 'gpt-6-luna'
 TRANSLATOR_VERSION = 'household-translator-v1'
-PLANNER_VERSION = 'household-price-planner-v1'
+PLANNER_VERSION = 'household-price-planner-v2'
 ENDPOINT = 'https://api.openai.com/v1/responses'
 ALLOWED_MODELS = {'gpt-6-luna'}
 FIELDS = ['min_price', 'max_price', 'budget', 'max_offer_kwh',
@@ -77,18 +77,25 @@ Do not round quantities or prices; validation will explain invalid increments. L
 normalized_prompt must plainly state the requested change, with units and times; questions and unhandled must be empty
 for a ready response. If the text contains a clarification answer, interpret it together with the preceding request."""
 
+STRATEGY_CATALOG = {
+    'seller': {'firm':[9500,8000,6500], 'balanced':[9000,7000,5000],
+               'flexible':[8000,5500,3000], 'urgent':[7000,4500,2000]},
+    'buyer': {'firm':[500,2000,3500], 'balanced':[1000,3500,6000],
+              'flexible':[2000,5000,7500], 'urgent':[3000,6000,9000]},
+}
 PLAN_SCHEMA = _object({'agents': {'type': 'array', 'items': _object({
     'id': {'type':'string'},
-    'price_positions': {'type':'array', 'items': {'type':'integer'}, 'minItems':3, 'maxItems':3},
+    'stance': {'type':'string', 'enum':['firm','balanced','flexible','urgent']},
 })}})
 
 PLANNER_INSTRUCTIONS = """Prepare executable price negotiation strategies for synthetic households.
-Return one entry per supplied id, no additions or omissions. Each price_positions array has exactly three integers
-from 0 to 10000, positions within a feasible seller-floor to buyer-ceiling price band. Sellers start high and concede
-down (nonincreasing); buyers start low and concede up (nondecreasing). Use household preferences to vary willingness
-to concede, with sensible crossing final aspirations for many but not necessarily all pairs. A price-sensitive
-seller may start [9500,7500,5500], a flexible seller [8000,5500,3000]; an urgent buyer may use [2500,5500,8000].
-These are soft strategies, never permission to change hard budgets, demand, reserves, availability or floor/ceiling.
+Return one entry per supplied id, no additions or omissions. Choose one stance from the supplied catalog for each home:
+firm protects price surplus, balanced offers moderate concessions, flexible prioritizes finding an agreement,
+urgent prioritizes filling the requirement or selling available surplus quickly. Use each household's stated
+preferences and context, not just its role. The catalog maps each choice to three real quote positions within
+a feasible seller-floor to buyer-ceiling band. Sellers concede down, buyers concede up; entries are already valid.
+Do not calculate money or output free-form quote positions. These soft strategies never change hard budgets,
+demand, reserves, availability or floor/ceiling. A small budget is not itself permission to change the price band.
 The engine recalculates prices from actual delivery windows, time-specific floors and remaining energy at every turn.
 No dialogue, fabricated events, tools or code. The same frozen plan is used before and after a household intervention."""
 
@@ -428,7 +435,8 @@ def prepare_strategy_plan(world, *, client=None):
     fallback = default_strategy_plan(world['agents'])
     # These synthetic profile fields determine a strategy; intervention fields
     # never enter the key. All later interventions reuse this exact artifact.
-    context = {'agents':[{k:a.get(k) for k in ['id','role','context','min_price','max_price',
+    context = {'strategy_catalog':STRATEGY_CATALOG,
+               'agents':[{k:a.get(k) for k in ['id','role','context','min_price','max_price',
                    'budget','reserve_kwh','max_offer_kwh','demand_kwh','time_price']}
                          for a in world['agents']]}
     final_key = 'plan:' + _hash([PLANNER_VERSION, client.model, world])
@@ -437,14 +445,20 @@ def prepare_strategy_plan(world, *, client=None):
         if row:
             return validate_strategy_plan(json.loads(row[0]), world['agents'])
     try:
-        artifact = client.request(PLANNER_VERSION, PLANNER_INSTRUCTIONS, context, PLAN_SCHEMA, 6500)
+        artifact = client.request(PLANNER_VERSION, PLANNER_INSTRUCTIONS, context, PLAN_SCHEMA, 3000)
         rows = artifact['value']['agents']
         if len(rows) != len(world['agents']) or len({a['id'] for a in rows}) != len(rows):
             raise ValueError('Plan must cover each household once')
+        profiles = {a['id']:a for a in world['agents']}
+        if any(set(a) != {'id','stance'} or a['id'] not in profiles or
+               a['stance'] not in STRATEGY_CATALOG[profiles[a['id']]['role']] for a in rows):
+            raise ValueError('Choose only a supplied household and strategy stance')
         candidate = {'version':PLAN_VERSION, 'source':'llm',
-                     'agents':{a['id']:{'price_positions':a['price_positions']} for a in rows},
+                     'agents':{a['id']:{'price_positions':STRATEGY_CATALOG[profiles[a['id']]['role']][a['stance']]}
+                               for a in rows},
                      'provenance':{k:v for k,v in artifact.items() if k != 'value'}}
         candidate['provenance']['status'] = 'ready'
+        candidate['provenance']['style_choices'] = {a['id']:a['stance'] for a in rows}
         plan = validate_strategy_plan(candidate, world['agents'])
     except (LLMUnavailable, ValueError, TypeError, KeyError) as exc:
         plan = fallback

@@ -160,11 +160,13 @@ class LLMTests(unittest.TestCase):
 
     def test_valid_price_strategy_is_executable_and_cached_for_the_world(self):
         from src.energy_exchange.collective_engine import run_experiment, verify_result
-        rows = [{'id':a['id'], 'price_positions':[9000,6000,4000] if a['role']=='seller'
-                 else [1000,5000,8000]} for a in self.world['agents']]
+        rows = [{'id':a['id'], 'stance':'flexible' if a['role']=='seller' else 'urgent'}
+                for a in self.world['agents']]
         client = self.client({'agents':rows})
         plan = self.mod.prepare_strategy_plan(self.world, client=client)
         self.assertEqual(plan['source'], 'llm')
+        self.assertEqual(plan['agents']['A17']['price_positions'], [8000,5500,3000])
+        self.assertEqual(plan['provenance']['style_choices']['A17'], 'flexible')
         self.assertEqual(self.mod.prepare_strategy_plan(self.world, client=client), plan)
         self.assertEqual(len(self.calls), 1)
         result = run_experiment({'population':20,'negotiation_mode':'bargaining'},
@@ -207,8 +209,7 @@ class LLMTests(unittest.TestCase):
                 self.assertEqual(result['changes'], {})
 
     def test_cached_strategy_stays_frozen_if_credential_becomes_unavailable(self):
-        rows = [{'id':a['id'], 'price_positions':[9000,6000,4000] if a['role']=='seller'
-                 else [1000,5000,8000]} for a in self.world['agents']]
+        rows = [{'id':a['id'], 'stance':'balanced'} for a in self.world['agents']]
         first = self.mod.prepare_strategy_plan(self.world, client=self.client({'agents':rows}))
         disabled = self.mod.LLMClient(api_key='', db_path=self.db)
         self.assertEqual(self.mod.prepare_strategy_plan(self.world, client=disabled), first)
