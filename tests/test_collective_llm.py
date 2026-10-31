@@ -152,7 +152,8 @@ class LLMTests(unittest.TestCase):
 
     def test_model_quote_formatting_preserves_original_meaning(self):
         phrase = 'could you make the minimum price 3.5 for me'
-        for quote in ['Make the minimum price 3.5', 'minimum  price\n3.5', 'minimum price 3.5.']:
+        for quote in ['Make the minimum price 3.5', 'minimum  price\n3.5', 'minimum price 3.5.',
+                      '"make the minimum price 3.5"', '“Make the minimum price 3.5.”']:
             with self.subTest(quote=quote):
                 self.db = self.db.with_name(str(len(self.calls)) + '.sqlite3')
                 result = self.mod.translate_instruction(phrase, self.agent,

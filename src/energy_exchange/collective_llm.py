@@ -388,9 +388,12 @@ def _validated_translation(data, text, agent, tick):
             raise ValueError('Invalid field or operation')
         if not isinstance(evidence, str) or not evidence.strip():
             raise ValueError('The change was not supported by the request')
-        # The small model may capitalize a quote or add sentence punctuation.
+        # The small model may capitalize a quote or wrap it in quotation marks.
         # Match its words back to the source and validate that original span.
         quote = evidence.strip().rstrip('.!?').strip()
+        quote_pairs = {'"':'"', "'":"'", '“':'”', '‘':'’'}
+        if len(quote) >= 2 and quote_pairs.get(quote[0]) == quote[-1]:
+            quote = quote[1:-1].strip().rstrip('.!?').strip()
         match = re.search(r'\s+'.join(re.escape(word) for word in quote.split()), text, re.I) if quote else None
         if match is None:
             raise ValueError(f'The quoted words do not match the request: {evidence[:120]!r}')
