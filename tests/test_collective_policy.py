@@ -36,6 +36,24 @@ class PolicyTests(unittest.TestCase):
         policy.parse_instruction('Raise my minimum price to ₹8/kWh', self.seller)
         self.assertEqual(self.seller, original)
 
+    def test_everyday_price_phrasing_uses_the_existing_price_units(self):
+        for text in ['Make the minimum price 3.5', 'Set the minimum price to 3.5',
+                     'make my min price 3.5', 'Change the selling price to 3.5']:
+            with self.subTest(text=text):
+                result = policy.parse_instruction(text, self.seller)
+                self.assertEqual(result['errors'], [])
+                self.assertEqual(result['changes'], {'min_price': 3.5})
+                self.assertTrue(result['requires_confirmation'])
+        result = policy.parse_instruction('Make the maximum price 8', self.buyer)
+        self.assertEqual(result['changes'], {'max_price': 8})
+
+    def test_everyday_price_phrasing_does_not_drop_units_or_conditions(self):
+        for text in ['Make the minimum price 3.5 dollars', 'Make the minimum price 3.5 kWh',
+                     'Make the minimum price 3.5 total', 'Make the minimum price 3.5 unless it rains',
+                     'Make the minimum price 3.53', 'Make the minimum price -3.5']:
+            with self.subTest(text=text):
+                self.assertEqual(policy.parse_instruction(text, self.seller)['changes'], {})
+
     def test_negative_or_conflicting_values_rejected(self):
         for text in ['Sell up to -4 kWh', 'Set my minimum price to ₹7 and set my minimum price to ₹9',
                      'Sell up to 4 kWh at at least ₹7/kWh; accept ₹8 only if at least 3 kWh is sold together']:

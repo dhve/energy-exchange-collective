@@ -6,7 +6,7 @@ from decimal import Decimal
 import math
 import re
 
-PARSER_VERSION = 'energy-policy-grammar/2.0'
+PARSER_VERSION = 'energy-policy-grammar/2.1'
 NUM = r'(\d+(?:\.\d+)?)'
 MONEY = r'(?:₹|inr\s*|rs\.?\s*)?'
 UNIT = r'(?:\s*/\s*kwh|\s+per\s+kwh)?'
@@ -64,10 +64,10 @@ def parse_instruction(text: str, agent: dict, price_tick: float = 0.05) -> dict:
             lambda m: add('min_price', float(m[1]), 'Minimum price', 'seller'))
     consume(r'(?:at\s+)?at\s+most\s+' + MONEY + NUM + UNIT,
             lambda m: add('max_price', float(m[1]), 'Maximum price', 'buyer'))
-    consume(r'(?:(?:set|raise|lower|change|reduce|increase)\s+)?(?:my\s+)?(?:minimum\s+price|price\s+floor)\s+(?:to\s+)?'
+    consume(r'(?:(?:make|set|raise|lower|change|reduce|increase)\s+)?(?:(?:my|the)\s+)?(?:(?:minimum|min|selling)\s+price|price\s+floor)\s+(?:to\s+)?'
             + MONEY + NUM + UNIT,
             lambda m: add('min_price', float(m[1]), 'Minimum price', 'seller'))
-    consume(r'(?:(?:set|raise|lower|change|reduce|increase)\s+)?(?:my\s+)?(?:maximum\s+price|price\s+ceiling)\s+(?:to\s+)?'
+    consume(r'(?:(?:make|set|raise|lower|change|reduce|increase)\s+)?(?:(?:my|the)\s+)?(?:(?:maximum|max|buying)\s+price|price\s+ceiling)\s+(?:to\s+)?'
             + MONEY + NUM + UNIT,
             lambda m: add('max_price', float(m[1]), 'Maximum price', 'buyer'))
     consume(r'(?:(?:set|raise|lower|change|reduce|increase)\s+)?(?:my\s+|a\s+)?budget\s+(?:to\s+|of\s+)?' + MONEY + NUM,

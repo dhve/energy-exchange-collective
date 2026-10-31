@@ -65,6 +65,89 @@ class LLMTests(unittest.TestCase):
         self.assertEqual(result['changes'], {'reserve_kwh': 3})
         self.assertEqual(self.calls, [])
 
+    def test_reported_unitless_price_has_a_confirmable_preview_without_a_paid_call(self):
+        result = self.mod.translate_instruction('Make the minimum price 3.5', self.agent,
+            client=self.client(RuntimeError('must not call')))
+        self.assertEqual(result['changes'], {'min_price': 3.5})
+        self.assertEqual(result['errors'], [])
+        self.assertTrue(result['requires_confirmation'])
+        self.assertIn('₹/kWh', ' '.join(result['assumptions']))
+        self.assertEqual(self.calls, [])
+
+    def test_llm_can_use_known_units_for_prices_and_budget(self):
+        buyer = next(a for a in self.world['agents'] if a['role']=='buyer')
+        cases = [
+            ('could you make the minimum price 3.5 for me', self.agent, 'min_price', 3.5, 'set', 3.5),
+            ('please put my selling price at 3.5 for me', self.agent, 'min_price', 3.5, 'set', 3.5),
+            ('lower my minimum price by 0.5 please', self.agent, 'min_price', 0.5, 'decrease', 6.0),
+            ('please make my maximum price eight for me', buyer, 'max_price', 8, 'set', 8),
+            ('could you put my budget at 30 please', buyer, 'budget', 30, 'set', 30),
+            ('In rupees per kWh, make the minimum price 3.5 please', self.agent, 'min_price', 3.5, 'set', 3.5),
+            ('In INR/kWh, make the minimum price 3.5 please', self.agent, 'min_price', 3.5, 'set', 3.5),
+        ]
+        for phrase, agent, field, amount, operation, expected in cases:
+            with self.subTest(phrase=phrase):
+                result = self.mod.translate_instruction(phrase, agent,
+                    client=self.client(translation([update(field, amount, phrase, operation)])))
+                self.assertEqual(result['changes'], {field: expected})
+                self.assertEqual(result['errors'], [])
+                self.assertTrue(result['requires_confirmation'])
+                self.assertIn('₹', ' '.join(result['assumptions']))
+
+    def test_known_units_do_not_turn_other_numbers_or_currencies_into_prices(self):
+        for phrase, field, amount in [
+            ('make the minimum price 3.5 dollars please', 'min_price', 3.5),
+            ('make the minimum price 3.5 kWh please', 'min_price', 3.5),
+            ('make the minimum price 3.5 percent please', 'min_price', 3.5),
+            ('my minimum price is fine and 8 guests are coming', 'min_price', 8),
+            ('sell 3 kWh for 8 total please', 'min_price', 8),
+            ('make the maximum price 3.5 please', 'min_price', 3.5),
+        ]:
+            with self.subTest(phrase=phrase):
+                result = self.mod.translate_instruction(phrase, self.agent,
+                    client=self.client(translation([update(field, amount, phrase)])))
+                self.assertEqual(result['changes'], {})
+
+    def test_short_evidence_cannot_hide_an_explicit_conflicting_unit(self):
+        phrases = ['please make the minimum price 3.5 ' + suffix
+                   for suffix in ['dollars', 'USD', 'kWh', 'percent', '%', 'guests']]
+        phrases += ['In dollars, make the minimum price 3.5 please',
+                    'Please make the minimum price 3.5, in dollars',
+                    'Please make the minimum price 3.5, in kWh please',
+                    'In kWh, make the minimum price 3.5 please',
+                    'Make the minimum price 3.5 please, kWh',
+                    'In paise, make the minimum price 3.5 please',
+                    'In cents, make the minimum price 3.5 please',
+                    'Using Mexican pesos, make the minimum price 3.5 please',
+                    'In rupees per MWh, make the minimum price 3.5 please',
+                    'In INR/kW, make the minimum price 3.5 please']
+        for index, phrase in enumerate(phrases):
+            with self.subTest(phrase=phrase):
+                self.db = self.db.with_name(f'conflicting-unit-{index}.sqlite3')
+                result = self.mod.translate_instruction(phrase, self.agent,
+                    client=self.client(translation([update('min_price', 3.5, 'minimum price 3.5')])))
+                self.assertEqual(result['changes'], {})
+                self.assertEqual(result['translation']['status'], 'invalid_output')
+
+    def test_price_and_time_assumptions_both_survive_translation(self):
+        phrase = 'could you set my price to 3.5 please and deliver between 8 PM and 10 PM'
+        rows = [update('min_price', 3.5, 'price to 3.5'),
+                update('interval_start', '2026-10-28T20:00:00+05:30', 'between 8 PM and 10 PM'),
+                update('interval_end', '2026-10-28T22:00:00+05:30', 'between 8 PM and 10 PM')]
+        result = self.mod.translate_instruction(phrase, self.agent, client=self.client(translation(rows)))
+        self.assertEqual(result['errors'], [])
+        self.assertEqual(result['changes']['min_price'], 3.5)
+        self.assertEqual(len(result['assumptions']), 2)
+        self.assertIn('₹/kWh', result['assumptions'][0])
+        self.assertIn('Asia/Kolkata', result['assumptions'][1])
+
+    def test_known_unit_relative_price_cannot_become_an_absolute_floor(self):
+        phrase = 'Lower my minimum price by 0.5 please'
+        result = self.mod.translate_instruction(phrase, self.agent,
+            client=self.client(translation([update('min_price', 0.5, 'minimum price by 0.5', 'set')])))
+        self.assertEqual(result['changes'], {})
+        self.assertEqual(result['translation']['status'], 'invalid_output')
+
     def test_missing_party_quantity_asks_instead_of_applying_partial_changes(self):
         value = translation([update(value=5, evidence='birthday party')], questions=['How many kWh should stay at home?'])
         result = self.mod.translate_instruction('birthday party so keep more energy', self.agent, client=self.client(value))
