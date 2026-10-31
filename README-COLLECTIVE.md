@@ -79,7 +79,7 @@ Partially overlapping windows can trade within their overlap. Windows that only 
 
 ## Bargaining and comparisons
 
-Bargaining is the default method. The server prepares a validated plan with three price positions per household, then the engine executes offers and concessions from those positions. Model plans are cached, and their source, model, versions, usage, and provenance are recorded. A rules-based fallback is disclosed when the model is unavailable. Plans, including fallback plans, stay frozen for each generated world and its interventions.
+Bargaining is the default method. The model chooses a firm, balanced, flexible, or urgent strategy for each household from a validated catalog for buyers and sellers. Each choice maps to three price positions that the engine uses for offers and concessions. Model plans are cached, and their source, model, versions, usage, and provenance are recorded. The service records the catalog, and the exported plan records each household's choice. A rules-based fallback is disclosed when the model is unavailable. Plans, including fallback plans, stay frozen for each generated world and its interventions.
 
 The engine ranks feasible proposals by the proposing home's surplus. One atomic replacement can remove at most one agreement from each participating home. The proposer must improve its utility, and a responder that displaces an agreement must also improve. A displaced third party can lose utility. Bundle discounts apply to one trade with one buyer. Utility is price surplus times quantity, with no shortfall, risk, or missed-requirement penalties.
 
@@ -91,7 +91,7 @@ An intervention starts with the baseline's final allocation, then revalidates ag
 
 ## Model use and cost controls
 
-User instructions may be sent to OpenAI for translation. Synthetic household context may be sent to prepare bargaining plans. Replay and inspection make no paid calls. Requests use no model tools and set `store: false`. Translation output is limited to 1,800 tokens, and strategy output to 6,500 tokens.
+User instructions may be sent to OpenAI for translation. Synthetic household context may be sent to prepare bargaining plans. Replay and inspection make no paid calls. Requests use no model tools and set `store: false`. Translation output is limited to 1,800 tokens, and strategy output to 3,000 tokens.
 
 The default model is `gpt-6-luna`. Its [official Standard rates](https://developers.openai.com/api/docs/models/gpt-6-luna) were $0.10 per million input tokens and $0.50 per million output tokens on 30 October 2026. Actual charges depend on token use and current API pricing.
 
