@@ -382,12 +382,14 @@ function renderConversation() {
   $('follow-latest').textContent=state.followLatest?'Following latest':'Follow latest ↓';
   $('follow-latest').onclick=()=>{state.followLatest=true;box.scrollTop=box.scrollHeight;$('follow-latest').textContent='Following latest';};
   box.onscroll=()=>{state.followLatest=box.scrollHeight-box.scrollTop-box.clientHeight<50;$('follow-latest').textContent=state.followLatest?'Following latest':'Follow latest ↓';};
+}
+function bindHistory(box) {
   const participants=target=>target?.closest?.('[data-participants]')?.dataset.participants.split('|');
   box.onmouseover=e=>{const pair=participants(e.target);if(pair&&!participants(document.activeElement))highlightMessage(pair);};
   box.onpointermove=e=>{const pair=participants(e.target);if(pair)highlightMessage(pair);};
   box.onmouseout=e=>{if(!participants(e.relatedTarget))highlightMessage(participants(document.activeElement)||null);};
-  box.onfocusin=e=>{const pair=participants(e.target);if(pair){state.followLatest=false;highlightMessage(pair);}};
-  box.onfocusout=e=>{if(!participants(e.relatedTarget))highlightMessage(null);};
+  box.addEventListener('focusin',e=>{const pair=participants(e.target);if(pair){state.followLatest=false;highlightMessage(pair);}});
+  box.addEventListener('focusout',e=>{if(!participants(e.relatedTarget))highlightMessage(null);});
 }
 function highlightMessage(pair) {state.hoveredPair=pair;updateTown();if(!state.town||state.view==='compare'||state.mapMode==='agreements')drawReplayGraphs();}
 function updateTown() {
@@ -734,7 +736,7 @@ $('export').onclick=()=>download(`energy-experiment-seed-${state.config.seed}.js
 $('trace-export').onclick=()=>download(`energy-${state.view}-trace.jsonl`,currentEvents().map(e=>JSON.stringify(e)).join('\n'),'application/x-ndjson');
 $('ledger-export').onclick=exportLedger;
 $('select-export').onclick=()=>{$('export-text').focus();$('export-text').select();};
-bindPan($('graph'));bindPan($('compare-graph'));
+bindHistory($('conversation'));bindPan($('graph'));bindPan($('compare-graph'));
 if(typeof window!=='undefined') {
   let width=window.innerWidth,resizeTimer;
   window.addEventListener('resize',()=>{
