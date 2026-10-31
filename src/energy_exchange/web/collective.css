@@ -32,3 +32,5 @@ summary{cursor:pointer;min-height:44px;padding:10px 0;font-size:17px;font-weight
 @media(max-width:760px){.line-legend{padding:0 16px 14px;font-size:12px;gap:8px 14px}.replay-stages{padding:0 12px 12px;gap:4px}.replay-stages button{font-size:11px;padding:7px 3px}.conversation{padding:16px}.conversation-entry p,.conversation-entry strong{font-size:14px}.node .node-label{display:none}.node.controlled-node .node-label,.node.inspected-node .node-label,.node.active-party .node-label,.node:focus .node-label{display:block}.home-timing{margin-top:-4px}.graph-caption{font-size:12px}.line-legend>span:last-child{display:block}}
 
 .method-details table{border-collapse:collapse;width:100%;font-size:15px}.method-details th,.method-details td{padding:10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}.method-details th{font-weight:500}.unsupported-clauses{border-left:3px solid var(--red);padding-left:12px;margin:14px 0}
+/* Keep the network caption below the plotted homes. */
+.graph-wrap{flex-wrap:wrap}.graph-caption{position:static;flex:0 0 100%;padding:0 16px 12px}

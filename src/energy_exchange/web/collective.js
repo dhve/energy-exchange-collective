@@ -352,12 +352,34 @@ function eventDescription(event) {
   return 'The homes are checking which trades fit their rules.';
 }
 function svgEl(tag, attrs={}, parent, text) { const n=document.createElementNS(ns,tag); for(const [k,v] of Object.entries(attrs)) n.setAttribute(k,String(v)); if(text!==undefined)n.textContent=text; if(parent)parent.append(n); return n; }
+function clusterCenter(cluster) {
+  const theta=-Math.PI/2+cluster*2*Math.PI/5;
+  return {x:440+300*Math.cos(theta),y:310+170*Math.sin(theta),theta};
+}
 function positions() {
-  const map=new Map(), list=agents(), clusters=5;
-  list.forEach((a,i)=> { const cluster=i%clusters, members=Math.ceil((list.length-cluster)/clusters), item=Math.floor(i/clusters), theta=-Math.PI/2+cluster*2*Math.PI/clusters, angle=item*2*Math.PI/members+theta*.2, r=members>10?78:64;
-    const offset=state.nodeOffsets[a.id]||{x:0,y:0};
-    map.set(a.id,{x:440+190*Math.cos(theta)+r*Math.cos(angle)+offset.x,y:290+172*Math.sin(theta)+r*Math.sin(angle)+offset.y});
-  }); return map;
+  const map=new Map(),list=agents(),clusters=5;
+  list.forEach((a,i)=>{
+    const cluster=i%clusters,members=Math.ceil((list.length-cluster)/clusters),item=Math.floor(i/clusters),center=clusterCenter(cluster);
+    const angle=item*2*Math.PI/members+center.theta*.2,r=members>10?96:88,offset=state.nodeOffsets[a.id]||{x:0,y:0};
+    map.set(a.id,{x:center.x+r*Math.cos(angle)+offset.x,y:center.y+r*Math.sin(angle)+offset.y});
+  });
+  return map;
+}
+function labelPositions(points,font) {
+  const placed=[],labels=new Map(),overlaps=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
+  const nodes=[...points.values()].map(point=>({left:point.x-18,right:point.x+18,top:point.y-18,bottom:point.y+18}));
+  for(const [id,point] of points) {
+    const candidates=[[0,40],[0,-26],[42,6],[-42,6]];
+    for(const radius of [38,50,62])for(let step=0;step<16;step++){const angle=Math.PI/2+step*Math.PI/8;candidates.push([radius*Math.cos(angle),radius*Math.sin(angle)+font*.375]);}
+    let chosen;
+    for(const [x,y] of candidates) {
+      const half=id.length*font*.35+2,box={left:point.x+x-half,right:point.x+x+half,top:point.y+y-font-2,bottom:point.y+y+font*.25+2};
+      if(box.left<8||box.right>872||box.top<35||box.bottom>582||nodes.some(node=>overlaps(box,node))||placed.some(label=>overlaps(box,label)))continue;
+      chosen={x,y};placed.push(box);break;
+    }
+    labels.set(id,chosen || {x:0,y:40});
+  }
+  return labels;
 }
 function drawGraph(svg,trades,event,caption,world=frameWorld()) {
   svg.replaceChildren();
@@ -369,9 +391,9 @@ function drawGraph(svg,trades,event,caption,world=frameWorld()) {
     svgEl('path',{d:'M0 0 L10 5 L0 10 Z',fill:color},marker);
   }
   const root=svgEl('g',{transform:`translate(${state.pan.x} ${state.pan.y}) translate(440 300) scale(${state.zoom}) translate(-440 -300)`},svg);
-  const textScale=Math.max(.4,Math.min((svg.clientWidth||880)/880,(svg.clientHeight||610)/610));
+  const textScale=Math.max(.4,Math.min((svg.clientWidth||880)/880,(svg.clientHeight||610)/610)),labels=labelPositions(pos,11/textScale);
   svgEl('text',{x:440,y:25,'text-anchor':'middle',fill:'#4c624c','font-size':14/textScale},root,caption);
-  for(let c=0;c<5;c++){const theta=-Math.PI/2+c*2*Math.PI/5,x=440+190*Math.cos(theta),y=290+172*Math.sin(theta);svgEl('circle',{cx:x,cy:y,r:98,fill:'none',stroke:'#e4e9dc','stroke-dasharray':'3 6'},root);}
+  for(let c=0;c<5;c++){const center=clusterCenter(c);svgEl('circle',{cx:center.x,cy:center.y,r:agents().length>50?112:108,fill:'none',stroke:'#e4e9dc','stroke-dasharray':'3 6'},root);}
   const edges=svgEl('g',{},root),nodes=svgEl('g',{},root);
   function edge(from,to,attrs={}) {
     const a=pos.get(from),b=pos.get(to);if(!a||!b)return;
@@ -413,7 +435,7 @@ function drawGraph(svg,trades,event,caption,world=frameWorld()) {
     const attrs={fill:a.role==='seller'?'#c59a55':'#5c9287',stroke:affected?'#718eb9':'#fffef9','stroke-width':affected?3:2,class:'node-shape'},radius=agents().length<=50?14:10;
     if(a.role==='seller')svgEl('circle',{r:radius,...attrs},g);else svgEl('rect',{x:-radius,y:-radius,width:radius*2,height:radius*2,rx:5,...attrs},g);
     if(own)svgEl('text',{'text-anchor':'middle',y:3,fill:'white','font-size':9,'font-weight':600},g,'✦');
-    svgEl('text',{'text-anchor':'middle',y:38,fill:'#314b36','font-size':11/textScale,'font-weight':own?700:500,class:'node-label'},g,a.id);
+    svgEl('text',{'text-anchor':'middle',...labels.get(a.id),fill:'#314b36','font-size':11/textScale,'font-weight':own?700:500,class:'node-label'},g,a.id);
     svgEl('title',{},g,`${a.id} · ${a.name || 'Home'} · ${a.role} · ${availability}`);
     const inspect=()=>{state.selected=a.id;$('inspect-select').value=a.id;renderFrame();$('household-details').open=true;$('household-details').scrollIntoView?.({block:'nearest'});};
     g.addEventListener('click',inspect);g.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();inspect();}});

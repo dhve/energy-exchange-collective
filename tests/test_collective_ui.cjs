@@ -539,3 +539,34 @@ test('prompt names the controlled home in short sentences while retaining its ar
   f.evaluate("state.result.world.agents=[{id:'A17',name:'Yash (Kandivali)',role:'seller',min_price:6}];renderOwn();");
   assert.equal(f.element('prompt-help').textContent,'You control Yash’s home (A17, Kandivali). It sells spare solar energy.');
 });
+
+test('fifty desktop home IDs avoid other nodes and labels while replay positions stay fixed', () => {
+  const f=fixture();
+  f.evaluate(`
+    state.result.world.agents=Array.from({length:50},(_,i)=>({id:'A'+String(i+1).padStart(2,'0'),role:i%2?'buyer':'seller'}));
+    state.result.baseline={events:[],trades:[]};state.result.intervention={events:[],trades:[]};
+    $('graph').clientWidth=800;$('graph').clientHeight=410;$('role-filter').value='all';
+    drawGraph($('graph'),[],null,'Starting agreements');
+  `);
+  const positions=JSON.parse(f.evaluate('JSON.stringify(Object.fromEntries(positions()))'));
+  const groups=descendants(f.element('graph')).filter(n=>n.getAttribute?.('data-agent'));
+  const labels=groups.map(group=>{
+    const label=group.children.find(n=>n.getAttribute?.('class')==='node-label'),id=group.getAttribute('data-agent'),point=positions[id],font=Number(label.getAttribute('font-size'));
+    const x=point.x+Number(label.getAttribute('x') || 0),y=point.y+Number(label.getAttribute('y'));
+    return {id,left:x-id.length*font*.33-1,right:x+id.length*font*.33+1,top:y-font*.9-1,bottom:y+font*.2+1};
+  });
+  assert.equal(labels.length,50);
+  for(const box of labels) {
+    assert.ok(box.left>0&&box.right<880&&box.top>30&&box.bottom<585,`${box.id} must stay clear of the caption and graph edges`);
+    for(const [id,point] of Object.entries(positions)) {
+      const touching=box.left<point.x+16&&box.right>point.x-16&&box.top<point.y+16&&box.bottom>point.y-16;
+      assert.equal(touching,false,`${box.id}'s ID must not overlap ${id}'s node`);
+    }
+    for(const other of labels)if(other.id!==box.id) {
+      const touching=box.left<other.right&&box.right>other.left&&box.top<other.bottom&&box.bottom>other.top;
+      assert.equal(touching,false,`${box.id}'s ID must not overlap ${other.id}'s ID`);
+    }
+  }
+  f.evaluate("state.view='intervention';state.stage='starting';state.index=25;");
+  assert.deepEqual(JSON.parse(f.evaluate('JSON.stringify(Object.fromEntries(positions()))')),positions);
+});
