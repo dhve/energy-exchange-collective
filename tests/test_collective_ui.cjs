@@ -320,7 +320,7 @@ test('conversation uses actual recorded amounts, delivery window and authoritati
   const html=f.element('conversation').innerHTML;
   assert.match(html,/A17.*A03/s);
   assert.match(html,/1\.50 kWh.*8\.00/s);
-  assert.match(html,/15:00.*16:00/s);
+  assert.match(html,/30 Oct · 3–4 PM \(India time\)/);
   assert.match(html,/Available surplus/);
   assert.doesNotMatch(html,/A02/,'Unrelated conversations must not be fabricated');
 });
@@ -336,8 +336,8 @@ test('inspecting another household preserves the visible controlled name and ID'
 
 test('delivery and time price summaries use declared timezone terms', () => {
   const f=fixture();
-  assert.match(f.evaluate("policyValue('time_price',{after:'2026-10-30T15:00:00+05:30',floor:5})"),/5\.00.*15:00.*\+05:30/);
-  assert.match(f.evaluate("deliveryWindow({interval_start:'2026-10-30T14:30:00+05:30',interval_end:'2026-10-30T16:00:00+05:30'})"),/14:30.*16:00.*\+05:30/);
+  assert.equal(f.evaluate("policyValue('time_price',{after:'2026-10-30T15:00:00+05:30',floor:5})"),'₹5.00/kWh after 30 Oct · 3 PM (India time)');
+  assert.equal(f.evaluate("deliveryWindow({interval_start:'2026-10-30T14:30:00+05:30',interval_end:'2026-10-30T16:00:00+05:30'})"),'30 Oct · 2:30–4 PM (India time)');
 });
 
 
@@ -517,4 +517,25 @@ test('delivery repair explains invalid old terms without claiming partly overlap
   `);
   assert.match(f.element('conversation').innerHTML,/prior delivery interval no longer fits the revised household windows/i);
   assert.doesNotMatch(f.element('conversation').innerHTML,/windows do not overlap/i);
+});
+
+
+test('delivery windows use a short date and unambiguous India-time ranges with minutes', () => {
+  const f=fixture();
+  for(const [start,end,expected] of [
+    ['2026-10-28T14:00:00+05:30','2026-10-28T16:00:00+05:30','28 Oct · 2–4 PM (India time)'],
+    ['2026-10-28T11:30:00+05:30','2026-10-28T14:15:00+05:30','28 Oct · 11:30 AM–2:15 PM (India time)'],
+    ['2026-10-28T14:05:00+05:30','2026-10-28T16:45:00+05:30','28 Oct · 2:05–4:45 PM (India time)'],
+    ['2026-10-27T23:30:00Z','2026-10-28T01:30:00Z','28 Oct · 5–7 AM (India time)'],
+  ]) {
+    f.context.windowValue={delivery_start:start,delivery_end:end};
+    assert.equal(f.evaluate('deliveryWindow(globalThis.windowValue)'),expected);
+    assert.equal(f.context.windowValue.delivery_start,start,'Formatting must preserve exported timestamps');
+  }
+});
+
+test('prompt names the controlled home in short sentences while retaining its area and ID', () => {
+  const f=fixture();
+  f.evaluate("state.result.world.agents=[{id:'A17',name:'Yash (Kandivali)',role:'seller',min_price:6}];renderOwn();");
+  assert.equal(f.element('prompt-help').textContent,'You control Yash’s home (A17, Kandivali). It sells spare solar energy.');
 });

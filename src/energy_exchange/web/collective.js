@@ -15,14 +15,23 @@ const agents = updated => (updated && state.result?.updated_world?.agents || sta
 const agentById = (id, updated = false) => agents(updated).find(a => a.id === id);
 const currentRun = () => state.result && (state.view === 'baseline' ? state.result.baseline : (state.result.intervention || state.result.baseline));
 const currentEvents = () => currentRun()?.events || [];
+function indiaTime(value) {
+  if(!value||!/(Z|[+-]\d{2}:\d{2})$/.test(String(value)))return null;
+  const instant=Date.parse(value);if(!Number.isFinite(instant))return null;
+  const india=new Date(instant+330*60*1000),hours=india.getUTCHours(),minutes=india.getUTCMinutes();
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return {date:`${india.getUTCDate()} ${months[india.getUTCMonth()]}`,day:india.toISOString().slice(0,10),clock:`${hours%12||12}${minutes?':'+String(minutes).padStart(2,'0'):''}`,period:hours<12?'AM':'PM'};
+}
 function timestamp(value) {
-  if(!value)return 'Unspecified';
-  const text=String(value),zone=text.match(/(Z|[+-]\d{2}:\d{2})$/)?.[1];
-  return `${text.slice(0,10)} ${text.slice(11,16)}${zone?' UTC'+(zone==='Z'?'+00:00':zone):''}`;
+  const time=indiaTime(value);
+  return time?`${time.date} · ${time.clock} ${time.period} (India time)`:'Unspecified';
 }
 function deliveryWindow(value) {
   const start=value?.delivery_start || value?.interval_start,end=value?.delivery_end || value?.interval_end;
-  return start&&end?`${timestamp(start)} to ${timestamp(end)}`:'Delivery window not recorded';
+  const first=indiaTime(start),last=indiaTime(end);
+  if(!first||!last)return 'Delivery window not recorded';
+  if(first.day!==last.day)return `${timestamp(start)} to ${timestamp(end)}`;
+  return `${first.date} · ${first.clock}${first.period===last.period?'':' '+first.period}–${last.clock} ${last.period} (India time)`;
 }
 function policyValue(field,value) {
   if(field==='time_price')return value?`₹${fmt(value.floor)}/kWh after ${timestamp(value.after)}`:'No later price';
@@ -188,7 +197,8 @@ function renderOwn() {
   if(!a) return;
   $('own-name').textContent=a.name || a.id; $('own-id').textContent=`${a.id} · ${a.role==='seller'?'Solar seller':'Energy buyer'}`;
   $('own-role').textContent=a.role==='seller'?'SELLER':'BUYER';
-  $('prompt-help').textContent=`You are guiding ${a.name || 'Home'} (${a.id}), which ${a.role==='seller'?'sells spare solar energy':'buys energy'}.`;
+  const nameArea=a.name?.match(/^(.*?)\s*\(([^)]+)\)$/),name=nameArea?.[1]?.trim() || a.name,identity=[a.id,nameArea?.[2]].filter(Boolean).join(', ');
+  $('prompt-help').textContent=`You control ${name?name+'’s':'your'} home (${identity}). It ${a.role==='seller'?'sells spare solar energy':'buys energy'}.`;
   $('instruction').placeholder='Type your instruction here…';
   suggestedInstructions(a).forEach((example,index)=>{$(`example-${index}`).textContent=example.label;});
   $('own-context').textContent=typeof a.context==='string'?a.context:'Synthetic household preferences for this research experiment.';
