@@ -1,151 +1,225 @@
 {
-  "date": "2026-10-27",
+  "date": "2026-10-30",
+  "source_commit": "c9a559ebcc8eac358772882be6de0f131f08885d",
   "python_tests": {
-    "passed": 99,
+    "passed": 155,
     "failed": 0,
-    "command": ".venv/bin/python -m unittest discover -s tests -v"
+    "command": ".venv/bin/python -m unittest discover -s tests -p 'test_*.py' -q"
   },
   "javascript_tests": {
-    "passed": 28,
+    "passed": 54,
     "failed": 0,
     "command": "node --test tests/test_collective_ui.cjs tests/collective_streamlit_bridge.test.js"
   },
   "scenario_cases": {
-    "passed": 54,
+    "passed": 24,
     "failed": 0,
-    "runs": 108,
-    "locally_stable": 84,
-    "round_limited": 24,
-    "file": "scenario-matrix.json"
+    "populations": [
+      20,
+      50,
+      100
+    ],
+    "discovery": [
+      "local",
+      "open"
+    ],
+    "scenarios": [
+      "noop",
+      "reserve",
+      "price",
+      "time"
+    ],
+    "file": "refined-scenario-matrix.json"
   },
-  "browser": {
-    "local_fastapi": "http://127.0.0.1:8766/",
-    "local_streamlit": "http://127.0.0.1:8767/",
-    "sample_baseline_kwh": 50.1,
-    "sample_intervention_kwh": 51.15,
-    "affected_households": 4,
-    "indirect_households": 1,
-    "intervention_messages": 10,
-    "intervention_events": 28,
-    "comparison_graphs_verified": 2,
-    "streamlit_open_100_households": {
-      "kwh": 120,
-      "messages": 1143,
-      "rounds": 9,
-      "events": 1749,
-      "status": "locally_stable"
+  "live_llm": {
+    "model": "gpt-6-luna",
+    "translation_cases_passed": 7,
+    "translation_cases_failed": 0,
+    "file": "refined-llm-evaluation.json",
+    "planner_source": "llm",
+    "planner_version": "household-price-planner-v2",
+    "planner_usage": {
+      "input_tokens": 5107,
+      "output_tokens": 476
     },
-    "console_errors_observed": 0
+    "planner_estimated_uncached_usd": 0.0007487,
+    "pricing_source": "https://developers.openai.com/api/docs/models/gpt-6-luna"
   },
-  "exports": {
-    "complete_experiment_verified": true,
-    "trace_matches_experiment": true,
-    "ledger_matches_experiment": true,
-    "trace_events": 28,
-    "ledger_rows": 56,
-    "browser_note": "Codex in-app browser cancelled some direct downloads. The app provides complete export text as a fallback; all three payloads were extracted from that visible interface and independently verified."
+  "sample": {
+    "file": "sample-experiment.json",
+    "controlled_home": "A17",
+    "change": {
+      "reserve_kwh": 3
+    },
+    "baseline_metrics": {
+      "committed_kwh": 56.42,
+      "trade_count": 30,
+      "unfilled_demand_kwh": 35.58,
+      "unused_surplus_kwh": 25.38,
+      "mean_price": 6.6752,
+      "median_price": 6.725,
+      "welfare": 89.185,
+      "payments": 376.64,
+      "message_count": 730,
+      "rounds": 10,
+      "status": "locally_stable",
+      "hard_constraint_violations": 0,
+      "duplicate_reservations": 0,
+      "released_count": 21,
+      "runtime_seconds": 0.1386
+    },
+    "intervention_metrics": {
+      "committed_kwh": 55.42,
+      "trade_count": 30,
+      "unfilled_demand_kwh": 36.58,
+      "unused_surplus_kwh": 25.38,
+      "mean_price": 6.6756,
+      "median_price": 6.725,
+      "welfare": 88.935,
+      "payments": 369.99,
+      "message_count": 22,
+      "rounds": 3,
+      "status": "locally_stable",
+      "hard_constraint_violations": 0,
+      "duplicate_reservations": 0,
+      "released_count": 1,
+      "runtime_seconds": 0.0239
+    },
+    "verify_result": [],
+    "engine_source_sha256": "sha256:f4c2bf790f5413d01cc447e31bc149326b5337b56124279ca60117b9a52f0593",
+    "checksum_version": "canonical-json-numbers-v2",
+    "browser_json_round_trip": "Passed with actual Node JSON.parse and JSON.stringify; unchanged trade ledgers"
   },
-  "engine_source_sha256": "230633547b130a046307d62f4d2d4f4336411eff6c9e5dfbe242e1387685d3fe",
-  "upstream_commit": "0eea2ab1a7015e2cc6aa536d20a7ebd7c7875a41",
+  "local_browser": {
+    "fastapi": "http://127.0.0.1:8766/",
+    "streamlit": "http://127.0.0.1:8767/",
+    "checked": [
+      "messy instruction translated by live LLM",
+      "party clarification blocks confirmation",
+      "confirmed reserve change",
+      "real price counteroffers and acceptance in stage 4",
+      "A22 inspection retains A17 control",
+      "desktop graph labels"
+    ],
+    "screen_reader_tested": false
+  },
+  "review": {
+    "claude": "Claude Fable 5.1 Ultracode desktop reviewed PDF requirements and engine approach",
+    "independent": "All reported engine/UI/service findings resolved; targeted re-review cleared catalog planner and unit/condition grounding"
+  },
   "limitations": [
-    "No tested generated world reached a cycle.",
-    "Deterministic policy grammar, no LLM parser.",
-    "One fixed interval; zero risk and shortfall penalties.",
-    "Conceptual NandaTown reuse; collective engine does not import NandaTown runtime.",
-    "Synthetic negotiation only; no physical grid, live customers, money transfer, or settlement."
+    "Synthetic negotiation only; no physical electricity transfer or payment settlement.",
+    "One flexible energy pool per home within a delivery window; no power or hourly-device limits.",
+    "Local stability refers to the bounded recorded strategy and permitted replacements, not a global optimum or Nash equilibrium.",
+    "Tata/REP rules, live meter/weather data and role switching are not implemented.",
+    "Public LLM call guards are per server disk; cache loss or deployment resets are not an account-level billing cap.",
+    "Natural-language interpretation still requires the visitor to check and confirm its meaning."
   ],
-  "review": "All six independent engine findings resolved; SVG comparison visibility corrected with a regression test.",
   "hosted_streamlit": {
     "url": "https://energy-exchange-collective.streamlit.app/",
-    "verified_date": "2026-10-27",
-    "tested_source_commit": "ede0377caecbf7605c9540a83cc8227cd8abbb25",
-    "branch": "main",
-    "entry_point": "deploy/collective/app.py",
-    "python": "3.12.15",
-    "requirements": "deploy/collective/requirements.txt",
-    "baseline_50_households": {
-      "kwh": 50.1,
-      "messages": 119,
-      "rounds": 4,
-      "events": 274
+    "status": "passed",
+    "checked": [
+      "live LLM translation with explicit confirmation",
+      "party clarification with no Apply control",
+      "recorded price offers and counteroffers with acceptance",
+      "LLM strategy source visible",
+      "same-world bargaining and midpoint comparison",
+      "390px phone layout without horizontal overflow"
+    ],
+    "mobile": {
+      "viewport_width": 390,
+      "document_scroll_width": 390,
+      "main_control_font_px": 18
     },
-    "sample_policy_intervention": {
-      "kwh": 51.15,
-      "affected_households": 4,
-      "indirect_households": 1,
-      "messages": 10,
-      "rounds": 3,
-      "events": 28,
-      "status": "locally_stable"
+    "export_fix": "Fresh browser export validates all checksums and deterministic decisions offline; no API calls used for replay.",
+    "source_commit": "c9a559ebcc8eac358772882be6de0f131f08885d",
+    "file": "hosted-experiment.json",
+    "engine_version": "0.2.1",
+    "checksum_version": "canonical-json-numbers-v2",
+    "strategy_source": "llm",
+    "verify_result": [],
+    "baseline_metrics": {
+      "committed_kwh": 52.2,
+      "trade_count": 31,
+      "unfilled_demand_kwh": 39.8,
+      "unused_surplus_kwh": 29.6,
+      "mean_price": 6.6318,
+      "median_price": 6.65,
+      "welfare": 84.78,
+      "payments": 346.18,
+      "message_count": 676,
+      "rounds": 10,
+      "status": "locally_stable",
+      "hard_constraint_violations": 0,
+      "duplicate_reservations": 0,
+      "released_count": 35,
+      "runtime_seconds": 0.4667
     },
-    "comparison_graphs_visible": 2,
-    "open_100_households": {
-      "kwh": 120,
-      "messages": 1143,
-      "rounds": 9,
-      "events": 1749,
-      "rendered_household_nodes": 100,
-      "status": "locally_stable"
+    "intervention_metrics": {
+      "committed_kwh": 54.2,
+      "trade_count": 34,
+      "unfilled_demand_kwh": 37.8,
+      "unused_surplus_kwh": 26.6,
+      "mean_price": 6.6284,
+      "median_price": 6.65,
+      "welfare": 87.105,
+      "payments": 359.26,
+      "message_count": 69,
+      "rounds": 5,
+      "status": "locally_stable",
+      "hard_constraint_violations": 0,
+      "duplicate_reservations": 0,
+      "released_count": 2,
+      "runtime_seconds": 0.1835
     },
-    "console_errors_observed": 0,
-    "screenshot": "../assets/collective-hosted.jpg",
-    "visibility": "public and searchable, verified in Streamlit Sharing settings"
+    "method_comparison": {
+      "world_checksum": "sha256:d4c566f0135552c6e38ab886031129beede94f40d182128c8fbdc2d41391dea5",
+      "note": "Same household profiles, delivery windows and change. Each method forms its own initial allocation. These figures do not establish a generally better method.",
+      "baseline": {
+        "bargaining": {
+          "committed_kwh": 52.2,
+          "unfilled_demand_kwh": 39.8,
+          "payments": 346.18,
+          "message_count": 676
+        },
+        "midpoint": {
+          "committed_kwh": 58.16,
+          "unfilled_demand_kwh": 33.84,
+          "payments": 391.34,
+          "message_count": 201
+        }
+      },
+      "intervention": {
+        "bargaining": {
+          "committed_kwh": 54.2,
+          "unfilled_demand_kwh": 37.8,
+          "payments": 359.26,
+          "message_count": 69
+        },
+        "midpoint": {
+          "committed_kwh": 58.16,
+          "unfilled_demand_kwh": 33.84,
+          "payments": 391.34,
+          "message_count": 8
+        }
+      }
+    },
+    "screenshots": [
+      "../assets/collective-hosted.jpg",
+      "../assets/collective-mobile.jpg",
+      "../assets/collective-clarification.jpg",
+      "../assets/collective-comparison.jpg"
+    ]
   },
-  "ui_simplification": {
-    "source_commit": "f4c5e3de385e302a7b31c164f3710bef22e259a8",
-    "date": "2026-10-27",
-    "default_panels": [
-      "Instruction",
-      "Neighbourhood simulation"
-    ],
-    "desktop_viewport": [
-      1280,
-      900
-    ],
-    "mobile_viewport": [
-      390,
-      844
-    ],
-    "horizontal_overflow": false,
-    "visible_buttons_minimum_height_px": 44,
-    "instruction_font_px": 18,
-    "keyboard_network_skip_target": "timeline",
-    "role_example_parser_checks": 150,
-    "local_fastapi_checked": [
-      "empty instruction disabled",
-      "example fills without applying",
-      "rejected unsupported clause",
-      "sample instruction review and apply",
-      "before/after comparison",
-      "replay",
-      "buyer examples",
-      "settings invalidation and rebuild",
-      "keyboard skip"
-    ],
-    "local_streamlit_checked": [
-      "reserve example review",
-      "sample instruction apply",
-      "full export: 50.10 kWh before, 51.15 kWh after, 28 intervention events"
-    ],
-    "review": "Claude desktop usability review incorporated. Independent code review found no remaining high or medium issues after fixes. Actual screen-reader testing was not performed.",
-    "hosted_url": "https://energy-exchange-collective.streamlit.app/",
-    "hosted_checked": [
-      "fresh landing page",
-      "sample instruction preview and apply: 51.15 kWh, 4 homes affected",
-      "two comparison graphs",
-      "repeat-change explanation",
-      "stacked comparison at 390 px",
-      "no console errors observed"
-    ],
-    "github_ci": {
-      "url": "https://github.com/dhve/energy-exchange-collective/actions/runs/40607302744",
-      "conclusion": "success",
-      "jobs": [
-        "collective (3.11)",
-        "collective (3.12)",
-        "collective (3.14)",
-        "legacy"
-      ]
-    }
+  "github_ci": {
+    "url": "https://github.com/dhve/energy-exchange-collective/actions/runs/41154064899",
+    "head_sha": "c9a559ebcc8eac358772882be6de0f131f08885d",
+    "conclusion": "success",
+    "jobs": [
+      "collective (3.11)",
+      "collective (3.12)",
+      "collective (3.14)",
+      "legacy"
+    ]
   }
 }

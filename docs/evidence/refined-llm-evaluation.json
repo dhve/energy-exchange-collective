@@ -1,0 +1,224 @@
+{
+  "model": "gpt-6-luna",
+  "date": "2026-10-30",
+  "cases": [
+    {
+      "text": "plz keep 3kwh at home dont sell it",
+      "agent_id": "A17",
+      "expected": "ready",
+      "actual": "ready",
+      "passed": true,
+      "result": {
+        "changes": {
+          "reserve_kwh": 3
+        },
+        "recognized": [
+          "reserve_kwh"
+        ],
+        "errors": [],
+        "requires_confirmation": true,
+        "normalized_prompt": "Set the energy kept at home (reserve) to 3 kWh.",
+        "clarification_questions": [],
+        "assumptions": [],
+        "parser_version": "household-translator-v2",
+        "translation": {
+          "model": "gpt-6-luna",
+          "prompt_version": "household-translator-v2",
+          "usage": {
+            "input_tokens": 953,
+            "output_tokens": 71
+          },
+          "mode": "llm",
+          "status": "ready"
+        }
+      }
+    },
+    {
+      "text": "birthday party tonight so keep more energy at home",
+      "agent_id": "A17",
+      "expected": "clarify",
+      "actual": "clarify",
+      "passed": true,
+      "result": {
+        "changes": {},
+        "recognized": [],
+        "errors": [],
+        "requires_confirmation": true,
+        "normalized_prompt": "",
+        "clarification_questions": [
+          "How many kWh should I keep at home, and what delivery time window tonight do you mean? Please give a start and end time."
+        ],
+        "assumptions": [],
+        "parser_version": "household-translator-v2",
+        "translation": {
+          "model": "gpt-6-luna",
+          "prompt_version": "household-translator-v2",
+          "usage": {
+            "input_tokens": 950,
+            "output_tokens": 59
+          },
+          "mode": "llm",
+          "status": "needs_clarification"
+        }
+      }
+    },
+    {
+      "text": "fully charge my EV before my trip",
+      "agent_id": "A02",
+      "expected": "clarify",
+      "actual": "clarify",
+      "passed": true,
+      "result": {
+        "changes": {},
+        "recognized": [],
+        "errors": [],
+        "requires_confirmation": true,
+        "normalized_prompt": "",
+        "clarification_questions": [
+          "How many kWh should be delivered, and what explicit delivery window should I use? \u201cFully charge my EV before my trip\u201d does not specify either."
+        ],
+        "assumptions": [],
+        "parser_version": "household-translator-v2",
+        "translation": {
+          "model": "gpt-6-luna",
+          "prompt_version": "household-translator-v2",
+          "usage": {
+            "input_tokens": 946,
+            "output_tokens": 62
+          },
+          "mode": "llm",
+          "status": "needs_clarification"
+        }
+      }
+    },
+    {
+      "text": "lower my price by 0.50 rupees per kWh please",
+      "agent_id": "A17",
+      "expected": "ready",
+      "actual": "ready",
+      "passed": true,
+      "result": {
+        "changes": {
+          "min_price": 6.0
+        },
+        "recognized": [
+          "min_price"
+        ],
+        "errors": [],
+        "requires_confirmation": true,
+        "normalized_prompt": "Decrease the minimum selling price by INR 0.50/kWh.",
+        "clarification_questions": [],
+        "assumptions": [],
+        "parser_version": "household-translator-v2",
+        "translation": {
+          "model": "gpt-6-luna",
+          "prompt_version": "household-translator-v2",
+          "usage": {
+            "input_tokens": 955,
+            "output_tokens": 78
+          },
+          "mode": "llm",
+          "status": "ready"
+        }
+      }
+    },
+    {
+      "text": "sell 4 kWh 8\u201310 PM minimum \u20b97/kWh, accept \u20b96/kWh after 9 PM",
+      "agent_id": "A17",
+      "expected": "ready",
+      "actual": "ready",
+      "passed": true,
+      "result": {
+        "changes": {
+          "max_offer_kwh": 4,
+          "interval_start": "2026-10-28T20:00:00+05:30",
+          "interval_end": "2026-10-28T22:00:00+05:30",
+          "min_price": 7,
+          "time_price": {
+            "after": "2026-10-28T21:00:00+05:30",
+            "floor": 6
+          }
+        },
+        "recognized": [
+          "max_offer_kwh",
+          "interval_start",
+          "interval_end",
+          "min_price",
+          "time_price"
+        ],
+        "errors": [],
+        "requires_confirmation": true,
+        "normalized_prompt": "Set the seller's offer to 4 kWh for delivery from 8:00 PM to 10:00 PM on 2026-10-28 (Asia/Kolkata), with a minimum price of \u20b97/kWh and a lower price of \u20b96/kWh for delivery after 9:00 PM.",
+        "clarification_questions": [],
+        "assumptions": [
+          "Delivery uses the displayed synthetic date and Asia/Kolkata time. Energy can move within that window; device power limits are not modelled."
+        ],
+        "parser_version": "household-translator-v2",
+        "translation": {
+          "model": "gpt-6-luna",
+          "prompt_version": "household-translator-v2",
+          "usage": {
+            "input_tokens": 966,
+            "output_tokens": 261
+          },
+          "mode": "llm",
+          "status": "ready"
+        }
+      }
+    },
+    {
+      "text": "sell 3 kWh unless it rains",
+      "agent_id": "A17",
+      "expected": "unsupported",
+      "actual": "unsupported",
+      "passed": true,
+      "result": {
+        "changes": {},
+        "recognized": [],
+        "errors": [
+          "This demo cannot apply weather conditions or exceptions such as \u201cunless\u201d. Remove that condition or state an exact energy, price or delivery-time rule. Nothing has been applied."
+        ],
+        "requires_confirmation": true,
+        "normalized_prompt": "",
+        "clarification_questions": [],
+        "assumptions": [],
+        "parser_version": "household-translator-v2",
+        "translation": {
+          "mode": "grammar",
+          "status": "unsupported"
+        }
+      }
+    },
+    {
+      "text": "please keep 3 kW at home",
+      "agent_id": "A17",
+      "expected": "clarify",
+      "actual": "clarify",
+      "passed": true,
+      "result": {
+        "changes": {},
+        "recognized": [],
+        "errors": [
+          "Not supported: 3 kW is power and cannot be converted to kWh without a delivery duration."
+        ],
+        "requires_confirmation": true,
+        "normalized_prompt": "The request to keep 3 kW at home cannot be translated into a reserve energy quantity.",
+        "clarification_questions": [
+          "How many kWh should be kept at home? The request gives power in kW, not energy in kWh."
+        ],
+        "assumptions": [],
+        "parser_version": "household-translator-v2",
+        "translation": {
+          "model": "gpt-6-luna",
+          "prompt_version": "household-translator-v2",
+          "usage": {
+            "input_tokens": 949,
+            "output_tokens": 92
+          },
+          "mode": "llm",
+          "status": "needs_clarification"
+        }
+      }
+    }
+  ]
+}

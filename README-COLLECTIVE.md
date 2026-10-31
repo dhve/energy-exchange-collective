@@ -105,6 +105,8 @@ Detailed results include household gains and losses, event traces, and trade led
 
 Complete research exports include private synthetic profiles, policy changes, and strategy provenance. Changed kWh counts removed plus added trades, while matched-energy difference measures the net change. Exports contain no API credentials.
 
+New exports use `canonical-json-numbers-v2` checksums, so browser serialization of `1.0` as `1` does not break verification. Native legacy exports retain their original verification mode. Older browser exports with mismatched checksums must be regenerated.
+
 Run the collective checks after installing the test dependency:
 
 ```bash

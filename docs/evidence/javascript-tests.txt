@@ -1,10 +1,62 @@
-JavaScript verification summary
-
-Source commit: f4c5e3de385e302a7b31c164f3710bef22e259a8
-Command: node --test tests/test_collective_ui.cjs tests/collective_streamlit_bridge.test.js
-Result: 28 passed, 0 failed.
-
-Verified locally and by each collective GitHub Actions job.
-CI: https://github.com/dhve/energy-exchange-collective/actions/runs/40607302744
-
-The added checks cover role-specific suggestions, empty input, settings invalidation, truthful outcomes and limits, repeated instructions, and unresolved results.
+✔ standalone FastAPI page uses fetch, without Streamlit handshake (2.240625ms)
+✔ bridge waits for render, sends one JSON request and resolves matching response (1.581792ms)
+✔ bridge ignores foreign sources and rejects validated server errors (0.88325ms)
+✔ bridge has bounded pending requests and rejects unsupported routes (0.642167ms)
+✔ bridge needs no eval or remote code/assets (0.494708ms)
+✔ editing instruction while preview is pending invalidates its eventual response (4.93575ms)
+✔ editing structured policy-value invalidates a displayed draft (11.563ms)
+✔ editing structured policy-field invalidates a displayed draft (1.0025ms)
+✔ selecting another controlled agent does not rewrite the completed experiment impact (1.794292ms)
+✔ no-change control requests a paired run with the original policy (0.995ms)
+✔ utility chart reads the engine per-agent summaries (0.677792ms)
+✔ message and round metrics use engine counters (0.674125ms)
+✔ impact uses the engine causal classification when supplied (0.607666ms)
+✔ dragged household positions remain fixed across replay renders (0.733125ms)
+✔ round stepping moves to the adjacent recorded round (0.697666ms)
+✔ comparison visibility changes the SVG hidden attribute (0.99075ms)
+✔ exports expose a persistent direct download link containing the displayed data (56.680667ms)
+✔ suggested instructions match the selected household role (1.391583ms)
+✔ choosing an example clears a prior confirmation without applying any change (1.184042ms)
+✔ an empty instruction is caught before a request is sent (1.30075ms)
+✔ examples and review are disabled while changed settings need rebuilding (0.879375ms)
+✔ plain outcome reports a decrease correctly and discloses a search limit (1.25025ms)
+✔ an initial run hides comparison and affected-home controls (0.85575ms)
+✔ a message budget stop is described as a message limit (0.787375ms)
+✔ a no-change review identifies unchanged rules without promising unchanged trades (0.900666ms)
+✔ reviewing another change explains that it replaces the last intervention (1.017875ms)
+✔ replay does not describe an unresolved simulation as a search limit (1.195083ms)
+✔ an unresolved experiment does not present provisional trades as an outcome (3.749083ms)
+✔ clarification keeps the original instruction and provides no apply path (1.496875ms)
+✔ translated preview shows interpretation and assumptions but submits only policy fields (1.527583ms)
+✔ five replay stages point to real events and starting agreements stay frozen (1.595583ms)
+✔ a missing affected agreement stage explains the absence without inventing a release (1.33825ms)
+✔ comparison always uses starting agreements instead of matching negotiation rounds (1.278083ms)
+✔ conversation uses actual recorded amounts, delivery window and authoritative reason (2.677458ms)
+✔ inspecting another household preserves the visible controlled name and ID (1.178875ms)
+✔ delivery and time price summaries use declared timezone terms (1.148ms)
+✔ network separates directed messages from agreements and identifies every home (3.723375ms)
+✔ inactive and exhausted homes have different explanations (1.360042ms)
+✔ household results derive energy, payment and utility changes from actual ledgers (1.027916ms)
+✔ method disclosure distinguishes frozen LLM planning and rules fallback (1.14675ms)
+✔ revised requirement stage shows the recorded before and after policy values (1.19925ms)
+✔ method comparison displays recorded results for the same world and current run view (2.345292ms)
+✔ method comparison never substitutes starting metrics for an unavailable intervention comparison (0.990167ms)
+✔ clarification also displays unsupported clauses so an answer cannot imply they will apply (0.896166ms)
+✔ conversation explains recorded constraint codes without inventing household quotes (1.3625ms)
+✔ starting agreements use original profiles in both inspection and node availability (3.084583ms)
+✔ fixed comparison graph explicitly uses original household profiles after a policy change (3.117875ms)
+✔ affected stage excludes replacements caused by later negotiations and stays before offers (3.6075ms)
+✔ offers stage displays a recorded exchange through its response and matching allocation only (1.950042ms)
+✔ delivery repair explains invalid old terms without claiming partly overlapping windows do not overlap (2.504583ms)
+✔ delivery windows use a short date and unambiguous India-time ranges with minutes (0.950208ms)
+✔ prompt names the controlled home in short sentences while retaining its area and ID (1.126375ms)
+✔ fifty desktop home IDs avoid other nodes and labels while replay positions stay fixed (5.203333ms)
+✔ final conversation explains termination plainly while keeping the recorded audit reason (1.381791ms)
+ℹ tests 54
+ℹ suites 0
+ℹ pass 54
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 252.709209

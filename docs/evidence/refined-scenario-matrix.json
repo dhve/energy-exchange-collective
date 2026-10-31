@@ -1,0 +1,639 @@
+{
+  "method": "bargaining",
+  "strategy_source": "rules",
+  "source_commit": "c9a559ebcc8eac358772882be6de0f131f08885d",
+  "cases": [
+    {
+      "config": {
+        "population": 20,
+        "seed": 42,
+        "topology": "local",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "reserve_kwh": 2
+        }
+      },
+      "scenario": "noop",
+      "baseline_status": "locally_stable",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 19.26,
+      "after_kwh": 19.26,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 20,
+        "seed": 42,
+        "topology": "local",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "reserve_kwh": 3
+        }
+      },
+      "scenario": "reserve",
+      "baseline_status": "locally_stable",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 19.26,
+      "after_kwh": 19.26,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 20,
+        "seed": 42,
+        "topology": "local",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "min_price": 9
+        }
+      },
+      "scenario": "price",
+      "baseline_status": "locally_stable",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 19.26,
+      "after_kwh": 19.26,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 20,
+        "seed": 42,
+        "topology": "local",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "interval_start": "2026-10-28T15:00:00+05:30",
+          "interval_end": "2026-10-28T17:00:00+05:30"
+        }
+      },
+      "scenario": "time",
+      "baseline_status": "locally_stable",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 19.26,
+      "after_kwh": 19.26,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 20,
+        "seed": 42,
+        "topology": "open",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "reserve_kwh": 2
+        }
+      },
+      "scenario": "noop",
+      "baseline_status": "locally_stable",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 20.59,
+      "after_kwh": 20.59,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 20,
+        "seed": 42,
+        "topology": "open",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "reserve_kwh": 3
+        }
+      },
+      "scenario": "reserve",
+      "baseline_status": "locally_stable",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 20.59,
+      "after_kwh": 19.59,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 20,
+        "seed": 42,
+        "topology": "open",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "min_price": 9
+        }
+      },
+      "scenario": "price",
+      "baseline_status": "locally_stable",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 20.59,
+      "after_kwh": 18.3,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 20,
+        "seed": 42,
+        "topology": "open",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "interval_start": "2026-10-28T15:00:00+05:30",
+          "interval_end": "2026-10-28T17:00:00+05:30"
+        }
+      },
+      "scenario": "time",
+      "baseline_status": "locally_stable",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 20.59,
+      "after_kwh": 20.59,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 50,
+        "seed": 42,
+        "topology": "local",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "reserve_kwh": 2
+        }
+      },
+      "scenario": "noop",
+      "baseline_status": "locally_stable",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 60.24,
+      "after_kwh": 60.24,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 50,
+        "seed": 42,
+        "topology": "local",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "reserve_kwh": 3
+        }
+      },
+      "scenario": "reserve",
+      "baseline_status": "locally_stable",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 60.24,
+      "after_kwh": 59.74,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 50,
+        "seed": 42,
+        "topology": "local",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "min_price": 9
+        }
+      },
+      "scenario": "price",
+      "baseline_status": "locally_stable",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 60.24,
+      "after_kwh": 56.74,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 50,
+        "seed": 42,
+        "topology": "local",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "interval_start": "2026-10-28T15:00:00+05:30",
+          "interval_end": "2026-10-28T17:00:00+05:30"
+        }
+      },
+      "scenario": "time",
+      "baseline_status": "locally_stable",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 60.24,
+      "after_kwh": 60.24,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 50,
+        "seed": 42,
+        "topology": "open",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "reserve_kwh": 2
+        }
+      },
+      "scenario": "noop",
+      "baseline_status": "round_limited",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 63.17,
+      "after_kwh": 63.17,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 50,
+        "seed": 42,
+        "topology": "open",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "reserve_kwh": 3
+        }
+      },
+      "scenario": "reserve",
+      "baseline_status": "round_limited",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 63.17,
+      "after_kwh": 63.52,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 50,
+        "seed": 42,
+        "topology": "open",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "min_price": 9
+        }
+      },
+      "scenario": "price",
+      "baseline_status": "round_limited",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 63.17,
+      "after_kwh": 62.95,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 50,
+        "seed": 42,
+        "topology": "open",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "interval_start": "2026-10-28T15:00:00+05:30",
+          "interval_end": "2026-10-28T17:00:00+05:30"
+        }
+      },
+      "scenario": "time",
+      "baseline_status": "round_limited",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 63.17,
+      "after_kwh": 63.18,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 100,
+        "seed": 42,
+        "topology": "local",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "reserve_kwh": 2
+        }
+      },
+      "scenario": "noop",
+      "baseline_status": "locally_stable",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 120.0,
+      "after_kwh": 120.0,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 100,
+        "seed": 42,
+        "topology": "local",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "reserve_kwh": 3
+        }
+      },
+      "scenario": "reserve",
+      "baseline_status": "locally_stable",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 120.0,
+      "after_kwh": 120.0,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 100,
+        "seed": 42,
+        "topology": "local",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "min_price": 9
+        }
+      },
+      "scenario": "price",
+      "baseline_status": "locally_stable",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 120.0,
+      "after_kwh": 120.0,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 100,
+        "seed": 42,
+        "topology": "local",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "interval_start": "2026-10-28T15:00:00+05:30",
+          "interval_end": "2026-10-28T17:00:00+05:30"
+        }
+      },
+      "scenario": "time",
+      "baseline_status": "locally_stable",
+      "intervention_status": "locally_stable",
+      "baseline_kwh": 120.0,
+      "after_kwh": 120.0,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 100,
+        "seed": 42,
+        "topology": "open",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "reserve_kwh": 2
+        }
+      },
+      "scenario": "noop",
+      "baseline_status": "round_limited",
+      "intervention_status": "round_limited",
+      "baseline_kwh": 118.67,
+      "after_kwh": 120.0,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 100,
+        "seed": 42,
+        "topology": "open",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "reserve_kwh": 3
+        }
+      },
+      "scenario": "reserve",
+      "baseline_status": "round_limited",
+      "intervention_status": "round_limited",
+      "baseline_kwh": 118.67,
+      "after_kwh": 120.0,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 100,
+        "seed": 42,
+        "topology": "open",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "min_price": 9
+        }
+      },
+      "scenario": "price",
+      "baseline_status": "round_limited",
+      "intervention_status": "round_limited",
+      "baseline_kwh": 118.67,
+      "after_kwh": 120.0,
+      "invariant_errors": []
+    },
+    {
+      "config": {
+        "population": 100,
+        "seed": 42,
+        "topology": "open",
+        "max_rounds": 12,
+        "max_messages": 4000,
+        "utility_cap_kwh": 120,
+        "memory_enabled": true,
+        "price_tick": 0.05,
+        "negotiation_mode": "bargaining"
+      },
+      "intervention": {
+        "agent_id": "A17",
+        "scenario": "custom",
+        "changes": {
+          "interval_start": "2026-10-28T15:00:00+05:30",
+          "interval_end": "2026-10-28T17:00:00+05:30"
+        }
+      },
+      "scenario": "time",
+      "baseline_status": "round_limited",
+      "intervention_status": "round_limited",
+      "baseline_kwh": 118.67,
+      "after_kwh": 119.72,
+      "invariant_errors": []
+    }
+  ],
+  "passed": 24,
+  "failed": 0
+}
