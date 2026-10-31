@@ -201,18 +201,44 @@ function renderOwn() {
   $('policy-field').innerHTML=fields.map(f=>`<option value="${f}">${fieldNames[f]}</option>`).join('');
   if(fields.includes(prev)) $('policy-field').value=prev;
 }
+function frameWorld() {
+  const original=state.result?.world;
+  if(state.view==='baseline'||!state.result?.intervention||state.stage==='starting')return original;
+  const policyIndex=currentEvents().findIndex(event=>event.type==='policy_confirmed');
+  if(policyIndex>=0&&state.index<policyIndex)return original;
+  return state.result.updated_world || original;
+}
+function frameEvents() {
+  if(state.stage==='starting')return state.result?.baseline?.events || [];
+  return currentEvents().slice(0,state.index+1);
+}
+function recordedExchange(events,startIndex) {
+  if(startIndex<0)return {index:-1,event:null,startIndex:-1};
+  const first=events[startIndex],parties=new Set([first.actor_id,first.counterparty_id]);
+  let end=startIndex;
+  for(let index=startIndex+1;index<events.length;index++) {
+    const event=events[index];
+    if(['offer_sent','terminated','policy_confirmed'].includes(event.type))break;
+    if(!parties.has(event.actor_id)||!parties.has(event.counterparty_id))continue;
+    if(/counteroffer|price_counter|accepted|rejected|reserved|replaced|released/.test(event.type))end=index;
+    if(/provisional_reserved|offer_replaced|offer_rejected/.test(event.type))break;
+  }
+  return {index:end,event:events[end],startIndex};
+}
 function replayStages() {
   const events=currentEvents(),intervention=state.view!=='baseline'&&state.result?.intervention;
   const find=predicate=>{const index=events.findIndex(predicate);return {index,event:index<0?null:events[index]};};
   const policy=intervention?find(e=>e.type==='policy_confirmed'):{index:-1,event:null};
-  const affected=intervention?find(e=>/released|replaced/.test(e.type)):{index:-1,event:null};
-  const offers=find(e=>['offer_sent','counteroffer_sent','price_counter','price_counters','offer_accepted','offer_rejected'].includes(e.type));
+  const opening=find(e=>['offer_sent','counteroffer_sent','price_counter','price_counters','offer_accepted','offer_rejected'].includes(e.type));
+  const offers=recordedExchange(events,opening.index);
+  const repair=intervention&&policy.event?find((e,index)=>index>policy.index&&(opening.index<0||index<opening.index)&&/released|replaced/.test(e.type)&&e.caused_by?.includes(policy.event.id)):{index:-1,event:null};
+  const affected=repair.event?repair:{index:policy.index,event:null};
   const final={index:Math.max(0,events.length-1),event:events.at(-1)||null};
   return [
     {id:'starting',title:'Starting agreements',index:-1,event:null,explanation:'Original agreements before your change. These stay fixed as the reference.'},
     {id:'requirement',title:'Revised requirement',...policy,explanation:policy.event?recordedReason(policy.event):'No revised requirement is recorded. Review and apply an instruction to try a change.'},
-    {id:'affected',title:'Affected agreement',...affected,explanation:affected.event?recordedReason(affected.event):'No prior agreement was released or directly changed at this stage.'},
-    {id:'offers',title:'Offers and responses',...offers,explanation:offers.event?eventDescription(offers.event):'No offers or responses were recorded for this run.'},
+    {id:'affected',title:'Affected agreement',...affected,explanation:affected.event?recordedReason(affected.event):'No prior agreement was released or directly changed by the policy before negotiation.'},
+    {id:'offers',title:'Offers and responses',...offers,explanation:offers.event?`Recorded exchange, steps ${offers.startIndex+1} to ${offers.index+1}. ${eventDescription(offers.event)}`:'No offers or responses were recorded for this run.'},
     {id:'final',title:'Final allocation',...final,explanation:currentRun()?.status==='unresolved'?'The run did not produce a final allocation.':eventDescription(final.event)}
   ];
 }
@@ -247,7 +273,7 @@ function recordedReason(event) {
     over_budget:"the offer exceeds the buyer's remaining budget",
     over_supply:"the offer exceeds the seller's available energy after reserves and existing agreements",
     over_demand:"the offer exceeds the buyer's remaining energy requirement",
-    interval_mismatch:'the delivery windows do not overlap',
+    interval_mismatch:/released/.test(event.type)?'the prior delivery interval no longer fits the revised household windows':'the delivery windows do not overlap',
     deadline_passed:'the last permitted negotiation round has passed',
     price_below_floor:"the price is below the seller's minimum for these delivery terms",
     price_above_max:"the price is above the buyer's maximum",
@@ -271,8 +297,9 @@ function renderConversation() {
     return;
   }
   const messageTypes=['offer_sent','counteroffer_sent','price_counter','price_counters','offer_accepted','offer_rejected','provisional_reserved','provisional_released','offer_replaced'];
-  const list=event&&participants.length===2?currentEvents().slice(0,state.index+1).filter(e=>messageTypes.includes(e.type)&&participants.includes(e.actor_id)&&participants.includes(e.counterparty_id)).slice(-3):[];
-  $('conversation').innerHTML=list.length?`<h3>Active conversation · ${participants.map(esc).join(' ↔ ')}</h3>${list.map(e=>`<article class="conversation-entry"><strong>${esc(e.actor_id)} → ${esc(e.counterparty_id)} · ${esc(label(e.type))}</strong>${eventTerms(e)?`<p>${esc(eventTerms(e))}</p>`:''}<p>${esc(recordedReason(e))}</p></article>`).join('')}`:`<h3>${state.stage==='starting'?'Starting agreements':'Recorded response'}</h3><p>${esc(state.stage?replayStages().find(s=>s.id===state.stage)?.explanation:event?recordedReason(event):'Select Play or a replay stage to follow the homes. No conversation is active here.')}</p>`;
+  const exchange=state.stage==='offers'?replayStages().find(stage=>stage.id==='offers'):null;
+  const list=event&&participants.length===2?currentEvents().slice(exchange?.startIndex ?? 0,state.index+1).filter(e=>messageTypes.includes(e.type)&&participants.includes(e.actor_id)&&participants.includes(e.counterparty_id)).slice(exchange?-8:-3):[];
+  $('conversation').innerHTML=list.length?`<h3>${exchange?'Recorded exchange':'Active conversation'} · ${participants.map(esc).join(' ↔ ')}</h3>${list.map(e=>`<article class="conversation-entry"><strong>${esc(e.actor_id)} → ${esc(e.counterparty_id)} · ${esc(label(e.type))}</strong>${eventTerms(e)?`<p>${esc(eventTerms(e))}</p>`:''}<p>${esc(recordedReason(e))}</p></article>`).join('')}`:`<h3>${state.stage==='starting'?'Starting agreements':'Recorded response'}</h3><p>${esc(state.stage?replayStages().find(s=>s.id===state.stage)?.explanation:event?recordedReason(event):'Select Play or a replay stage to follow the homes. No conversation is active here.')}</p>`;
 }
 function translationDescription(translation) {
   const mode=translation.mode || 'unknown';
@@ -294,7 +321,7 @@ function renderFrame() {
   const trades=frameTrades();
   drawGraph($('graph'),trades,event,state.view==='baseline'?'Before your change':'After your change');
   if(state.view==='compare') {
-    drawGraph($('compare-graph'),state.result.baseline.trades || [],null,'Original starting agreements');
+    drawGraph($('compare-graph'),state.result.baseline.trades || [],null,'Original starting agreements',state.result.world);
   }
   renderInspector(); renderDecisionAudit(); renderLog();
 }
@@ -322,7 +349,7 @@ function positions() {
     map.set(a.id,{x:440+190*Math.cos(theta)+r*Math.cos(angle)+offset.x,y:290+172*Math.sin(theta)+r*Math.sin(angle)+offset.y});
   }); return map;
 }
-function drawGraph(svg,trades,event,caption) {
+function drawGraph(svg,trades,event,caption,world=frameWorld()) {
   svg.replaceChildren();
   const pos=positions(),delta=changed(),search=$('search').value.trim().toLowerCase(),only=$('only-affected').checked;
   const markerPrefix=svg.id || (svg===$('compare-graph')?'comparison':'main');
@@ -364,7 +391,7 @@ function drawGraph(svg,trades,event,caption) {
     edge(e.actor_id,e.counterparty_id,{stroke:release?'#a14738':message?'#79548f':'#315d49','stroke-width':2.5,'stroke-dasharray':message?'7 5':release?'3 4':'none','marker-end':`url(#${markerPrefix}-${kind})`,class:`event-edge ${message?'message-edge':release?'event-release':'event-accept'}`,opacity:.95});
   }
   const activeParties=new Set([event?.actor_id,event?.counterparty_id]);
-  for(const a of agents(state.view!=='baseline')) {
+  for(const a of world?.agents || []) {
     const point=pos.get(a.id);if(!point)continue;
     const affected=delta.affected.has(a.id),selected=a.id===state.selected,own=a.id===state.controlled,active=activeParties.has(a.id);
     const match=(!search||`${a.id} ${a.name}`.toLowerCase().includes(search))&&($('role-filter').value==='all'||$('role-filter').value===a.role),dim=!match||(only&&!affected&&!own);
@@ -393,16 +420,16 @@ function householdAvailability(a,trades) {
   return unfilled<=1e-7?'Energy requirement filled.':agreements.length?`${fmt(unfilled)} kWh still needed.`:`Not in an agreement; ${fmt(unfilled)} kWh still needed.`;
 }
 function renderInspector() {
-  const a=agentById(state.selected,state.view!=='baseline'); if(!a)return;
-  const relevant=currentEvents().slice(0,state.index+1).filter(e=>e.actor_id===a.id||e.counterparty_id===a.id),last=relevant.at(-1);
+  const a=frameWorld()?.agents?.find(agent=>agent.id===state.selected); if(!a)return;
+  const relevant=frameEvents().filter(e=>e.actor_id===a.id||e.counterparty_id===a.id),last=relevant.at(-1);
   const trades=frameTrades().filter(t=>t.seller_id===a.id||t.buyer_id===a.id);
   let memory=a.memory || [];
   if(!Array.isArray(memory))memory=Object.entries(memory).map(([id,text])=>({id,text}));
   $('inspection').innerHTML=`<div class="inspector-id"><span class="role-tag">${esc(a.role.toUpperCase())}</span><span class="tiny-label">${esc(a.id)}</span></div><h3>${esc(a.name || a.id)}</h3><h4>Hard constraints</h4>${boundHTML(a)}${a.conditional_price?`<div class="bound"><span>Bundle discount (private)</span><strong>₹${fmt(a.conditional_price.floor)} for ≥${fmt(a.conditional_price.minimum_kwh)} kWh</strong></div>`:''}<div class="bound"><span>Time window</span><strong>${esc(deliveryWindow(a))}</strong></div><p>${esc(householdAvailability(a,frameTrades()))}</p><h4>Reservations at this event</h4>${trades.length?trades.map(t=>`<div class="bound"><span>${esc(t.seller_id)} → ${esc(t.buyer_id)}</span><strong>${fmt(t.quantity_kwh)} kWh<br>₹${fmt(t.price)}/kWh<br><small>${esc(deliveryWindow(t))}</small></strong></div>`).join(''):'<p class="muted">No active reservation at this point.</p>'}<h4>Latest recorded decision</h4><p>${esc(last?recordedReason(last):'No decision recorded yet at this replay position.')}</p>${last?.rule_checks?`<p class="muted small">Checks: ${esc(Array.isArray(last.rule_checks)?last.rule_checks.join(', '):JSON.stringify(last.rule_checks))}</p>`:''}<details><summary>Private context & memory (${memory.length})</summary><div class="private">Research inspection only. Private context is not shared in agent messages.</div><p>${esc(typeof a.context==='string'?a.context:JSON.stringify(a.context))}</p>${memory.map(m=>`<div class="memory-record">${esc(m.text || m.content || JSON.stringify(m))}<small>Source ${esc(m.id || m.record_id || 'synthetic memory')} · ${state.config.memory_enabled?'Retrieval enabled':'Retrieval disabled'}</small>${m.preference?.type==='preferred_counterparty'?`<small>Soft preference: ${esc(m.preference.agent_id)} wins equal-value ties</small>`:''}</div>`).join('')}<p class="muted small">Memory can rank feasible alternatives. It cannot override a hard constraint.</p></details>`;
 }
 function renderDecisionAudit() {
-  const a=agentById(state.selected,state.view!=='baseline');if(!a)return;
-  const relevant=currentEvents().slice(0,state.index+1).filter(e=>e.actor_id===a.id||e.counterparty_id===a.id);
+  const a=frameWorld()?.agents?.find(agent=>agent.id===state.selected);if(!a)return;
+  const relevant=frameEvents().filter(e=>e.actor_id===a.id||e.counterparty_id===a.id);
   const decision=relevant.findLast(e=>e.utility_before&&a.id in e.utility_before),offer=relevant.at(-1);
   const retrieved=relevant.filter(e=>e.type==='profile_retrieved'&&e.actor_id===a.id);
   let html='';

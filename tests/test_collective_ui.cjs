@@ -281,7 +281,7 @@ function replayFixture(f) {
     state.result.baseline={events:[{id:'b1',type:'offer_sent',round:1}],trades:[{id:'t1',seller_id:'A17',buyer_id:'A02',quantity_kwh:2,price:6}]};
     state.result.intervention={events:[
       {id:'i1',type:'policy_confirmed',round:0,actor_id:'A17',reason:'Floor changed'},
-      {id:'i2',type:'provisional_released',round:0,actor_id:'A17',counterparty_id:'A02',trade_id:'t1',reason:'Price below new floor'},
+      {id:'i2',type:'provisional_released',caused_by:['i1'],round:0,actor_id:'A17',counterparty_id:'A02',trade_id:'t1',reason:'Price below new floor'},
       {id:'i3',type:'offer_sent',round:1,actor_id:'A17',counterparty_id:'A03',quantity_kwh:1.5,price:8,reason:'Available surplus',delivery_start:'2026-10-30T15:00:00+05:30',delivery_end:'2026-10-30T16:00:00+05:30'},
       {id:'i4',type:'terminated',round:2,reason:'No admissible move'}],trades:[]};
     state.view='intervention';rebuildFrames();
@@ -431,4 +431,90 @@ test('conversation explains recorded constraint codes without inventing househol
   f.evaluate("state.result.intervention.events[2].reason='A03 rejects: responder_not_improving';state.result.intervention.events[2].reason_code='responder_not_improving';renderConversation();");
   assert.match(f.element('conversation').innerHTML,/responding household model utility/);
   assert.doesNotMatch(f.element('conversation').innerHTML,/responder_/);
+});
+
+function snapshotFixture(f) {
+  f.evaluate(`
+    const original={id:'A17',name:'Mira',role:'seller',min_price:6,forecast_surplus_kwh:8,reserve_kwh:0,max_offer_kwh:8};
+    state.result.world.agents=[original,{id:'A02',role:'buyer',demand_kwh:4,max_price:10,budget:40}];
+    state.result.updated_world={agents:[{...original,min_price:9,max_offer_kwh:4},state.result.world.agents[1]]};
+    state.result.baseline={events:[],trades:[{id:'t1',seller_id:'A17',buyer_id:'A02',quantity_kwh:4,price:7}]};
+    state.result.intervention={events:[{id:'i1',type:'policy_confirmed',actor_id:'A17',round:0,reason:'Price floor raised'},{id:'i2',type:'terminated',round:1}],trades:[]};
+    state.view='intervention';state.stage='starting';state.index=0;state.selected='A17';rebuildFrames();
+  `);
+}
+
+test('starting agreements use original profiles in both inspection and node availability', () => {
+  const f=fixture();snapshotFixture(f);
+  f.evaluate("renderInspector();$('role-filter').value='all';drawGraph($('graph'),frameTrades(),null,'Starting');");
+  assert.match(f.element('inspection').innerHTML,/Price floor.*6\.00/s);
+  assert.doesNotMatch(f.element('inspection').innerHTML,/9\.00/);
+  assert.match(f.element('inspection').innerHTML,/4\.00 kWh still available/);
+  const own=descendants(f.element('graph')).find(n=>n.getAttribute?.('data-agent')==='A17');
+  assert.match(own.getAttribute('aria-label'),/4\.00 kWh still available/);
+  f.evaluate("state.stage='requirement';renderInspector();");
+  assert.match(f.element('inspection').innerHTML,/Price floor.*9\.00/s);
+});
+
+test('fixed comparison graph explicitly uses original household profiles after a policy change', () => {
+  const f=fixture();snapshotFixture(f);
+  f.evaluate("renderDecisionAudit=()=>{};renderLog=()=>{};state.view='compare';state.stage=null;state.index=1;$('role-filter').value='all';renderFrame();");
+  const before=descendants(f.element('compare-graph')).find(n=>n.getAttribute?.('data-agent')==='A17');
+  assert.match(before.getAttribute('aria-label'),/4\.00 kWh still available/);
+});
+
+test('affected stage excludes replacements caused by later negotiations and stays before offers', () => {
+  const f=fixture();replayFixture(f);
+  f.evaluate(`state.result.intervention.events=[
+    {id:'iv-1',type:'policy_confirmed',actor_id:'A02',round:0,reason:'Buying ceiling changed'},
+    {id:'iv-2',type:'offer_sent',actor_id:'A02',counterparty_id:'A17',round:1},
+    {id:'iv-51',type:'offer_accepted',actor_id:'A17',counterparty_id:'A02',round:1,caused_by:['iv-2']},
+    {id:'iv-52',type:'offer_replaced',actor_id:'A17',counterparty_id:'A02',round:1,caused_by:['iv-51']},
+    {id:'iv-53',type:'terminated',round:2}];renderFrame=()=>{};`);
+  const affected=JSON.parse(f.evaluate("JSON.stringify(replayStages().find(stage=>stage.id==='affected'))"));
+  assert.equal(affected.event,null,'A negotiated replacement cannot be presented as immediate policy repair');
+  assert.match(affected.explanation,/no prior agreement.*policy.*before negotiation/i);
+  f.evaluate("selectStage('affected');globalThis.affectedIndex=state.index;selectStage('offers');");
+  assert.ok(f.evaluate('state.index>=globalThis.affectedIndex'),'The five-stage path must not move backward from later replacement to the first offer');
+});
+
+test('offers stage displays a recorded exchange through its response and matching allocation only', () => {
+  const f=fixture();replayFixture(f);
+  f.evaluate(`
+    state.result.baseline.trades=[];
+    const trade={id:'new-trade',seller_id:'A17',buyer_id:'A03',quantity_kwh:1.5,price:7};
+    state.result.intervention.events=[
+      {id:'p',type:'policy_confirmed',actor_id:'A17',round:0},
+      {id:'offer',type:'offer_sent',actor_id:'A17',counterparty_id:'A03',round:1,quantity_kwh:1.5,price:8,reason:'Recorded opening offer'},
+      {id:'counter',type:'counteroffer_sent',actor_id:'A03',counterparty_id:'A17',round:1,quantity_kwh:1.5,price:7,reason:'Recorded counteroffer',caused_by:['offer']},
+      {id:'accept',type:'offer_accepted',actor_id:'A17',counterparty_id:'A03',round:1,quantity_kwh:1.5,price:7,reason:'Recorded acceptance',caused_by:['counter']},
+      {id:'reserve',type:'provisional_reserved',actor_id:'A17',counterparty_id:'A03',round:1,trade,reason:'Recorded reservation',caused_by:['accept']},
+      {id:'future',type:'offer_sent',actor_id:'A17',counterparty_id:'A03',round:2,quantity_kwh:3,price:99,reason:'Later independent exchange'},
+      {id:'end',type:'terminated',round:2}
+    ];
+    state.result.intervention.trades=[{...trade,quantity_kwh:3}];rebuildFrames();
+    renderInspector=()=>{};renderDecisionAudit=()=>{};renderLog=()=>{};
+    drawGraph=(svg,trades,event)=>{if(svg===$('graph'))globalThis.visibleGraph={trades,event};};
+    selectStage('offers');
+  `);
+  assert.match(f.element('conversation').innerHTML,/Offer sent.*Counteroffer sent.*Offer accepted/s);
+  assert.doesNotMatch(f.element('conversation').innerHTML,/99\.00|Later independent exchange/);
+  assert.equal(f.evaluate('state.index'),4,'The timeline must be at the displayed exchange end');
+  assert.equal(f.context.visibleGraph.event.id,'reserve');
+  assert.equal(f.context.visibleGraph.trades[0].quantity_kwh,1.5,'Do not show a later allocation as already agreed');
+  assert.match(f.element('replay-caption').textContent,/recorded exchange.*2.*5/i);
+  assert.equal(f.evaluate('currentEvents().length'),7,'Stage presentation must not add trace events');
+});
+
+test('delivery repair explains invalid old terms without claiming partly overlapping windows do not overlap', () => {
+  const f=fixture();replayFixture(f);
+  f.evaluate(`
+    const seller={id:'A17',role:'seller',interval_start:'2026-10-30T14:00:00+05:30',interval_end:'2026-10-30T16:00:00+05:30'};
+    const buyer={id:'A02',role:'buyer',interval_start:'2026-10-30T14:00:00+05:30',interval_end:'2026-10-30T16:00:00+05:30'};
+    state.result.world.agents=[seller,buyer];state.result.updated_world={agents:[seller,{...buyer,interval_start:'2026-10-30T15:00:00+05:30',interval_end:'2026-10-30T17:00:00+05:30'}]};
+    Object.assign(state.result.intervention.events[1],{reason:'t1 no longer satisfies A02: interval_mismatch',reason_code:'interval_mismatch',trade:{...state.result.baseline.trades[0],delivery_start:seller.interval_start,delivery_end:seller.interval_end}});
+    state.stage='affected';state.index=1;renderConversation();
+  `);
+  assert.match(f.element('conversation').innerHTML,/prior delivery interval no longer fits the revised household windows/i);
+  assert.doesNotMatch(f.element('conversation').innerHTML,/windows do not overlap/i);
 });
