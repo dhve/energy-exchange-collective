@@ -379,14 +379,23 @@ def _validated_translation(data, text, agent, tick):
             result['clarification_questions'] = ['Please give the exact amount, unit and any delivery times.']
         return result
     changes = {}
+    evidence_spans = []
     for item in data['updates']:
         if not isinstance(item, dict) or set(item) != {'field','operation','value','evidence'}:
             raise ValueError('Invalid update')
         field, op, value, evidence = (item[k] for k in ('field','operation','value','evidence'))
         if field not in FIELDS or field in changes or op not in ('set','increase','decrease','clear'):
             raise ValueError('Invalid field or operation')
-        if not isinstance(evidence, str) or not evidence.strip() or evidence not in text:
+        if not isinstance(evidence, str) or not evidence.strip():
             raise ValueError('The change was not supported by the request')
+        # The small model may capitalize a quote or add sentence punctuation.
+        # Match its words back to the source and validate that original span.
+        quote = evidence.strip().rstrip('.!?').strip()
+        match = re.search(r'\s+'.join(re.escape(word) for word in quote.split()), text, re.I) if quote else None
+        if match is None:
+            raise ValueError(f'The quoted words do not match the request: {evidence[:120]!r}')
+        evidence = match.group(0)
+        evidence_spans.append((field, match.start(), match.end()))
         contextual_money = (_contextual_money_amount(field, value, evidence) and
                             _contextual_money_amount(field, value, text))
         _ground_meaning(field, op, evidence, contextual_money=contextual_money)
@@ -441,9 +450,8 @@ def _validated_translation(data, text, agent, tick):
     # conditional rule. The model may not silently omit a request's exception.
     conditions = list(re.finditer(r'\bif\b|\bonly when\b|\bprovided that\b', text, re.I))
     for condition in conditions:
-        if not any(item['field'] in ('conditional_price','time_price') and
-                   text.find(item['evidence']) <= condition.start() < text.find(item['evidence']) + len(item['evidence'])
-                   for item in data['updates']):
+        if not any(field in ('conditional_price','time_price') and start <= condition.start() < end
+                   for field, start, end in evidence_spans):
             raise ValueError('An unsupported or ambiguous condition was omitted')
     result['errors'] = validate_policy_changes(changes, agent, tick)
     if not result['errors']:

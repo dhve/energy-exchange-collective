@@ -150,6 +150,27 @@ class LLMTests(unittest.TestCase):
         self.assertEqual(result['translation']['validation_reason'],
                          'A relative amount cannot be used as an absolute amount')
 
+    def test_model_quote_formatting_preserves_original_meaning(self):
+        phrase = 'could you make the minimum price 3.5 for me'
+        for quote in ['Make the minimum price 3.5', 'minimum  price\n3.5', 'minimum price 3.5.']:
+            with self.subTest(quote=quote):
+                self.db = self.db.with_name(str(len(self.calls)) + '.sqlite3')
+                result = self.mod.translate_instruction(phrase, self.agent,
+                    client=self.client(translation([update('min_price', 3.5, quote)])))
+                self.assertEqual(result['changes'], {'min_price': 3.5})
+                self.assertEqual(result['errors'], [])
+
+    def test_quote_formatting_does_not_remove_units_numbers_or_conditions(self):
+        phrase = 'could you make the minimum price 3.5 dollars for me'
+        result = self.mod.translate_instruction(phrase, self.agent,
+            client=self.client(translation([update('min_price', 3.5, 'Minimum price 3.5.')])))
+        self.assertEqual(result['changes'], {})
+        phrase = 'could you accept ₹5 per kWh only if 3 kWh is sold together'
+        row = update('conditional_price', {'floor':5, 'minimum_kwh':3},
+                     'Accept ₹5 per kWh only if 3 kWh is sold together.')
+        result = self.mod.translate_instruction(phrase, self.agent, client=self.client(translation([row])))
+        self.assertEqual(result['changes'], {'conditional_price': {'floor':5, 'minimum_kwh':3}})
+
     def test_missing_party_quantity_asks_instead_of_applying_partial_changes(self):
         value = translation([update(value=5, evidence='birthday party')], questions=['How many kWh should stay at home?'])
         result = self.mod.translate_instruction('birthday party so keep more energy', self.agent, client=self.client(value))
