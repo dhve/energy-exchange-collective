@@ -59,3 +59,10 @@ test('fit camera includes off-canvas household positions and leaves a label marg
     assert.ok(p.y*view.k+view.y>=35&&p.y*view.k+view.y<=545);
   }
 });
+
+test('missing delivery or quantity is unknown eligibility, not a failed discount condition',()=>{
+  const [card]=replay.messages([quote({type:'offer_replaced',quantity_kwh:undefined,delivery_start:undefined})],world);
+  assert.deepEqual(card.sensitivity.rules.map(r=>r.eligible),[null,null]);
+  assert.equal(card.sensitivity.floor,null);
+  assert.equal(card.sensitivity.discounted,null);
+});

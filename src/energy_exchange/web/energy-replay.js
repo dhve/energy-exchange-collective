@@ -12,16 +12,17 @@
     if(!seller)return null;
     const rules=[];let floor=Number(seller.min_price);
     if(seller.conditional_price){
-      const p=seller.conditional_price,eligible=terms.quantity_kwh!=null&&Number(terms.quantity_kwh)>=p.minimum_kwh;
+      const p=seller.conditional_price,eligible=terms.quantity_kwh==null?null:Number(terms.quantity_kwh)>=p.minimum_kwh;
       rules.push({kind:'quantity',floor:p.floor,minimum_kwh:p.minimum_kwh,eligible});
       if(eligible)floor=Math.min(floor,p.floor);
     }
     if(seller.time_price){
-      const p=seller.time_price,eligible=!!terms.delivery_start&&Date.parse(terms.delivery_start)>=Date.parse(p.after);
+      const p=seller.time_price,eligible=!terms.delivery_start||!Number.isFinite(Date.parse(terms.delivery_start))?null:Date.parse(terms.delivery_start)>=Date.parse(p.after);
       rules.push({kind:'time',floor:p.floor,after:p.after,eligible});
       if(eligible)floor=Math.min(floor,p.floor);
     }
-    return {seller_id:seller.id,ordinaryFloor:seller.min_price,floor,rules,discounted:terms.price!=null&&Number(terms.price)<Number(seller.min_price)&&Number(terms.price)>=floor};
+    if(rules.some(rule=>rule.eligible===null))floor=null;
+    return {seller_id:seller.id,ordinaryFloor:seller.min_price,floor,rules,discounted:floor===null?null:terms.price!=null&&Number(terms.price)<Number(seller.min_price)&&Number(terms.price)>=floor};
   }
   function messages(events, world, updatedWorld){
     let profiles=new Map((world?.agents||[]).map(a=>[a.id,a]));

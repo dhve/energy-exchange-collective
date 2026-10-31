@@ -728,3 +728,23 @@ test('message highlight selects both participants and clears back to the active 
   f.evaluate('highlightMessage(null);');
   assert.deepEqual(Array.from(f.context.townModel.highlighted),['A17','A03']);
 });
+
+test('Watch negotiations leaves comparison and starts the visible animation',()=>{
+  const f=fixture();replayFixture(f);
+  f.evaluate("state.town={update(m){globalThis.townModel=m;}};state.view='compare';state.index=3;renderInspector=()=>{};renderDecisionAudit=()=>{};renderLog=()=>{};play();");
+  assert.equal(f.evaluate('state.view'),'intervention');
+  assert.equal(f.context.townModel.playing,true);
+  assert.equal(f.element('energy-town').hidden,false);
+});
+
+test('history hover colors and highlights both participants on both visible comparison maps',()=>{
+  const f=fixture();replayFixture(f);
+  f.evaluate("state.result.world.agents=[{id:'A17',role:'seller',min_price:6},{id:'A02',role:'buyer'},{id:'A03',role:'buyer'}];state.view='compare';state.index=2;highlightMessage(['A17','A02']);");
+  for(const id of ['graph','compare-graph']){
+    const nodes=descendants(f.element(id)).filter(n=>n.tag==='g'&&n.getAttribute('data-agent'));
+    const highlighted=nodes.filter(n=>n.getAttribute('class').includes('active-party')).map(n=>n.getAttribute('data-agent')).sort();
+    assert.deepEqual(highlighted,['A02','A17']);
+    const node=nodes.find(n=>n.getAttribute('data-agent')==='A17');
+    assert.equal(descendants(node).find(n=>n.getAttribute('class')==='node-shape').getAttribute('fill'),f.evaluate("EnergyReplay.color('A17')"));
+  }
+});

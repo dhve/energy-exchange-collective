@@ -358,7 +358,7 @@ function sensitivityHTML(sensitivity) {
   const rules=sensitivity.rules.map(rule=>rule.kind==='quantity'
     ? `₹${quoteNumber(rule.floor)}/kWh for at least ${quoteNumber(rule.minimum_kwh)} kWh`
     : `₹${quoteNumber(rule.floor)}/kWh after ${timestamp(rule.after)}`);
-  return `<details class="message-policy"><summary>Why this price can change</summary><p>Seller's rule at this step, separate from the message:</p>${sensitivity.rules.map((rule,i)=>`<p>${esc(rules[i])}. <strong>${rule.eligible?'These terms qualify.':'These terms do not qualify.'}</strong></p>`).join('')}<p>Minimum allowed for these terms: ₹${quoteNumber(sensitivity.floor)}/kWh.${sensitivity.discounted?' This quote is below the regular minimum.':' A qualifying rule does not mean a discount was used.'}</p></details>`;
+  return `<details class="message-policy"><summary>Why this price can change</summary><p>Seller's rule at this step, separate from the message:</p>${sensitivity.rules.map((rule,i)=>`<p>${esc(rules[i])}. <strong>${rule.eligible===null?(rule.kind==='time'?'Delivery time was not recorded, so eligibility is unknown.':'Quantity was not recorded, so eligibility is unknown.'):rule.eligible?'These terms qualify.':'These terms do not qualify.'}</strong></p>`).join('')}${sensitivity.floor===null?'<p>The applicable minimum cannot be determined from this event.</p>':`<p>Minimum allowed for these terms: ₹${quoteNumber(sensitivity.floor)}/kWh.${sensitivity.discounted?' This recorded price is below the regular minimum.':' A qualifying rule does not mean a discount was used.'}</p>`}</details>`;
 }
 function historyEntry(card) {
   const t=card.terms,terms=[t.quantity_kwh!=null?`${quoteNumber(t.quantity_kwh)} kWh`:'',t.price!=null?`₹${quoteNumber(t.price)}/kWh`:''].filter(Boolean);
@@ -388,7 +388,7 @@ function renderConversation() {
   box.onfocusin=e=>{const pair=participants(e.target);if(pair){state.followLatest=false;highlightMessage(pair);}};
   box.onfocusout=e=>{if(!participants(e.relatedTarget))highlightMessage(null);};
 }
-function highlightMessage(pair) {state.hoveredPair=pair;updateTown();}
+function highlightMessage(pair) {state.hoveredPair=pair;updateTown();if(!state.town||state.view==='compare'||state.mapMode==='agreements')drawReplayGraphs();}
 function updateTown() {
   if(!state.result)return;
   const starting=state.stage==='starting',events=starting?state.result.baseline.events:currentEvents(),event=activeEvent();
@@ -421,13 +421,13 @@ function renderFrame() {
   $('event-reason').textContent=event?recordedReason(event):'Inspect the recorded event details in the trace export.';
   $('causal').hidden=!event?.caused_by?.length; $('causal').textContent=state.causal.size?'Clear causal highlight':'Highlight causal chain ↗';
   $('graph-wrap').classList.toggle('comparing',state.view==='compare'); $('compare-graph').toggleAttribute('hidden',state.view!=='compare');
-  const trades=frameTrades();
-  updateTown();
-  if(!state.town||state.view==='compare'||state.mapMode==='agreements')drawGraph($('graph'),trades,event,state.view==='baseline'?'Before':state.stage==='starting'?'Original agreements':event?.type==='terminated'||state.stage==='final'?'After · final agreements':'After · at this step');
-  if(state.view==='compare') {
-    drawGraph($('compare-graph'),state.result.baseline.trades || [],null,'Before · original agreements',state.result.world);
-  }
+  updateTown();drawReplayGraphs();
   renderInspector(); renderDecisionAudit(); renderLog();
+}
+function drawReplayGraphs() {
+  const event=activeEvent();
+  if(!state.town||state.view==='compare'||state.mapMode==='agreements')drawGraph($('graph'),frameTrades(),event,state.view==='baseline'?'Before':state.stage==='starting'?'Original agreements':event?.type==='terminated'||state.stage==='final'?'After · final agreements':'After · at this step');
+  if(state.view==='compare')drawGraph($('compare-graph'),state.result.baseline.trades || [],null,'Before · original agreements',state.result.world);
 }
 function eventDescription(event) {
   if(!event)return 'Each shape is a home. Lines show their energy agreements.';
@@ -535,17 +535,17 @@ function drawGraph(svg,trades,event,caption,world=frameWorld()) {
     const kind=release?'release':message?'message':'agreement';
     edge(e.actor_id,e.counterparty_id,{stroke:release?'#a14738':message?'#79548f':'#315d49','stroke-width':2.5,'stroke-dasharray':message?'7 5':release?'3 4':'none','marker-end':`url(#${markerPrefix}-${kind})`,class:`event-edge ${message?'message-edge':release?'event-release':'event-accept'}`,opacity:.95});
   }
-  const activeParties=new Set([event?.actor_id,event?.counterparty_id]);
+  const activeParties=new Set(state.hoveredPair || [event?.actor_id,event?.counterparty_id]);
   for(const a of world?.agents || []) {
     const point=pos.get(a.id);if(!point)continue;
     const affected=delta.affected.has(a.id),selected=a.id===state.selected,own=a.id===state.controlled,active=activeParties.has(a.id);
-    const match=(!search||`${a.id} ${a.name}`.toLowerCase().includes(search))&&($('role-filter').value==='all'||$('role-filter').value===a.role),dim=!match||(only&&!affected&&!own);
+    const match=(!search||`${a.id} ${a.name}`.toLowerCase().includes(search))&&($('role-filter').value==='all'||$('role-filter').value===a.role),dim=!match||(only&&!affected&&!own)||!!(state.hoveredPair&&!active);
     const availability=householdAvailability(a,trades);
     const g=svgEl('g',{transform:`translate(${point.x} ${point.y})`,class:`node${affected?' changed-node':''}${active?' active-party':''}${own?' controlled-node':''}${selected?' inspected-node':''}`,'data-agent':a.id,tabindex:0,role:'button','aria-label':`Inspect ${a.id}, ${a.name || ''}, ${a.role}. ${availability}${affected?', affected':''}`,opacity:dim?.15:1},nodes);
     if(active)svgEl('circle',{r:28,fill:'#ede4f3',stroke:'#79548f','stroke-width':1.5},g);
     if(own)svgEl('circle',{r:20,fill:'none',stroke:'#40654d','stroke-width':2},g);
     if(selected)svgEl('circle',{r:24,fill:'none',stroke:'#254936','stroke-width':1.5,'stroke-dasharray':'3 3'},g);
-    const attrs={fill:a.role==='seller'?'#c59a55':'#5c9287',stroke:affected?'#ae650f':'#fffef9','stroke-width':affected?3:2,class:'node-shape'},radius=agents().length<=50?14:10;
+    const attrs={fill:EnergyReplay.color(a.id),stroke:affected?'#ae650f':'#fffef9','stroke-width':affected?3:2,class:'node-shape'},radius=agents().length<=50?14:10;
     if(a.role==='seller')svgEl('circle',{r:radius,...attrs},g);else svgEl('rect',{x:-radius,y:-radius,width:radius*2,height:radius*2,rx:5,...attrs},g);
     if(own)svgEl('text',{'text-anchor':'middle',y:3,fill:'white','font-size':9,'font-weight':600},g,'✦');
     svgEl('text',{'text-anchor':'middle',...labels.get(a.id),fill:'#314b36','font-size':11/textScale,'font-weight':own?700:500,class:'node-label'},g,a.id);
@@ -701,7 +701,7 @@ function stepRound(direction) {
   renderFrame();
 }
 function stop(){clearInterval(state.timer);state.timer=null;state.townPlaying=false;if(state.town)updateTown();$('replay-caption').setAttribute('aria-live','polite');$('play').textContent='▶ Watch negotiations';$('play').setAttribute('aria-label','Play the simulation');}
-function play(){state.mapMode='animation';state.stage=null;if(state.timer||state.townPlaying){stop();return;}if(!currentEvents().length)return;$('replay-caption').setAttribute('aria-live','off');if(state.index>=currentEvents().length-1)state.index=0;$('play').textContent='Ⅱ Pause';$('play').setAttribute('aria-label','Pause the simulation');state.townPlaying=!!state.town;renderFrame();if(state.town)return;state.timer=setInterval(()=>{if(state.index>=currentEvents().length-1){stop();return;}state.index++;renderFrame();},1400/Number($('speed').value));}
+function play(){if(state.view==='compare'){state.view='intervention';document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('selected',b.dataset.view===state.view));}state.mapMode='animation';state.stage=null;if(state.timer||state.townPlaying){stop();return;}if(!currentEvents().length)return;$('replay-caption').setAttribute('aria-live','off');if(state.index>=currentEvents().length-1)state.index=0;$('play').textContent='Ⅱ Pause';$('play').setAttribute('aria-label','Pause the simulation');state.townPlaying=!!state.town;renderFrame();if(state.town)return;state.timer=setInterval(()=>{if(state.index>=currentEvents().length-1){stop();return;}state.index++;renderFrame();},1400/Number($('speed').value));}
 function download(name,text,type){if(state.exportURL)URL.revokeObjectURL(state.exportURL);state.exportURL=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement('a');a.href=state.exportURL;a.download=name;a.textContent=`Download ${name}`;notify('Your export is ready. ');$('notice').append(a);$('export-title').textContent=`View or copy ${name}`;$('export-text').value=text;$('export-preview').hidden=false;$('notice').scrollIntoView?.({block:'nearest'});}
 function exportLedger(){const q=s=>`"${String(s??'').replaceAll('"','""')}"`;const columns=['run','id','seller_id','buyer_id','quantity_kwh','price','payment','status','delivery_start','delivery_end'];const rows=[columns.join(',')];for(const name of ['baseline','intervention'])for(const t of state.result[name]?.trades||[])rows.push([name,...columns.slice(1).map(k=>t[k])].map(q).join(','));download('energy-trade-ledger.csv',rows.join('\n'),'text/csv');}
 function bindPan(svg){let drag=null;svg.addEventListener('pointerdown',e=>{if(e.target.closest('.trade-edge'))return;const node=e.target.closest('.node'),id=node?.getAttribute('data-agent'),origin=id?(state.nodeOffsets[id]||{x:0,y:0}):state.pan;drag={x:e.clientX,y:e.clientY,px:origin.x,py:origin.y,id};if(id){state.selected=id;state.focusedPair=null;$('inspect-select').value=id;}});svg.addEventListener('pointermove',e=>{if(!drag||Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<4)return;if(!drag.moved)svg.setPointerCapture(e.pointerId);drag.moved=true;const rect=svg.getBoundingClientRect(),scale=1/Math.min(rect.width/880,rect.height/610)/(drag.id?state.zoom:1),next={x:drag.px+(e.clientX-drag.x)*scale,y:drag.py+(e.clientY-drag.y)*scale};if(drag.id)state.nodeOffsets[drag.id]=next;else state.pan=next;renderFrame();});svg.addEventListener('pointerup',()=>{const selected=drag?.id,moved=drag?.moved;drag=null;if((selected||moved)&&state.result)renderFrame();});svg.addEventListener('pointercancel',()=>drag=null);}
