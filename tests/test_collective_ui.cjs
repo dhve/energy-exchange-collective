@@ -570,3 +570,19 @@ test('fifty desktop home IDs avoid other nodes and labels while replay positions
   f.evaluate("state.view='intervention';state.stage='starting';state.index=25;");
   assert.deepEqual(JSON.parse(f.evaluate('JSON.stringify(Object.fromEntries(positions()))')),positions);
 });
+
+test('final conversation explains termination plainly while keeping the recorded audit reason', () => {
+  const f=fixture();
+  for(const [status,termination,expected] of [
+    ['locally_stable','sweep_clean',/finished finding trades under these rules/i],
+    ['round_limited','max_messages',/message limit.*further changes may be possible/i],
+    ['unresolved','invariant_failure',/could not complete/i],
+  ]) {
+    f.context.ending={status,termination_reason:termination,events:[{type:'terminated',reason:status+': '+termination,reason_code:termination}],trades:[]};
+    f.evaluate("state.result.baseline=globalThis.ending;state.view='baseline';state.stage=null;state.index=0;renderConversation();");
+    assert.match(f.element('conversation').innerHTML,/<h3>Final allocation<\/h3>/);
+    assert.match(f.element('conversation').innerHTML,expected);
+    assert.doesNotMatch(f.element('conversation').innerHTML,/sweep.clean|locally.stable|invariant.failure|max.messages/i);
+    assert.equal(f.evaluate('currentEvents()[0].reason'),status+': '+termination,'Plain language must not rewrite recorded audit data');
+  }
+});

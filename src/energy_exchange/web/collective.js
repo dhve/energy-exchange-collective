@@ -302,6 +302,10 @@ function recordedReason(event) {
 }
 function renderConversation() {
   const event=activeEvent(),participants=[event?.actor_id,event?.counterparty_id].filter(Boolean);
+  if(event?.type==='terminated') {
+    $('conversation').innerHTML=`<h3>Final allocation</h3><p>${esc(eventDescription(event))}</p>`;
+    return;
+  }
   if(event?.type==='policy_confirmed') {
     $('conversation').innerHTML=`<h3>Revised requirement</h3><p>${esc(recordedReason(event))}</p>${(event.changed_fields || []).map(change=>`<p><strong>${esc(change.agent_id)} · ${esc(fieldNames[change.field] || label(change.field))}</strong><br>${esc(policyValue(change.field,change.before))} → ${esc(policyValue(change.field,change.after))}</p>`).join('')}`;
     return;
