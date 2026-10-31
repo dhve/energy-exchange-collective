@@ -18,6 +18,10 @@ Sell up to 4 kWh from 2 to 4 PM at at least ₹7/kWh; accept ₹6.50 only if at 
 
 Replay uses recorded events, including actual offers, counteroffers, acceptances, rejections, and replacements. When a stage has no corresponding event, the workspace says so. Communication arrows show who contacted whom, while energy agreements show accepted trades.
 
+The network and conversation share one replay workspace. **Compare** places the original agreements first (left on wide screens, above on narrow screens). Teal lines mark new pairs, amber lines mark revised terms, and dashed red lines mark removed pairs; unchanged agreements fade. The selected changed pair has an on-graph amount or price annotation. The **What changed?** table shows exact quantities, prices and delivery windows, including changes with the same kWh amount. It compares the original ledger with the currently displayed event, never with future events.
+
+The applied-policy strip and selected home's settings follow the replay position. Original settings remain explicitly labelled in the instruction panel because each new experiment starts from the baseline. Time-dependent prices and bundle discounts are visible in the selected-home inspector. Current replay totals sit above the graph; end-of-run totals and household energy/payment differences sit below it and remain fixed during replay. Earlier negotiation messages and additional changed pairs can be expanded. Explanations use recorded reason codes and strategy steps rather than invented household dialogue.
+
 Every intervention starts from the original baseline and uses the same frozen household strategies. A second instruction replaces the previous intervention. Editing an instruction or experiment setting invalidates its previous confirmation. A failed request leaves the last successful result visible.
 
 ## Run locally

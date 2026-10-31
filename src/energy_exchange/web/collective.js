@@ -145,7 +145,7 @@ function render() {
   $('metric-status').textContent=label(run.status || 'complete');
   $('metric-status-sub').textContent=run.status==='locally_stable'?'Within the declared move set':words(run.termination_reason || 'Search stopped before stability');
   $('graph-subtitle').textContent=`${agents().length} simulated homes ${state.config.topology==='local'?'trading with nearby homes':'able to trade across the neighbourhood'}`;
-  renderOwn(); renderFrame(); renderAnalysis(); renderOutcome(); renderMethod();
+  renderOwn(); renderFrame(); renderAnalysis(); renderOutcome(); renderMethod(); renderImpactSummary();
   $('manifest').textContent=JSON.stringify(state.result.manifest,null,2);
   $('protocol-scope').textContent=typeof run.stability_scope==='string'?run.stability_scope:JSON.stringify(run.stability_scope || state.result.manifest?.protocol || 'See the manifest for protocol scope.');
   $('footer-run').textContent=`Seed ${state.config.seed} · ${state.result.manifest?.protocol_version || state.result.manifest?.version || 'Deterministic bilateral protocol'}`;
@@ -203,7 +203,7 @@ function renderOwn() {
   suggestedInstructions(a).forEach((example,index)=>{$(`example-${index}`).textContent=example.label;});
   $('own-context').textContent=typeof a.context==='string'?a.context:'Synthetic household preferences for this research experiment.';
   $('own-bounds').innerHTML=boundHTML(a);
-  $('home-window').textContent=deliveryWindow(a);
+  $('home-window').textContent=`Original window: ${deliveryWindow(a)}`;
   $('home-flexibility').textContent=a.time_price?policyValue('time_price',a.time_price):'One flexible energy pool within this window.';
   document.querySelector('.avatar').textContent=a.role==='seller'?'☀':'⌂';
   const fields=a.role==='seller'?['min_price','max_offer_kwh','forecast_surplus_kwh','reserve_kwh']:['max_price','budget','demand_kwh','deadline_round'];
@@ -300,6 +300,57 @@ function recordedReason(event) {
   const reason=event.reason || event.reason_code || '';
   return reason.replace(/[a-z]+(?:_[a-z]+)+/g,code=>explanations[code] || words(code)) || 'No reason recorded.';
 }
+function homeLabel(id) {
+  const a=agentById(id);return a?.name?`${a.name} · ${id}`:id || 'Market';
+}
+function eventLabel(type) {
+  return ({offer_sent:'Offer',counteroffer_sent:'Counteroffer',offer_accepted:'Accepted terms',offer_rejected:'Declined',provisional_reserved:'Tentative agreement',provisional_released:'Agreement released',offer_replaced:'Replacement agreement'})[type] || label(type);
+}
+function negotiationExplanation(event) {
+  if(event.reason_code==='strategy_quote')return `Recorded strategy, quote ${Number(event.strategy_step || 0)+1}: ${agentById(event.actor_id)?.role==='buyer'?'the buyer proposes its next buying price':'the seller proposes its next selling price'}. Prices follow the frozen strategy; no additional motive is recorded.`;
+  if(event.reason_code==='accepted_quote')return 'The recorded constraint checks passed and the household accepted these terms. Reservation follows as a separate step.';
+  return recordedReason(event);
+}
+// Compare all agreements for a pair, including multiple delivery windows.
+function agreementDifferences(before,after) {
+  const pairs=new Set([...before,...after].map(tradeKey));
+  return [...pairs].map(key=>{
+    const a=before.filter(t=>tradeKey(t)===key),b=after.filter(t=>tradeKey(t)===key);
+    if(a.map(signature).sort().join('~')===b.map(signature).sort().join('~'))return null;
+    const [seller,buyer]=key.split('|');
+    return {key,seller,buyer,before:a,after:b,kind:!a.length?'new':!b.length?'removed':'revised'};
+  }).filter(Boolean);
+}
+function frameDifferences() {
+  return state.view!=='baseline'&&state.result?.intervention?agreementDifferences(state.result.baseline.trades || [],frameTrades()):[];
+}
+function ledgerTerms(trades) {
+  return trades.length?trades.map(t=>`${fmt(t.quantity_kwh)} kWh · ₹${fmt(t.price)}/kWh · ${deliveryWindow(t)}`).join('; '):'No agreement';
+}
+function renderReplayContext() {
+  const trades=frameTrades(),diffs=frameDifferences(),event=activeEvent();
+  const ended=state.stage==='final'||event?.type==='terminated';
+  const policy=state.view!=='baseline'&&state.stage!=='starting'?frameEvents().find(e=>e.type==='policy_confirmed'):null;
+  $('policy-strip').hidden=!policy;
+  $('policy-strip').innerHTML=policy?`<strong>Applied change</strong> ${(policy.changed_fields || []).map(c=>`${esc(c.agent_id)} · ${esc(fieldNames[c.field] || label(c.field))}: <b>${esc(policyValue(c.field,c.before))} → ${esc(policyValue(c.field,c.after))}</b>`).join(' · ')}`:'';
+  $('graph-caption').textContent=`Selected: ${homeLabel(state.selected)}. Select a home or agreement to inspect it.`;
+  $('frame-summary').innerHTML=`<strong>${ended?'At the end':state.stage==='starting'?'Original agreements':'At this replay step'}: ${fmt(qty(trades))} kWh agreed</strong><span>${trades.length} agreements${state.view!=='baseline'&&state.result?.intervention?` · ${diffs.length} ${diffs.length===1?'pair differs':'pairs differ'} from before`:''}</span>`;
+  const a=frameWorld()?.agents?.find(a=>a.id===state.selected);
+  $('focus-home').innerHTML=a?`<span class="eyebrow">Selected home · ${frameWorld()===state.result.world?'original settings':'settings at this step'}</span><h3>${esc(homeLabel(a.id))}</h3><p>${esc(householdAvailability(a,trades))}</p>${boundHTML(a)}<div class="bound"><span>Delivery window</span><strong>${esc(deliveryWindow(a))}</strong></div><div class="bound"><span>Later price</span><strong>${esc(policyValue('time_price',a.time_price))}</strong></div>${a.conditional_price?`<div class="bound"><span>Bundle sensitivity</span><strong>${esc(policyValue('conditional_price',a.conditional_price))}</strong></div>`:''}<small>Private settings shown for research inspection.</small>`:'';
+  const box=$('trade-differences');box.hidden=state.view==='baseline'||!state.result?.intervention;
+  const ordered=[...diffs].sort((a,b)=>Number([b.seller,b.buyer].includes(state.selected))-Number([a.seller,a.buyer].includes(state.selected)));
+  const rows=ordered.map(d=>`<tr><th scope="row"><span class="change-tag ${d.kind}">${label(d.kind)}</span><button class="pair-select" data-home="${esc(d.seller)}" data-pair="${esc(d.key)}">${esc(homeLabel(d.seller))} → ${esc(homeLabel(d.buyer))}</button></th><td>${esc(ledgerTerms(d.before))}</td><td>${esc(ledgerTerms(d.after))}</td></tr>`);
+  const table=items=>`<div class="table-scroll"><table><thead><tr><th>Trading pair</th><th>Before</th><th>${ended?'After':'At this step'}</th></tr></thead><tbody>${items.join('')}</tbody></table></div>`;
+  box.innerHTML=`<h3>What changed ${ended?'by the end':'at this step'}?</h3><p class="helper">Compared with the original agreements. Select a pair to highlight it.</p>${rows.length?table(rows.slice(0,3))+(rows.length>3?`<details><summary>Show ${rows.length-3} more changed pairs</summary>${table(rows.slice(3))}</details>`:''):'<p>No agreement differences at this step.</p>'}`;
+  box.querySelectorAll('[data-home]').forEach(b=>b.onclick=()=>{state.selected=b.dataset.home;state.focusedPair=b.dataset.pair;renderFrame();});
+}
+function renderImpactSummary() {
+  if(state.result?.intervention?.status==='unresolved'){$('impact-summary').innerHTML='';return;}
+  const rows=householdChanges().filter(r=>Math.abs(r.energy)>.000001||Math.abs(r.payment)>.000001);
+  const signed=n=>`${n>0?'+':''}${fmt(n)}`;
+  rows.sort((a,b)=>Number(b.id===state.controlled)-Number(a.id===state.controlled)||Math.abs(b.energy)-Math.abs(a.energy)||Math.abs(b.payment)-Math.abs(a.payment));
+  $('impact-summary').innerHTML=rows.length?`<h3>Household impact · final comparison</h3><div class="impact-cards">${rows.slice(0,3).map(r=>`<article><strong>${esc(homeLabel(r.id))}</strong><p>${signed(r.energy)} kWh ${r.role==='seller'?'sold':'bought'}</p><small>${signed(r.payment)} rupees ${r.role==='seller'?'received':'spent'}</small></article>`).join('')}</div><p class="helper">Payment changes reflect both quantity and price. Lower spending alone does not mean a household is better off. All homes are listed in detailed results.</p>`:'';
+}
 function renderConversation() {
   const event=activeEvent(),participants=[event?.actor_id,event?.counterparty_id].filter(Boolean);
   if(event?.type==='terminated') {
@@ -312,8 +363,13 @@ function renderConversation() {
   }
   const messageTypes=['offer_sent','counteroffer_sent','price_counter','price_counters','offer_accepted','offer_rejected','provisional_reserved','provisional_released','offer_replaced'];
   const exchange=state.stage==='offers'?replayStages().find(stage=>stage.id==='offers'):null;
-  const list=event&&participants.length===2?currentEvents().slice(exchange?.startIndex ?? 0,state.index+1).filter(e=>messageTypes.includes(e.type)&&participants.includes(e.actor_id)&&participants.includes(e.counterparty_id)).slice(exchange?-8:-3):[];
-  $('conversation').innerHTML=list.length?`<h3>${exchange?'Recorded exchange':'Active conversation'} · ${participants.map(esc).join(' ↔ ')}</h3>${list.map(e=>`<article class="conversation-entry"><strong>${esc(e.actor_id)} → ${esc(e.counterparty_id)} · ${esc(label(e.type))}</strong>${eventTerms(e)?`<p>${esc(eventTerms(e))}</p>`:''}<p>${esc(recordedReason(e))}</p></article>`).join('')}`:`<h3>${state.stage==='starting'?'Starting agreements':'Recorded response'}</h3><p>${esc(state.stage?replayStages().find(s=>s.id===state.stage)?.explanation:event?recordedReason(event):'Select Play or a replay stage to follow the homes. No conversation is active here.')}</p>`;
+  const history=currentEvents().slice(0,state.index+1);
+  const samePair=e=>participants.includes(e.actor_id)&&participants.includes(e.counterparty_id);
+  const startIndex=exchange?.startIndex ?? Math.max(0,history.findLastIndex(e=>e.type==='offer_sent'&&samePair(e)));
+  const list=event&&participants.length===2?history.slice(startIndex).filter(e=>messageTypes.includes(e.type)&&samePair(e)):[];
+  const entry=e=>`<article class="conversation-entry"><strong>${esc(homeLabel(e.actor_id))} → ${esc(homeLabel(e.counterparty_id))} · ${esc(eventLabel(e.type))}</strong>${eventTerms(e)?`<p>${esc(eventTerms(e))}</p>`:''}<p>${esc(negotiationExplanation(e))}</p></article>`;
+  const earlier=list.length>3?`<details class="earlier-messages"><summary>Read ${list.length-3} earlier messages in this exchange</summary>${list.slice(0,-3).map(entry).join('')}</details>`:'';
+  $('conversation').innerHTML=list.length?`<h3>${exchange?'Recorded exchange':'Active conversation'} · ${participants.map(id=>esc(homeLabel(id))).join(' ↔ ')}</h3>${earlier}${list.slice(-3).map(entry).join('')}`:`<h3>${state.stage==='starting'?'Starting agreements':'Recorded response'}</h3><p>${esc(state.stage?replayStages().find(s=>s.id===state.stage)?.explanation:event?recordedReason(event):'Select Play or a replay stage to follow the homes. No conversation is active here.')}</p>`;
 }
 function translationDescription(translation) {
   const mode=translation.mode || 'unknown';
@@ -324,7 +380,7 @@ function renderFrame() {
   $('timeline').max=Math.max(0,events.length-1); $('timeline').value=state.index;
   $('position').textContent=stage?stage.title:state.index>=events.length-1?'Final result':`Step ${state.index+1} of ${events.length}`;
   $('replay-caption').textContent=stage?.explanation || eventDescription(event);
-  renderStages();renderConversation();
+  renderStages();renderConversation();renderReplayContext();
   $('back').disabled=state.index===0; $('next').disabled=state.index>=events.length-1;
   $('round-label').textContent=`Round ${event?.round ?? 0}`;
   $('event-type').textContent=words(event?.type || 'baseline').toUpperCase();
@@ -333,9 +389,9 @@ function renderFrame() {
   $('causal').hidden=!event?.caused_by?.length; $('causal').textContent=state.causal.size?'Clear causal highlight':'Highlight causal chain ↗';
   $('graph-wrap').classList.toggle('comparing',state.view==='compare'); $('compare-graph').toggleAttribute('hidden',state.view!=='compare');
   const trades=frameTrades();
-  drawGraph($('graph'),trades,event,state.view==='baseline'?'Before your change':'After your change');
+  drawGraph($('graph'),trades,event,state.view==='baseline'?'Before':state.stage==='starting'?'Original agreements':event?.type==='terminated'||state.stage==='final'?'After · final agreements':'After · at this step');
   if(state.view==='compare') {
-    drawGraph($('compare-graph'),state.result.baseline.trades || [],null,'Original starting agreements',state.result.world);
+    drawGraph($('compare-graph'),state.result.baseline.trades || [],null,'Before · original agreements',state.result.world);
   }
   renderInspector(); renderDecisionAudit(); renderLog();
 }
@@ -343,7 +399,7 @@ function eventDescription(event) {
   if(!event)return 'Each shape is a home. Lines show their energy agreements.';
   if(event.type==='terminated'){
     const run=currentRun();
-    if(run?.status==='locally_stable')return 'The homes have finished finding trades under these rules.';
+    if(run?.status==='locally_stable')return 'No further trade was found under these rules.';
     if(run?.status==='cycle_detected')return 'The simulation stopped because trades started repeating.';
     if(run?.status==='round_limited')return `The simulation reached its ${run.termination_reason==='max_messages'?'message':'round'} limit. Further changes may be possible.`;
     return 'The simulation could not complete. Open detailed results for the reason.';
@@ -387,10 +443,11 @@ function labelPositions(points,font) {
 }
 function drawGraph(svg,trades,event,caption,world=frameWorld()) {
   svg.replaceChildren();
-  const pos=positions(),delta=changed(),search=$('search').value.trim().toLowerCase(),only=$('only-affected').checked;
+  const diffs=frameDifferences(),diffMap=new Map(diffs.map(d=>[d.key,d]));
+  const pos=positions(),delta={affected:new Set(diffs.flatMap(d=>[d.seller,d.buyer]))},search=$('search').value.trim().toLowerCase(),only=$('only-affected').checked;
   const markerPrefix=svg.id || (svg===$('compare-graph')?'comparison':'main');
   const defs=svgEl('defs',{},svg);
-  for(const [name,color] of [['agreement','#527a59'],['message','#79548f'],['release','#a14738']]) {
+  for(const [name,color] of [['agreement','#527a59'],['message','#79548f'],['release','#a14738'],['new','#127568'],['revised','#ae650f']]) {
     const marker=svgEl('marker',{id:`${markerPrefix}-${name}`,viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:6,markerHeight:6,orient:'auto-start-reverse',markerUnits:'strokeWidth'},defs);
     svgEl('path',{d:'M0 0 L10 5 L0 10 Z',fill:color},marker);
   }
@@ -408,15 +465,33 @@ function drawGraph(svg,trades,event,caption,world=frameWorld()) {
     const from=Array.isArray(item)?item[0]:item.source || item.seller_id || item.from,to=Array.isArray(item)?item[1]:item.target || item.buyer_id || item.to;
     edge(from,to,{stroke:'#cbd4c0','stroke-width':.7,'stroke-dasharray':'3 6',opacity:.3});
   }
+  const original=svg===$('compare-graph'),showDiffs=state.view!=='baseline'&&!!state.result?.intervention;
+  if(showDiffs&&!original)for(const d of diffs.filter(d=>d.kind==='removed'))edge(d.seller,d.buyer,{stroke:'#a14738','stroke-width':3,'stroke-dasharray':'6 5',opacity:.8,'marker-end':`url(#${markerPrefix}-release)`,'aria-label':`${d.seller} to ${d.buyer}: removed agreement`});
   for(const t of trades) {
+    const difference=diffMap.get(tradeKey(t)),kind=difference?.kind;
     const active=[t.seller_id,t.buyer_id].includes(state.selected),affected=delta.affected.has(t.seller_id)||delta.affected.has(t.buyer_id);
     if(only&&!affected)continue;
     const description=`${t.seller_id} → ${t.buyer_id}: ${fmt(t.quantity_kwh)} kWh at ₹${fmt(t.price)}/kWh · ${deliveryWindow(t)}`;
-    const path=edge(t.seller_id,t.buyer_id,{stroke:active?'#315d49':'#a6b995','stroke-width':active?3:1,opacity:active?.95:.55,'marker-end':`url(#${markerPrefix}-agreement)`,class:'trade-edge',tabindex:0,role:'button','aria-label':description});
+    const path=edge(t.seller_id,t.buyer_id,{stroke:kind==='removed'?'#a14738':kind==='revised'?'#ae650f':kind==='new'?'#127568':active?'#315d49':'#a6b995','stroke-width':kind?3.5:active?2.5:1,'stroke-dasharray':kind==='removed'?'6 5':'none',opacity:(kind || active) ? .95 : showDiffs ? .18 : .55,'marker-end':`url(#${markerPrefix}-${kind==='removed'?'release':kind==='new'?'new':kind==='revised'?'revised':'agreement'})`,class:'trade-edge',tabindex:0,role:'button','aria-label':description});
     if(path) {
       svgEl('title',{},path,description);
-      const inspect=()=>{state.selected=t.seller_id;$('inspect-select').value=state.selected;notify(description);renderFrame();};
+      const inspect=()=>{state.selected=t.seller_id;state.focusedPair=tradeKey(t);$('inspect-select').value=state.selected;notify(description);renderFrame();};
       path.addEventListener('click',inspect);path.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();inspect();}});
+    }
+  }
+  const focused=diffs.find(d=>d.key===state.focusedPair)||diffs.find(d=>[d.seller,d.buyer].includes(state.selected));
+  if(focused) {
+    const p=pos.get(focused.seller),q=pos.get(focused.buyer);
+    if(p&&q){const x=(p.x+q.x)/2+18,y=(p.y+q.y)/2-18;
+      // Payments are rounded totals; use recorded quotes for unit prices.
+      const quotedPrice=trades=>trades.reduce((n,t)=>n+Number(t.price)*Number(t.quantity_kwh),0)/qty(trades);
+      const beforePrice=quotedPrice(focused.before),afterPrice=quotedPrice(focused.after);
+      const change=qty(focused.before)!==qty(focused.after)?`${fmt(qty(focused.before))} → ${fmt(qty(focused.after))} kWh`:Math.abs(beforePrice-afterPrice)>.000001?`${focused.before.length>1||focused.after.length>1?'Avg ':''}₹${fmt(beforePrice)} → ₹${fmt(afterPrice)}/kWh`:'Agreement terms revised';
+      const text=original?`${focused.seller} → ${focused.buyer}: ${fmt(qty(focused.before))} kWh`:`${focused.seller} → ${focused.buyer}: ${change}`;
+      const width=Math.min(820,(text.length*6.7+20)/textScale),height=28/textScale,cx=Math.max(width/2+12,Math.min(868-width/2,x));
+      const tag=svgEl('g',{'pointer-events':'none'},root);
+      svgEl('rect',{x:cx-width/2,y:y-height*.65,width,height,rx:7,fill:'#fffef9',stroke:'#ae650f'},tag);
+      svgEl('text',{x:cx,y:y+3/textScale,'text-anchor':'middle','font-size':12/textScale,fill:'#704307','font-weight':700},tag,text);
     }
   }
   const highlighted=state.causal.size?[...state.result.baseline.events,...(state.result.intervention?.events||[])].filter(e=>state.causal.has(e.id)):[event].filter(Boolean);
@@ -432,16 +507,16 @@ function drawGraph(svg,trades,event,caption,world=frameWorld()) {
     const affected=delta.affected.has(a.id),selected=a.id===state.selected,own=a.id===state.controlled,active=activeParties.has(a.id);
     const match=(!search||`${a.id} ${a.name}`.toLowerCase().includes(search))&&($('role-filter').value==='all'||$('role-filter').value===a.role),dim=!match||(only&&!affected&&!own);
     const availability=householdAvailability(a,trades);
-    const g=svgEl('g',{transform:`translate(${point.x} ${point.y})`,class:`node${active?' active-party':''}${own?' controlled-node':''}${selected?' inspected-node':''}`,'data-agent':a.id,tabindex:0,role:'button','aria-label':`Inspect ${a.id}, ${a.name || ''}, ${a.role}. ${availability}${affected?', affected':''}`,opacity:dim?.15:1},nodes);
+    const g=svgEl('g',{transform:`translate(${point.x} ${point.y})`,class:`node${affected?' changed-node':''}${active?' active-party':''}${own?' controlled-node':''}${selected?' inspected-node':''}`,'data-agent':a.id,tabindex:0,role:'button','aria-label':`Inspect ${a.id}, ${a.name || ''}, ${a.role}. ${availability}${affected?', affected':''}`,opacity:dim?.15:1},nodes);
     if(active)svgEl('circle',{r:28,fill:'#ede4f3',stroke:'#79548f','stroke-width':1.5},g);
     if(own)svgEl('circle',{r:20,fill:'none',stroke:'#40654d','stroke-width':2},g);
     if(selected)svgEl('circle',{r:24,fill:'none',stroke:'#254936','stroke-width':1.5,'stroke-dasharray':'3 3'},g);
-    const attrs={fill:a.role==='seller'?'#c59a55':'#5c9287',stroke:affected?'#718eb9':'#fffef9','stroke-width':affected?3:2,class:'node-shape'},radius=agents().length<=50?14:10;
+    const attrs={fill:a.role==='seller'?'#c59a55':'#5c9287',stroke:affected?'#ae650f':'#fffef9','stroke-width':affected?3:2,class:'node-shape'},radius=agents().length<=50?14:10;
     if(a.role==='seller')svgEl('circle',{r:radius,...attrs},g);else svgEl('rect',{x:-radius,y:-radius,width:radius*2,height:radius*2,rx:5,...attrs},g);
     if(own)svgEl('text',{'text-anchor':'middle',y:3,fill:'white','font-size':9,'font-weight':600},g,'✦');
     svgEl('text',{'text-anchor':'middle',...labels.get(a.id),fill:'#314b36','font-size':11/textScale,'font-weight':own?700:500,class:'node-label'},g,a.id);
     svgEl('title',{},g,`${a.id} · ${a.name || 'Home'} · ${a.role} · ${availability}`);
-    const inspect=()=>{state.selected=a.id;$('inspect-select').value=a.id;renderFrame();$('household-details').open=true;$('household-details').scrollIntoView?.({block:'nearest'});};
+    const inspect=()=>{state.selected=a.id;state.focusedPair=null;$('inspect-select').value=a.id;renderFrame();};
     g.addEventListener('click',inspect);g.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();inspect();}});
   }
 }
@@ -592,17 +667,17 @@ function stepRound(direction) {
   renderFrame();
 }
 function stop(){clearInterval(state.timer);state.timer=null;$('replay-caption').setAttribute('aria-live','polite');$('play').textContent='▶ Play the simulation';$('play').setAttribute('aria-label','Play the simulation');}
-function play(){state.stage=null;if(state.timer){stop();return;}if(!currentEvents().length)return;$('replay-caption').setAttribute('aria-live','off');if(state.index>=currentEvents().length-1)state.index=0;$('play').textContent='Ⅱ Pause';$('play').setAttribute('aria-label','Pause the simulation');renderFrame();state.timer=setInterval(()=>{if(state.index>=currentEvents().length-1){stop();return;}state.index++;renderFrame();},700/Number($('speed').value));}
+function play(){state.stage=null;if(state.timer){stop();return;}if(!currentEvents().length)return;$('replay-caption').setAttribute('aria-live','off');if(state.index>=currentEvents().length-1)state.index=0;$('play').textContent='Ⅱ Pause';$('play').setAttribute('aria-label','Pause the simulation');renderFrame();state.timer=setInterval(()=>{if(state.index>=currentEvents().length-1){stop();return;}state.index++;renderFrame();},1400/Number($('speed').value));}
 function download(name,text,type){if(state.exportURL)URL.revokeObjectURL(state.exportURL);state.exportURL=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement('a');a.href=state.exportURL;a.download=name;a.textContent=`Download ${name}`;notify('Your export is ready. ');$('notice').append(a);$('export-title').textContent=`View or copy ${name}`;$('export-text').value=text;$('export-preview').hidden=false;$('notice').scrollIntoView?.({block:'nearest'});}
 function exportLedger(){const q=s=>`"${String(s??'').replaceAll('"','""')}"`;const columns=['run','id','seller_id','buyer_id','quantity_kwh','price','payment','status','delivery_start','delivery_end'];const rows=[columns.join(',')];for(const name of ['baseline','intervention'])for(const t of state.result[name]?.trades||[])rows.push([name,...columns.slice(1).map(k=>t[k])].map(q).join(','));download('energy-trade-ledger.csv',rows.join('\n'),'text/csv');}
-function bindPan(svg){let drag=null;svg.addEventListener('pointerdown',e=>{if(e.target.closest('.trade-edge'))return;const node=e.target.closest('.node'),id=node?.getAttribute('data-agent'),origin=id?(state.nodeOffsets[id]||{x:0,y:0}):state.pan;drag={x:e.clientX,y:e.clientY,px:origin.x,py:origin.y,id};if(id){state.selected=id;$('inspect-select').value=id;}svg.setPointerCapture(e.pointerId);});svg.addEventListener('pointermove',e=>{if(!drag)return;const rect=svg.getBoundingClientRect(),scale=1/Math.min(rect.width/880,rect.height/610)/(drag.id?state.zoom:1),next={x:drag.px+(e.clientX-drag.x)*scale,y:drag.py+(e.clientY-drag.y)*scale};if(drag.id)state.nodeOffsets[drag.id]=next;else state.pan=next;renderFrame();});svg.addEventListener('pointerup',()=>{drag=null;if(state.result)renderFrame();});svg.addEventListener('pointercancel',()=>drag=null);}
+function bindPan(svg){let drag=null;svg.addEventListener('pointerdown',e=>{if(e.target.closest('.trade-edge'))return;const node=e.target.closest('.node'),id=node?.getAttribute('data-agent'),origin=id?(state.nodeOffsets[id]||{x:0,y:0}):state.pan;drag={x:e.clientX,y:e.clientY,px:origin.x,py:origin.y,id};if(id){state.selected=id;state.focusedPair=null;$('inspect-select').value=id;}});svg.addEventListener('pointermove',e=>{if(!drag||Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<4)return;if(!drag.moved)svg.setPointerCapture(e.pointerId);drag.moved=true;const rect=svg.getBoundingClientRect(),scale=1/Math.min(rect.width/880,rect.height/610)/(drag.id?state.zoom:1),next={x:drag.px+(e.clientX-drag.x)*scale,y:drag.py+(e.clientY-drag.y)*scale};if(drag.id)state.nodeOffsets[drag.id]=next;else state.pan=next;renderFrame();});svg.addEventListener('pointerup',()=>{const selected=drag?.id,moved=drag?.moved;drag=null;if((selected||moved)&&state.result)renderFrame();});svg.addEventListener('pointercancel',()=>drag=null);}
 $('config-form').onsubmit=e=>{e.preventDefault();state.zoom=1;state.pan={x:0,y:0};state.nodeOffsets={};run();};
 for(const id of ['population','topology','seed','max-rounds','max-messages','cap','memory','price-tick','negotiation-mode'])$(id).addEventListener('change',invalidate);
 $('instruction').addEventListener('input',()=>{const hadDraft=!!state.draft;clearDraft();setBusy(state.busy);if(hadDraft)$('instruction-help').textContent='Your instruction changed. Review it again before applying.';});
 $('policy-value').addEventListener('input',clearDraft);
 $('policy-field').addEventListener('change',clearDraft);
-$('controlled').onchange=()=>{state.controlled=$('controlled').value;state.selected=state.controlled;$('inspect-select').value=state.selected;clearDraft();state.causal.clear();render();};
-$('inspect-select').onchange=()=>{state.selected=$('inspect-select').value;renderFrame();};
+$('controlled').onchange=()=>{state.controlled=$('controlled').value;state.selected=state.controlled;state.focusedPair=null;$('inspect-select').value=state.selected;clearDraft();state.causal.clear();render();};
+$('inspect-select').onchange=()=>{state.selected=$('inspect-select').value;state.focusedPair=null;renderFrame();};
 $('parse').onclick=()=>preview();
 $('structured').onclick=()=>{const v=$('policy-value').value,f=$('policy-field').value,phrases={min_price:`Set my minimum price to INR ${v}`,max_price:`Set my maximum price to INR ${v}`,max_offer_kwh:`Sell up to ${v} kWh`,forecast_surplus_kwh:`Set my surplus to ${v} kWh`,reserve_kwh:`Keep ${v} kWh in reserve`,budget:`Set my budget to INR ${v}`,demand_kwh:`Buy ${v} kWh`,deadline_round:`Set my deadline to round ${v}`};$('instruction').value=phrases[f];preview(phrases[f]);};
 document.querySelectorAll('[data-example-index]').forEach(b=>b.onclick=()=>useExample(Number(b.dataset.exampleIndex)));
@@ -625,4 +700,12 @@ $('trace-export').onclick=()=>download(`energy-${state.view}-trace.jsonl`,curren
 $('ledger-export').onclick=exportLedger;
 $('select-export').onclick=()=>{$('export-text').focus();$('export-text').select();};
 bindPan($('graph'));bindPan($('compare-graph'));
+if(typeof window!=='undefined') {
+  let width=window.innerWidth,resizeTimer;
+  window.addEventListener('resize',()=>{
+    if(width===window.innerWidth)return;
+    width=window.innerWidth;clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(()=>{if(state.result)renderFrame();},100);
+  });
+}
 run();

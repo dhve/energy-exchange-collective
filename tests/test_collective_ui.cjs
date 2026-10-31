@@ -311,7 +311,7 @@ test('comparison always uses starting agreements instead of matching negotiation
   f.evaluate(`renderInspector=()=>{};renderDecisionAudit=()=>{};renderLog=()=>{};renderConversation=()=>{};state.view='compare';state.index=2;drawGraph=(svg,trades,event,caption)=>{if(svg===$('compare-graph'))globalThis.compared={trades,event,caption};};renderFrame();`);
   assert.equal(f.context.compared.trades.length,1);
   assert.equal(f.context.compared.event,null);
-  assert.match(f.context.compared.caption,/starting agreements/i);
+  assert.match(f.context.compared.caption,/Before.*original agreements/i);
 });
 
 test('conversation uses actual recorded amounts, delivery window and authoritative reason', () => {
@@ -497,7 +497,7 @@ test('offers stage displays a recorded exchange through its response and matchin
     drawGraph=(svg,trades,event)=>{if(svg===$('graph'))globalThis.visibleGraph={trades,event};};
     selectStage('offers');
   `);
-  assert.match(f.element('conversation').innerHTML,/Offer sent.*Counteroffer sent.*Offer accepted/s);
+  assert.match(f.element('conversation').innerHTML,/Offer.*Counteroffer.*Accepted terms.*Tentative agreement/s);
   assert.doesNotMatch(f.element('conversation').innerHTML,/99\.00|Later independent exchange/);
   assert.equal(f.evaluate('state.index'),4,'The timeline must be at the displayed exchange end');
   assert.equal(f.context.visibleGraph.event.id,'reserve');
@@ -574,7 +574,7 @@ test('fifty desktop home IDs avoid other nodes and labels while replay positions
 test('final conversation explains termination plainly while keeping the recorded audit reason', () => {
   const f=fixture();
   for(const [status,termination,expected] of [
-    ['locally_stable','sweep_clean',/finished finding trades under these rules/i],
+    ['locally_stable','sweep_clean',/No further trade was found under these rules/i],
     ['round_limited','max_messages',/message limit.*further changes may be possible/i],
     ['unresolved','invariant_failure',/could not complete/i],
   ]) {
@@ -585,4 +585,122 @@ test('final conversation explains termination plainly while keeping the recorded
     assert.doesNotMatch(f.element('conversation').innerHTML,/sweep.clean|locally.stable|invariant.failure|max.messages/i);
     assert.equal(f.evaluate('currentEvents()[0].reason'),status+': '+termination,'Plain language must not rewrite recorded audit data');
   }
+});
+
+test('agreement differences detect price and delivery changes, preserving multiple trades per pair', () => {
+  const f=fixture();
+  const differences=f.evaluate(`agreementDifferences([
+    {seller_id:'A17',buyer_id:'A02',quantity_kwh:4,price:6,delivery_start:'x',delivery_end:'y'},
+    {seller_id:'A17',buyer_id:'A02',quantity_kwh:1,price:7,delivery_start:'y',delivery_end:'z'},
+    {seller_id:'A03',buyer_id:'A04',quantity_kwh:2,price:5}
+  ],[
+    {seller_id:'A17',buyer_id:'A02',quantity_kwh:4,price:6.5,delivery_start:'x',delivery_end:'y'},
+    {seller_id:'A17',buyer_id:'A02',quantity_kwh:1,price:7,delivery_start:'y',delivery_end:'later'},
+    {seller_id:'A03',buyer_id:'A06',quantity_kwh:2,price:5}
+  ])`);
+  assert.deepEqual(Array.from(differences,d=>d.kind),['revised','removed','new']);
+  assert.equal(differences[0].before.length,2);
+  assert.equal(differences[0].after[0].price,6.5);
+  assert.equal(differences[0].after[1].delivery_end,'later');
+});
+
+test('replay differences and policy cards use the displayed frame, without leaking final changes', () => {
+  const f=fixture();
+  f.evaluate(`
+    const old={seller_id:'A17',buyer_id:'A02',quantity_kwh:4,price:6};
+    const revised={...old,quantity_kwh:3};
+    state.result={world:{agents:[{id:'A17',name:'Yash',role:'seller',reserve_kwh:2}]},updated_world:{agents:[{id:'A17',name:'Yash',role:'seller',reserve_kwh:3,time_price:{floor:5,after:'2025-10-29T21:00:00+05:30'}}]},baseline:{trades:[old]},intervention:{trades:[revised],events:[{type:'profile_retrieved'},{type:'policy_confirmed'},{type:'terminated'}]}};
+    state.frames=[[old],[old],[revised]];state.view='intervention';state.index=0;renderReplayContext();
+  `);
+  assert.match(f.element('trade-differences').innerHTML,/No agreement differences/);
+  assert.match(f.element('focus-home').innerHTML,/original settings.*2.00 kWh/s);
+  assert.doesNotMatch(f.element('focus-home').innerHTML,/₹5.00/);
+  f.evaluate('state.index=2;renderReplayContext();');
+  assert.match(f.element('trade-differences').innerHTML,/4.00 kWh.*3.00 kWh/s);
+  assert.match(f.element('frame-summary').innerHTML,/3.00 kWh agreed/);
+  assert.match(f.element('focus-home').innerHTML,/settings at this step.*3.00 kWh.*₹5.00/s);
+  f.evaluate("state.stage='starting';renderReplayContext();");
+  assert.match(f.element('trade-differences').innerHTML,/No agreement differences/);
+  assert.match(f.element('focus-home').innerHTML,/original settings.*2.00 kWh/s);
+});
+
+test('unchanged quantities with different prices remain visible in household impact cards', () => {
+  const f=fixture();
+  f.evaluate(`state.result={world:{agents:[{id:'A17',name:'Yash',role:'seller'}]},baseline:{trades:[{seller_id:'A17',buyer_id:'A02',quantity_kwh:4,price:6}]},intervention:{trades:[{seller_id:'A17',buyer_id:'A02',quantity_kwh:4,price:7}]}};renderImpactSummary();`);
+  assert.match(f.element('impact-summary').innerHTML,/0.00 kWh sold/);
+  assert.match(f.element('impact-summary').innerHTML,/\+4.00 rupees received/);
+});
+
+test('negotiation explanation distinguishes strategy steps from unrecorded motives', () => {
+  const f=fixture();
+  const text=f.evaluate(`negotiationExplanation({actor_id:'A17',reason_code:'strategy_quote',strategy_step:1,reason:'A17 proposes 3 kWh at INR 6.7/kWh'})`);
+  assert.match(text,/quote 2.*seller proposes.*frozen strategy.*no additional motive is recorded/);
+});
+
+test('price-only changes have an explicit graph annotation rather than identical energy amounts', () => {
+  const f=fixture();snapshotFixture(f);
+  f.evaluate(`state.stage=null;state.index=1;state.view='compare';
+    state.result.intervention.trades=[{id:'t2',seller_id:'A17',buyer_id:'A02',quantity_kwh:4,price:9}];
+    rebuildFrames();drawGraph($('graph'),frameTrades(),null,'After');`);
+  const texts=descendants(f.element('graph')).filter(n=>n.tag==='text').map(n=>n.textContent);
+  assert.ok(texts.some(t=>t.includes('₹7.00 → ₹9.00/kWh')));
+  const edge=descendants(f.element('graph')).find(n=>n.getAttribute?.('class')==='trade-edge');
+  assert.equal(edge.getAttribute('stroke'),'#ae650f');
+});
+
+test('graph price changes use recorded prices even when payments round to the same amount', () => {
+  for(const [beforePrice,afterPrice,beforePayment,afterPayment,expected] of [
+    [8,9.05,.80,.91,'₹8.00 → ₹9.05/kWh'],
+    [9.05,9.10,.91,.91,'₹9.05 → ₹9.10/kWh'],
+  ]) {
+    const f=fixture();snapshotFixture(f);
+    f.context.terms={beforePrice,afterPrice,beforePayment,afterPayment};
+    f.evaluate(`
+      const {beforePrice,afterPrice,beforePayment,afterPayment}=globalThis.terms;
+      const trade={id:'t1',seller_id:'A17',buyer_id:'A02',quantity_kwh:.1};
+      state.result.baseline.trades=[{...trade,price:beforePrice,payment:beforePayment}];
+      state.result.intervention.trades=[{...trade,price:afterPrice,payment:afterPayment}];
+      state.stage=null;state.index=1;state.view='compare';rebuildFrames();
+      drawGraph($('graph'),frameTrades(),null,'After');
+    `);
+    const texts=descendants(f.element('graph')).filter(n=>n.tag==='text').map(n=>n.textContent);
+    assert.ok(texts.some(t=>t.includes(expected)),`Expected the recorded price change ${expected}`);
+  }
+});
+
+test('ordinary replay can expand the full current exchange without past or future exchanges', () => {
+  const f=fixture();replayFixture(f);
+  f.evaluate(`
+    const offer={type:'offer_sent',actor_id:'A17',counterparty_id:'A03',quantity_kwh:1.5,price:8};
+    state.result.intervention.events=[
+      {...offer,round:0,reason:'Previous exchange'},
+      {...offer,type:'offer_rejected',round:0,reason:'Previous rejection'},
+      ...Array.from({length:10},(_,i)=>({...offer,id:'current-'+i,round:1,type:i===0?'offer_sent':i===9?'offer_accepted':'counteroffer_sent',reason:'Current message '+i})),
+      {...offer,round:2,reason:'Future exchange'}
+    ];
+    state.stage=null;state.index=11;renderConversation();
+  `);
+  const html=f.element('conversation').innerHTML;
+  assert.match(html,/<summary>Read 7 earlier messages/);
+  assert.equal((html.match(/class="conversation-entry"/g)||[]).length,10);
+  assert.match(html,/Current message 0/);
+  assert.match(html,/Current message 9/);
+  assert.doesNotMatch(html,/Previous exchange|Previous rejection|Future exchange/);
+});
+
+test('an unresolved intervention cannot show household changes as final results', () => {
+  const f=fixture();snapshotFixture(f);
+  f.evaluate("state.result.intervention.status='unresolved';renderImpactSummary();");
+  assert.equal(f.element('impact-summary').innerHTML,'');
+});
+
+test('tapping a household refreshes the inline inspector even if SVG capture suppresses click', () => {
+  const f=fixture();
+  f.evaluate('globalThis.redraws=0;renderFrame=()=>{globalThis.redraws++;};');
+  const graph=f.element('graph');
+  graph.listeners.pointerdown[0]({clientX:10,clientY:20,target:{closest:selector=>selector==='.node'?{getAttribute:()=> 'A02'}:null}});
+  assert.equal(f.context.redraws,0,'Do not remove the pressed element before pointerup');
+  graph.listeners.pointerup[0]({});
+  assert.equal(f.evaluate('state.selected'),'A02');
+  assert.equal(f.context.redraws,1);
 });
