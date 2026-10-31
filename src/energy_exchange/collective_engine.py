@@ -21,9 +21,14 @@ import math
 import random
 import statistics
 import time
+from datetime import timedelta
 
-PROTOCOL_VERSION = "collective-bilateral-v1"
-ENGINE_VERSION = "0.1.0"
+from .collective_time import validate_interval, contains, parse_time, segments
+
+from .collective_bargaining import (default_strategy_plan, validate_strategy_plan, quote_price)
+
+PROTOCOL_VERSION = "collective-bilateral-v2"
+ENGINE_VERSION = "0.2.0"
 STATUSES = ("locally_stable", "round_limited", "cycle_detected", "unresolved")
 SCENARIOS = ("custom", "price", "supply", "budget", "shock", "none")
 TOPOLOGIES = ("local", "open")
@@ -38,17 +43,17 @@ RAW_PER_INR = 100_000
 
 PRIVATE_FIELDS = ["budget", "conditional_price", "context",
                   "forecast_surplus_kwh", "memory", "reserve_kwh"]
-MESSAGE_TYPES = ("offer_sent", "counteroffer_sent", "offer_rejected")
+MESSAGE_TYPES = ("offer_sent", "counteroffer_sent", "offer_rejected", "offer_accepted")
 RESERVATION_TYPES = ("provisional_reserved", "provisional_released",
                      "offer_replaced")
 SELLER_CHANGES = {"min_price", "max_offer_kwh", "forecast_surplus_kwh",
                   "reserve_kwh", "conditional_price", "deadline_round",
-                  "interval_start", "interval_end"}
+                  "interval_start", "interval_end", "time_price"}
 BUYER_CHANGES = {"demand_kwh", "max_price", "budget", "deadline_round",
                  "interval_start", "interval_end"}
 CONFIG_KEYS = {"population", "seed", "topology", "max_rounds", "max_messages",
                "utility_cap_kwh", "memory_enabled", "price_tick",
-               "local_degree", "max_offers_per_turn"}
+               "local_degree", "max_offers_per_turn", "negotiation_mode"}
 
 PRICE_RULE = ("midpoint of the seller's effective floor and the buyer's maximum,"
               " rounded half up to the price tick and clamped into that band;"
@@ -64,7 +69,8 @@ ADMISSIBLE_MOVES = ("fill within free capacity; replacement of one of the mover'
                     " gains at least 1 paise; no coalition or multi trade moves")
 STABILITY_SCOPE_STABLE = (
     "locally stable: a final sweep over every agent in id order found no proposal"
-    " (fill or single trade replacement among discovery neighbors at the rule price)"
+    " (fill or single trade replacement among discovery neighbors under the recorded"
+    " pricing strategy and bounded move set)"
     " with expected mover gain of at least 1 paise that the counterparty had not"
     " already rejected in its unchanged state. Not a Nash or competitive equilibrium"
     " claim.")
@@ -166,7 +172,8 @@ def fingerprint(obj):
 
 
 def state_hash(trades):
-    rows = sorted((t["seller_id"], t["buyer_id"], t["wh"], t["paise"], bool(t["bundle"]))
+    rows = sorted((t["seller_id"], t["buyer_id"], t["wh"], t["paise"], bool(t["bundle"]),
+                   t.get("delivery_start"), t.get("delivery_end"))
                   for t in trades)
     return fingerprint(rows)
 
@@ -176,6 +183,7 @@ def default_config():
         "population": 50, "seed": 42, "topology": "local", "max_rounds": 12,
         "max_messages": 4000, "utility_cap_kwh": 400.0, "memory_enabled": True,
         "price_tick": 0.05, "local_degree": 6, "max_offers_per_turn": 8,
+        "negotiation_mode": "midpoint",
     }
 
 
@@ -199,6 +207,8 @@ def _validate_config(config):
             raise ValueError(f"{key} must be a nonnegative integer")
     if not isinstance(cfg["memory_enabled"], bool):
         raise ValueError("memory_enabled must be true or false")
+    if cfg["negotiation_mode"] not in ("midpoint", "bargaining"):
+        raise ValueError("negotiation_mode must be midpoint or bargaining")
     tick = to_paise(cfg["price_tick"], "price_tick")
     if tick < 1:
         raise ValueError("price_tick must be at least one paise")
@@ -218,7 +228,7 @@ def make_agent(agent_id, role, **fields):
         "interval_start": INTERVAL_START, "interval_end": INTERVAL_END,
         "timezone": TIMEZONE,
         "forecast_surplus_kwh": None, "reserve_kwh": None, "max_offer_kwh": None,
-        "min_price": None, "conditional_price": None,
+        "min_price": None, "conditional_price": None, "time_price": None,
         "demand_kwh": None, "max_price": None, "budget": None,
         "deadline_round": None, "memory": [],
     }
@@ -326,7 +336,10 @@ def make_world(agents, config):
         "agents": agents,
         "discovery_edges": _discovery_edges(agents, cfg["topology"], cfg["local_degree"]),
         "config": world_config,
-        "interval": {"start": INTERVAL_START, "end": INTERVAL_END, "timezone": TIMEZONE},
+        "interval": {
+            "start": min((parse_time(a["interval_start"]) for a in agents), default=parse_time(INTERVAL_START)).isoformat(),
+            "end": max((parse_time(a["interval_end"]) for a in agents), default=parse_time(INTERVAL_END)).isoformat(),
+            "timezone": TIMEZONE},
         "private_fields": list(PRIVATE_FIELDS),
     }
 
@@ -335,6 +348,21 @@ def build_world(config):
     cfg, _tick, _cap = _validate_config(config)
     population = cfg["population"]
     agents = [_generate_agent(cfg["seed"], i, population) for i in range(1, population + 1)]
+    if cfg["negotiation_mode"] == "bargaining":
+        # Delivery preferences are synthetic and independent of generation RNG.
+        # A17 remains the familiar baseline household used by existing examples.
+        for i, agent in enumerate(agents, 1):
+            if agent["id"] == "A17":
+                continue
+            hour = 20 if i % 5 == 0 else 15 if i % 5 == 1 else 14
+            start = parse_time(INTERVAL_START).replace(hour=hour)
+            agent["interval_start"] = start.isoformat()
+            agent["interval_end"] = (start + timedelta(hours=2)).isoformat()
+            if agent["role"] == "seller" and i % 3 == 0:
+                floor = max(0, ((to_paise(agent["min_price"], "min_price") - 50) // _tick) * _tick)
+                agent["time_price"] = {"after": (start + timedelta(hours=1)).isoformat(),
+                                       "floor": inr(floor)}
+            agent["context"] += " Energy is freely shiftable within its delivery window, subject to one total household pool."
     return make_world(agents, cfg)
 
 
@@ -343,7 +371,7 @@ def agent_state(agent, tick=5):
     role = agent["role"]
     label = agent["id"]
     state = {"id": label, "role": role, "version": 0,
-             "interval": (agent["interval_start"], agent["interval_end"]),
+             "interval": validate_interval(agent["interval_start"], agent["interval_end"]),
              "deadline": agent.get("deadline_round"),
              "preferred": [], "memory_ids": {}}
     if not isinstance(state["interval"][0], str) or not isinstance(state["interval"][1], str):
@@ -364,6 +392,18 @@ def agent_state(agent, tick=5):
         floor = to_paise(agent["min_price"], f"{label}.min_price")
         if floor % tick:
             raise ValueError(f"{label}: min_price must be on the price tick")
+        timed = agent.get("time_price")
+        if timed is not None:
+            if not isinstance(timed, dict) or set(timed) != {"after", "floor"}:
+                raise ValueError(f"{label}: time_price needs after and floor")
+            after = parse_time(timed["after"])
+            timed_floor = to_paise(timed["floor"], f"{label}.time_price.floor")
+            if timed_floor % tick or timed_floor >= floor:
+                raise ValueError(f"{label}: time price must be on tick and below the ordinary floor")
+            if not parse_time(state["interval"][0]) <= after < parse_time(state["interval"][1]):
+                raise ValueError(f"{label}: time price must start within the delivery window")
+            timed = (after.isoformat(), timed_floor)
+        state["time_price"] = timed
         cond = agent.get("conditional_price")
         if cond is not None:
             if not isinstance(cond, dict) or set(cond) != {"floor", "minimum_kwh"}:
@@ -380,6 +420,8 @@ def agent_state(agent, tick=5):
         state.update(offer_wh=max(0, min(max_offer, forecast - reserve)), floor=floor,
                      cond=cond)
     else:
+        if agent.get("time_price") is not None:
+            raise ValueError(f"{label}: time_price is available only for sellers")
         demand = to_wh(agent["demand_kwh"], f"{label}.demand_kwh")
         maximum = to_paise(agent["max_price"], f"{label}.max_price")
         if maximum % tick:
@@ -389,11 +431,15 @@ def agent_state(agent, tick=5):
     return state
 
 
-def effective_floor_paise(state, wh):
+def effective_floor_paise(state, wh, delivery_start=None):
+    floor = state["floor"]
+    timed = state.get("time_price")
+    if timed and delivery_start and parse_time(delivery_start) >= parse_time(timed[0]):
+        floor = min(floor, timed[1])
     cond = state.get("cond")
     if cond and wh >= cond[1]:
-        return cond[0]
-    return state["floor"]
+        floor = min(floor, cond[0])
+    return floor
 
 
 # -- engine state ------------------------------------------------------------
@@ -402,7 +448,9 @@ def effective_floor_paise(state, wh):
 class _Run:
     """Mutable negotiation state for one run (baseline or intervention)."""
 
-    def __init__(self, world, cfg, tick, cap_wh, name):
+    def __init__(self, world, cfg, tick, cap_wh, name, strategy_plan=None):
+        self.plan = strategy_plan or default_strategy_plan(world["agents"])
+        self.plan_hash = fingerprint(self.plan)
         self.name = name
         self.prefix = "ev-" if name == "baseline" else "iv-"
         self.cfg = cfg
@@ -492,14 +540,14 @@ class _Run:
     def free_budget(self, aid):
         return self.agents[aid]["budget"] - self.spent(aid)
 
-    def surplus(self, aid, wh, price):
+    def surplus(self, aid, wh, price, delivery_start=None):
         a = self.agents[aid]
         if a["role"] == "seller":
-            return (price - effective_floor_paise(a, wh)) * wh
+            return (price - effective_floor_paise(a, wh, delivery_start)) * wh
         return (a["maximum"] - price) * wh
 
     def trade_surplus(self, aid, trade):
-        return self.surplus(aid, trade["wh"], trade["paise"])
+        return self.surplus(aid, trade["wh"], trade["paise"], trade["delivery_start"])
 
     def utility(self, aid):
         return sum(self.trade_surplus(aid, t) for t in self.trades_of(aid))
@@ -519,6 +567,8 @@ class _Run:
             "bundle": trade["bundle"], "run": trade["run"],
             "created_event_id": trade["created_event_id"],
             "released_event_id": trade.get("released_event_id"),
+            "delivery_start": trade["delivery_start"], "delivery_end": trade["delivery_end"],
+            "effective_floor": inr(trade["floor"]),
         }
 
     def trades_after(self):
@@ -541,6 +591,9 @@ class _Run:
         if transition is not None:
             event["transition_id"] = transition
         event.update(extra)
+        if isinstance(event.get("trade"), dict):
+            for field in ("delivery_start", "delivery_end"):
+                event.setdefault(field, event["trade"].get(field))
         self.events.append(event)
         self.by_id[event_id] = event
         self.tail = event_id
@@ -578,7 +631,7 @@ class _Run:
 
     # -- proposals --
 
-    def _proposal(self, mover, partner, drop, partner_drop):
+    def _proposal(self, mover, partner, drop, partner_drop, delivery=None):
         """One candidate proposal, or None. Public information only, except
         the mover's own private fields."""
         m, c = self.agents[mover], self.agents[partner]
@@ -594,29 +647,48 @@ class _Run:
             return {"blocked": "cap_exhausted"}
         q = min(m_free, c_free, cap_free)
         bundle = False
-        price = price_paise(s["floor"], b["maximum"], self.tick)
+        delivery_start = delivery[0] if delivery else None
+        regular_floor = effective_floor_paise(dict(s, cond=None), q, delivery_start)
+        price = price_paise(regular_floor, b["maximum"], self.tick)
         if price is None and mover == seller and s["cond"] and q >= s["cond"][1]:
             price = price_paise(s["cond"][0], b["maximum"], self.tick)
             bundle = price is not None
         if price is None:
             return None
+        if self.cfg["negotiation_mode"] == "bargaining":
+            floor = effective_floor_paise(s, q, delivery_start)
+            price = quote_price(floor, b["maximum"], self.tick,
+                                self.plan["agents"][mover]["price_positions"][0])
+            bundle = s["cond"] is not None and q >= s["cond"][1] and price < regular_floor
         if mover == buyer:
             budget = self.free_budget(buyer) + (drop["payment"] if drop else 0)
             q = min(q, affordable_wh(budget, price))
         q -= q % ENERGY_TICK_WH
         if q <= 0 or (bundle and q < s["cond"][1]):
             return None
-        gain = self.surplus(mover, q, price) - (self.trade_surplus(mover, drop) if drop else 0)
+        gain = self.surplus(mover, q, price, delivery_start) - (self.trade_surplus(mover, drop) if drop else 0)
         if gain < EPSILON_RAW:
             return None
-        partner_gain = self.surplus(partner, q, price) - (
+        partner_gain = self.surplus(partner, q, price, delivery_start) - (
             self.trade_surplus(partner, partner_drop) if partner_drop else 0)
         if partner_gain < (EPSILON_RAW if partner_drop else 0):
             return None
         return {"mover": mover, "partner": partner, "seller": seller, "buyer": buyer,
                 "wh": q, "paise": price, "bundle": bundle, "drop": drop,
                 "expect_partner_drop": partner_drop, "gain": gain,
-                "partner_gain": partner_gain}
+                "partner_gain": partner_gain, "delivery": delivery}
+
+    def proposal_key(self, p):
+        return (p["mover"], p["partner"], p["wh"], p["paise"],
+                p["drop"]["id"] if p["drop"] else None,
+                *(p["delivery"] or (None, None)), self.plan_hash)
+
+    def proposals(self, mover, partner, drop, partner_drop):
+        seller = self.agents[mover if self.agents[mover]["role"] == "seller" else partner]
+        timed = seller.get("time_price")
+        for delivery in segments(self.agents[mover]["interval"],
+                                 self.agents[partner]["interval"], timed[0] if timed else None):
+            yield self._proposal(mover, partner, drop, partner_drop, delivery)
 
     def candidates(self, mover):
         """Ranked admissible proposals for one agent, plus blocking reasons."""
@@ -634,17 +706,17 @@ class _Run:
             partner_drops = [None] + self.trades_of(partner)
             for drop in own_drops:
                 for partner_drop in partner_drops:
-                    p = self._proposal(mover, partner, drop, partner_drop)
-                    if p is None:
-                        continue
-                    if "blocked" in p:
-                        blocked.add(p["blocked"])
-                        continue
-                    key = (partner, p["wh"], p["paise"], drop["id"] if drop else None)
-                    if self.rejections.get((mover,) + key) == self.agents[partner]["version"]:
-                        continue
-                    if key not in found or p["gain"] > found[key]["gain"]:
-                        found[key] = p
+                    for p in self.proposals(mover, partner, drop, partner_drop):
+                        if p is None:
+                            continue
+                        if "blocked" in p:
+                            blocked.add(p["blocked"])
+                            continue
+                        key = self.proposal_key(p)
+                        if self.rejections.get(key) == (m["version"], self.agents[partner]["version"]):
+                            continue
+                        if key not in found or p["gain"] > found[key]["gain"]:
+                            found[key] = p
         memory_on = self.cfg["memory_enabled"]
 
         def rank(p):
@@ -663,12 +735,12 @@ class _Run:
         mover, partner = p["mover"], p["partner"]
         r = self.agents[partner]
         q, price = p["wh"], p["paise"]
-        if self.agents[mover]["interval"] != r["interval"]:
+        if p["delivery"] is None:
             return {"decision": "reject", "reason_code": "interval_mismatch"}
         if r["deadline"] is not None and self.round > r["deadline"]:
             return {"decision": "reject", "reason_code": "deadline_passed"}
         if r["role"] == "seller":
-            if price < effective_floor_paise(r, q):
+            if price < effective_floor_paise(r, q, p["delivery"][0]):
                 return {"decision": "reject", "reason_code": "price_below_floor"}
         elif price > r["maximum"]:
             return {"decision": "reject", "reason_code": "price_above_max"}
@@ -692,7 +764,7 @@ class _Run:
 
         q_a, why_a = bounded(0, 0)
         if q_a > 0:
-            options.append((self.surplus(partner, q_a, price), 0, "", q_a, None, why_a))
+            options.append((self.surplus(partner, q_a, price, p["delivery"][0]), 0, "", q_a, None, why_a))
         elif why_a:
             reasons.append(why_a)
         for trade in sorted(self.trades_of(partner),
@@ -700,7 +772,7 @@ class _Run:
             q_b, why_b = bounded(trade["wh"], trade["payment"])
             if q_b <= 0:
                 continue
-            gain = self.surplus(partner, q_b, price) - self.trade_surplus(partner, trade)
+            gain = self.surplus(partner, q_b, price, p["delivery"][0]) - self.trade_surplus(partner, trade)
             if gain >= EPSILON_RAW:
                 options.append((gain, 1, trade["id"], q_b, trade, why_b))
         if not options:
@@ -714,13 +786,129 @@ class _Run:
                 "reason_code": why or "not_improving"}
 
     def mover_accepts(self, p, q):
-        gain = self.surplus(p["mover"], q, p["paise"]) - (
+        gain = self.surplus(p["mover"], q, p["paise"], p["delivery"][0]) - (
             self.trade_surplus(p["mover"], p["drop"]) if p["drop"] else 0)
         if gain >= EPSILON_RAW:
             return None
         if p["bundle"] and q < self.agents[p["seller"]]["cond"][1]:
             return "bundle_below_minimum"
         return "not_improving"
+
+    def checked_terms(self, p, q, partner_drop):
+        """Validate the complete proposed allocation before any mutation."""
+        if p["delivery"] is None:
+            return ["interval_mismatch"]
+        if any(self.agents[aid]["deadline"] is not None and
+               self.round > self.agents[aid]["deadline"] for aid in (p["mover"], p["partner"])):
+            return ["deadline_passed"]
+        refusal = self.mover_accepts(p, q)
+        if refusal:
+            return [refusal]
+        trial = copy.copy(self)
+        trial.trades = dict(self.trades)
+        for drop in (p["drop"], partner_drop):
+            if drop:
+                if drop["id"] not in trial.trades:
+                    return ["stale_replacement"]
+                del trial.trades[drop["id"]]
+        floor = effective_floor_paise(self.agents[p["seller"]], q, p["delivery"][0])
+        trial.trades["candidate"] = {
+            "id": "candidate", "seller_id": p["seller"], "buyer_id": p["buyer"],
+            "wh": q, "paise": p["paise"], "payment": payment_paise(q, p["paise"]),
+            "delivery_start": p["delivery"][0], "delivery_end": p["delivery"][1],
+            "floor": floor}
+        problems = trial.violations()
+        partner = p["partner"]
+        gain = trial.utility(partner) - self.utility(partner)
+        if gain < (EPSILON_RAW if partner_drop else 0):
+            problems.append("responder_not_improving")
+        return problems
+
+    def bargain(self, original, cause):
+        """At most three quotes per side, then acceptance or explicit rejection.
+
+        The model selected the trajectories, not the outcomes. Each quote is
+        executed against current quantities, budgets, delivery terms and prices.
+        """
+        p = dict(original)
+        counts = {p["mover"]: 0, p["partner"]: 0}
+        actor, receiver = p["mover"], p["partner"]
+        last = cause
+        reason = "strategy_exhausted"
+        q = p["wh"]
+        for exchange in range(6):
+            if p["delivery"] is None:
+                if not self.can_message():
+                    return False
+                own_window = self.agents[actor]["interval"]
+                last = self.emit(
+                    "offer_sent", actor, receiver,
+                    f"{actor} proposes {kwh(q):.3f} kWh within its delivery window",
+                    "delivery_offer", [last], quantity_kwh=kwh(q), price=inr(p["paise"]),
+                    delivery_start=own_window[0], delivery_end=own_window[1],
+                    strategy_plan_hash=self.plan_hash, strategy_step=0,
+                    price_position=self.plan["agents"][actor]["price_positions"][0])
+                reason = "interval_mismatch"
+                break
+            floor = effective_floor_paise(self.agents[p["seller"]], q, p["delivery"][0])
+            maximum = self.agents[p["buyer"]]["maximum"]
+            positions = self.plan["agents"][actor]["price_positions"]
+            step = counts[actor]
+            price = quote_price(floor, maximum, self.tick, positions[step])
+            if price is None:
+                reason = "price_below_floor"
+                break
+            p["paise"], p["wh"] = price, q
+            if not self.can_message():
+                return False
+            last = self.emit(
+                "offer_sent" if exchange == 0 else "counteroffer_sent", actor, receiver,
+                f"{actor} proposes {kwh(q):.3f} kWh at INR {inr(price):.2f}/kWh",
+                "strategy_quote", [last], quantity_kwh=kwh(q), price=inr(price),
+                delivery_start=p["delivery"][0], delivery_end=p["delivery"][1],
+                strategy_plan_hash=self.plan_hash, strategy_step=step,
+                price_position=positions[step],
+                replaces_trade_id=p["drop"]["id"] if p["drop"] else None)
+            counts[actor] += 1
+            answer = self.respond(p)
+            if answer["decision"] == "reject":
+                reason = answer["reason_code"]
+                break
+            budget_drop = p["drop"] if p["mover"] == p["buyer"] else answer["displace"]
+            available_budget = self.free_budget(p["buyer"]) + (budget_drop["payment"] if budget_drop else 0)
+            bounded_q = min(answer["wh"], affordable_wh(available_budget, price))
+            other_step = min(counts[receiver], 2)
+            aspiration = quote_price(floor, maximum, self.tick,
+                self.plan["agents"][receiver]["price_positions"][other_step])
+            acceptable = price >= aspiration if self.agents[receiver]["role"] == "seller" else price <= aspiration
+            problems = self.checked_terms(p, bounded_q, answer["displace"])
+            if acceptable and bounded_q == q and not problems:
+                if not self.can_message():
+                    return False
+                accepted = self.emit(
+                    "offer_accepted", receiver, actor,
+                    f"{receiver} accepts {kwh(q):.3f} kWh at INR {inr(price):.2f}/kWh",
+                    "accepted_quote", [last], quantity_kwh=kwh(q), price=inr(price),
+                    delivery_start=p["delivery"][0], delivery_end=p["delivery"][1],
+                    strategy_plan_hash=self.plan_hash, rule_checks=["all_constraints_passed"])
+                self.reserve(p, q, receiver, accepted, p["drop"], answer["displace"])
+                self.last_decision[p["mover"]] = f"reserved with {p['partner']}"
+                self.last_decision[p["partner"]] = f"accepted {p['mover']}"
+                return True
+            q = bounded_q
+            if counts[receiver] >= 3:
+                reason = problems[0] if problems else "strategy_exhausted"
+                break
+            actor, receiver = receiver, actor
+        if not self.can_message():
+            return False
+        self.emit("offer_rejected", receiver, actor, f"{receiver} rejects: {reason}", reason,
+                  [last], quantity_kwh=kwh(q), price=inr(p["paise"]),
+                  delivery_start=p["delivery"][0] if p["delivery"] else None,
+                  delivery_end=p["delivery"][1] if p["delivery"] else None,
+                  strategy_plan_hash=self.plan_hash, rejection_key=list(self.proposal_key(original)))
+        self.record_rejection(original, reason)
+        return False
 
     # -- transitions --
 
@@ -741,6 +929,9 @@ class _Run:
     def reserve(self, p, q, accepted_by, cause, mover_drop, partner_drop):
         """One atomic transition: releases, then the new reservation. Every
         event in the group carries the same post-transition allocation."""
+        problems = self.checked_terms(p, q, partner_drop)
+        if problems:
+            raise ValueError("unsafe reservation: " + "; ".join(problems))
         self.transition += 1
         transition = self.transition
         hop = self.hop.get(cause, 0) + 1
@@ -763,11 +954,16 @@ class _Run:
             causes.append(replaced)
             group.extend([replaced, released])
             queue_after.append((other, replaced))
+        seller = self.agents[p["seller"]]
+        regular_floor = effective_floor_paise(dict(seller, cond=None), q, p["delivery"][0])
+        bundle = bool(seller["cond"] and q >= seller["cond"][1] and p["paise"] < regular_floor)
         trade = {"id": f"trade-{self.next_trade:04d}", "seller_id": p["seller"],
                  "buyer_id": p["buyer"], "wh": q, "paise": p["paise"],
-                 "payment": payment_paise(q, p["paise"]), "bundle": p["bundle"],
+                 "payment": payment_paise(q, p["paise"]), "bundle": bundle,
                  "status": "provisional", "version": 1, "run": self.name,
-                 "created_event_id": self.next_event_id()}
+                 "created_event_id": self.next_event_id(),
+                 "delivery_start": p["delivery"][0], "delivery_end": p["delivery"][1],
+                 "floor": effective_floor_paise(self.agents[p["seller"]], q, p["delivery"][0])}
         self.next_trade += 1
         self.trades[trade["id"]] = trade
         event_id = self.emit(
@@ -794,8 +990,8 @@ class _Run:
     def record_rejection(self, p, reason_code):
         if reason_code == "cap_exhausted":
             return
-        key = (p["mover"], p["partner"], p["wh"], p["paise"], p["drop"]["id"] if p["drop"] else None)
-        self.rejections[key] = self.agents[p["partner"]]["version"]
+        self.rejections[self.proposal_key(p)] = (self.agents[p["mover"]]["version"],
+                                                 self.agents[p["partner"]]["version"])
 
     def take_turn(self, mover):
         cause = self.queued_by.get(mover)
@@ -811,13 +1007,20 @@ class _Run:
                                   " equal candidates", "memory_tie_break", [cause],
                                   memory_ids=[record])
         for p in ranked[:self.cfg["max_offers_per_turn"]]:
+            if self.cfg["negotiation_mode"] == "bargaining":
+                if self.bargain(p, cause):
+                    return True
+                if self.limit_hit:
+                    return False
+                continue
             if not self.can_message():
                 return False
             offer = self.emit(
                 "offer_sent", mover, p["partner"],
                 f"{mover} proposes {kwh(p['wh']):.3f} kWh at INR {inr(p['paise']):.2f}/kWh",
                 "bundle_offer" if p["bundle"] else "fill_offer", [cause],
-                quantity_kwh=kwh(p["wh"]), price=inr(p["paise"]), bundle=p["bundle"],
+                quantity_kwh=kwh(p["wh"]), price=inr(p["paise"]), bundle=p["bundle"], delivery_start=p["delivery"][0] if p["delivery"] else None,
+                delivery_end=p["delivery"][1] if p["delivery"] else None,
                 replaces_trade_id=p["drop"]["id"] if p["drop"] else None,
                 expected_gain=raw_inr(p["gain"]))
             answer = self.respond(p)
@@ -826,7 +1029,7 @@ class _Run:
             if answer["decision"] == "reject":
                 self.emit("offer_rejected", p["partner"], mover,
                           f"{p['partner']} rejects: {answer['reason_code']}",
-                          answer["reason_code"], [offer], quantity_kwh=kwh(p["wh"]),
+                          answer["reason_code"], [offer], rejection_key=list(self.proposal_key(p)), quantity_kwh=kwh(p["wh"]),
                           price=inr(p["paise"]))
                 self.record_rejection(p, answer["reason_code"])
                 self.last_decision[p["partner"]] = f"rejected {mover}: {answer['reason_code']}"
@@ -838,14 +1041,15 @@ class _Run:
                     "counteroffer_sent", p["partner"], mover,
                     f"{p['partner']} can take {kwh(q):.3f} kWh at the same price:"
                     f" {answer['reason_code']}", answer["reason_code"], [offer],
-                    quantity_kwh=kwh(q), price=inr(p["paise"]))
+                    quantity_kwh=kwh(q), price=inr(p["paise"]),
+                    delivery_start=p["delivery"][0], delivery_end=p["delivery"][1])
                 refusal = self.mover_accepts(p, q)
                 if refusal:
                     if not self.can_message():
                         return False
                     self.emit("offer_rejected", mover, p["partner"],
                               f"{mover} rejects the counteroffer: {refusal}", refusal,
-                              [last], quantity_kwh=kwh(q), price=inr(p["paise"]))
+                              [last], rejection_key=list(self.proposal_key(p)), quantity_kwh=kwh(q), price=inr(p["paise"]))
                     self.record_rejection(p, refusal)
                     self.last_decision[mover] = f"rejected counteroffer from {p['partner']}: {refusal}"
                     continue
@@ -911,14 +1115,20 @@ class _Run:
             if pair in pairs:
                 problems.append(f"duplicate pair {pair}")
             pairs.add(pair)
-            if t["wh"] <= 0:
-                problems.append(f"{t['id']} has no energy")
-            if t["paise"] < effective_floor_paise(s, t["wh"]) or t["paise"] > b["maximum"]:
+            if t["buyer_id"] not in self.neighbors[t["seller_id"]]:
+                problems.append(f"{t['id']} outside discovery network")
+            if t["wh"] <= 0 or t["wh"] % ENERGY_TICK_WH:
+                problems.append(f"{t['id']} invalid energy tick")
+            if t["paise"] < 0 or t["paise"] % self.tick:
+                problems.append(f"{t['id']} invalid price tick")
+            delivery = (t.get("delivery_start"), t.get("delivery_end"))
+            valid_delivery = contains(s["interval"], delivery) and contains(b["interval"], delivery)
+            if not valid_delivery:
+                problems.append(f"{t['id']} interval mismatch")
+            elif t["paise"] < effective_floor_paise(s, t["wh"], delivery[0]) or t["paise"] > b["maximum"]:
                 problems.append(f"{t['id']} price outside band")
             if t["payment"] != payment_paise(t["wh"], t["paise"]):
                 problems.append(f"{t['id']} payment mismatch")
-            if s["interval"] != b["interval"]:
-                problems.append(f"{t['id']} interval mismatch")
         for aid, a in self.agents.items():
             if a["role"] == "seller" and self.reserved_wh(aid) > a["offer_wh"]:
                 problems.append(f"{aid} over supply")
@@ -982,7 +1192,9 @@ class _Run:
                                           if self.agents[a]["role"] == "seller")),
             "mean_price": round(inr(weighted / total_wh), 4) if total_wh else None,
             "median_price": inr(statistics.median(prices)) if prices else None,
-            "welfare": raw_inr(welfare), "message_count": self.messages,
+            "welfare": raw_inr(welfare),
+            "payments": inr(sum(t["payment"] for t in self.trades.values())),
+            "message_count": self.messages,
             "rounds": self.round, "status": self.status,
             "hard_constraint_violations": len(problems), "duplicate_reservations": 0,
             "released_count": len(self.released),
@@ -992,6 +1204,7 @@ class _Run:
                 "released_trades": [self.trade_out(t) for t in self.released],
                 "metrics": metrics, "status": self.status,
                 "termination_reason": self.termination_reason, "stability_scope": scope,
+                "strategy_plan": copy.deepcopy(self.plan),
                 "rounds": self.round, "messages": self.messages,
                 "final_state_hash": state_hash(self.trades.values()), "agents": agents}
 
@@ -1085,9 +1298,10 @@ def _repair(run, changed_ids, policy_event):
         a = run.agents[aid]
         for trade in run.trades_of(aid):
             other = run.agents[trade["buyer_id"] if a["role"] == "seller" else trade["seller_id"]]
-            if a["interval"] != other["interval"]:
+            delivery = (trade["delivery_start"], trade["delivery_end"])
+            if not contains(a["interval"], delivery) or not contains(other["interval"], delivery):
                 drop(aid, trade, "interval_mismatch")
-            elif a["role"] == "seller" and trade["paise"] < effective_floor_paise(a, trade["wh"]):
+            elif a["role"] == "seller" and trade["paise"] < effective_floor_paise(a, trade["wh"], trade["delivery_start"]):
                 drop(aid, trade, "price_below_floor")
             elif a["role"] == "buyer" and trade["paise"] > a["maximum"]:
                 drop(aid, trade, "price_above_max")
@@ -1109,7 +1323,7 @@ def _repair(run, changed_ids, policy_event):
 
 def _trade_key(t):
     return (t["seller_id"], t["buyer_id"], round(t["quantity_kwh"] * 1000),
-            round(t["price"] * 100))
+            round(t["price"] * 100), t.get("delivery_start"), t.get("delivery_end"))
 
 
 def _comparison(base, inter, origins, controlled, scenario):
@@ -1129,7 +1343,7 @@ def _comparison(base, inter, origins, controlled, scenario):
     origin_set = set(origins)
     affected = sorted({k[0] for k in changed} | {k[1] for k in changed})
     direct = set()
-    for seller_id, buyer_id, _, _ in changed:
+    for seller_id, buyer_id, *_ in changed:
         if (seller_id in origin_set) != (buyer_id in origin_set):
             direct.add(buyer_id if seller_id in origin_set else seller_id)
     for t in inter["released_trades"]:
@@ -1162,6 +1376,8 @@ def _comparison(base, inter, origins, controlled, scenario):
         "cascade_depth": max((e["depth"] for e in inter["events"]
                               if e["type"] in RESERVATION_TYPES), default=0),
         "welfare_delta": round(inter["metrics"]["welfare"] - base["metrics"]["welfare"], 5),
+        "gaining_agents": sorted(aid for aid, delta in deltas.items() if delta > 0),
+        "losing_agents": sorted(aid for aid, delta in deltas.items() if delta < 0),
         "agent_utility_deltas": deltas,
         "baseline_metrics": base["metrics"], "intervention_metrics": inter["metrics"],
         "baseline_status": base["status"], "intervention_status": inter["status"],
@@ -1192,7 +1408,7 @@ def _source_fingerprint():
 # -- public entry points -----------------------------------------------------
 
 
-def run_experiment(config, intervention=None, world=None):
+def run_experiment(config, intervention=None, world=None, strategy_plan=None):
     """Run a baseline and, when asked, a cloned intervention. Pure: inputs are
     never mutated, and identical inputs give identical outputs apart from
     runtime_seconds."""
@@ -1202,8 +1418,11 @@ def run_experiment(config, intervention=None, world=None):
     else:
         world = copy.deepcopy(world)
         make_world(world["agents"], cfg)
+    strategy_plan = validate_strategy_plan(
+        strategy_plan if strategy_plan is not None else default_strategy_plan(world["agents"]),
+        world["agents"])
     started = time.perf_counter()
-    base = _Run(world, cfg, tick, cap_wh, "baseline")
+    base = _Run(world, cfg, tick, cap_wh, "baseline", strategy_plan)
     root = base.emit("world_generated", None, None,
                      f"{len(base.agents)} agents, {cfg['topology']} discovery,"
                      f" seed {cfg['seed']}", "seeded",
@@ -1261,7 +1480,11 @@ def run_experiment(config, intervention=None, world=None):
         "seed": cfg["seed"], "topology": cfg["topology"],
         "intervention": copy.deepcopy(intervention), "scenario": scenario,
         "changed_fields": changed_fields,
-        "price_rule": PRICE_RULE, "utility_formula": UTILITY_FORMULA,
+        "price_rule": PRICE_RULE if cfg["negotiation_mode"] == "midpoint" else
+            "bounded alternating price quotes from the frozen strategy plan; accepted quote sets price",
+        "strategy_plan": strategy_plan, "strategy_plan_hash": fingerprint(strategy_plan),
+        "energy_model": "One flexible energy pool per household over its delivery window; no power, device or per-hour generation limits.",
+        "utility_formula": UTILITY_FORMULA,
         "admissible_moves": ADMISSIBLE_MOVES,
         "stability_scope": STABILITY_SCOPE_STABLE,
         "units": {"energy": "kWh (whole watt hours internally)",
@@ -1279,7 +1502,9 @@ def _snapshot_trade(t):
             "wh": round(t["quantity_kwh"] * 1000), "paise": round(t["price"] * 100),
             "payment": round(t["payment"] * 100), "bundle": t["bundle"],
             "status": t["status"], "version": t["version"], "run": t["run"],
-            "created_event_id": t["created_event_id"]}
+            "created_event_id": t["created_event_id"],
+            "delivery_start": t.get("delivery_start"), "delivery_end": t.get("delivery_end"),
+            "floor": round(t.get("effective_floor", 0) * 100)}
 
 
 def _verify_snapshots(name, world, cfg, tick, cap_wh, run, carried, seen, problems):
@@ -1305,7 +1530,7 @@ def _verify_snapshots(name, world, cfg, tick, cap_wh, run, carried, seen, proble
             problems.append(f"{name}: transition {first.get('transition_id')} publishes"
                             " different snapshots on its events")
         group_ids = {e["id"] for e in group}
-        check = _Run(world, cfg, tick, cap_wh, name)
+        check = _Run(world, cfg, tick, cap_wh, name, run.get("strategy_plan"))
         for t in first["trades_after"]:
             check.trades[t["id"]] = _snapshot_trade(t)
             creator = t["created_event_id"]
@@ -1360,21 +1585,14 @@ def verify_result(result):
             if e["type"] == "policy_confirmed":
                 for aid in e["origin_agents"]:
                     versions[aid] = versions.get(aid, 0) + 1
-            if e["type"] == "offer_rejected":
-                mover, partner = e["counterparty_id"], e["actor_id"]
-                offer = seen.get(e["caused_by"][0]) if e["caused_by"] else None
-                if offer and offer["type"] == "counteroffer_sent":
-                    mover, partner = e["actor_id"], e["counterparty_id"]
-                    offer = seen.get(offer["caused_by"][0]) if offer["caused_by"] else None
-                if offer and e["reason_code"] != "cap_exhausted":
-                    key = (mover, partner, round(offer["quantity_kwh"] * 1000),
-                           round(offer["price"] * 100), offer.get("replaces_trade_id"))
-                    rejections[key] = versions.get(partner, 0)
+            if e["type"] == "offer_rejected" and e.get("rejection_key"):
+                key = tuple(e["rejection_key"])
+                rejections[key] = (versions.get(key[0], 0), versions.get(key[1], 0))
             if e["type"] in MESSAGE_TYPES:
                 for key in PRIVATE_FIELDS:
                     if key in e:
                         problems.append(f"{name}: {e['id']} exposes private field {key}")
-        check = _Run(world, cfg, tick, cap_wh, name)
+        check = _Run(world, cfg, tick, cap_wh, name, run.get("strategy_plan"))
         for t in run["trades"]:
             if t["status"] not in ("committed", "provisional"):
                 problems.append(f"{name}: {t['id']} has status {t['status']}")
@@ -1388,9 +1606,11 @@ def verify_result(result):
             problems.append(f"{name}: final trades differ from the last published snapshot")
         if run["status"] == "locally_stable" and not problems:
             check.round = run["rounds"]
+            for aid in check.agents:
+                check.agents[aid]["version"] = versions.get(aid, 0)
             for key, version in rejections.items():
-                if versions.get(key[1], 0) == version:
-                    check.rejections[key] = check.agents[key[1]]["version"]
+                if (versions.get(key[0], 0), versions.get(key[1], 0)) == version:
+                    check.rejections[key] = version
             leftover = check.sweep()
             if leftover:
                 problems.append(f"{name}: claims locally stable but {leftover} still have moves")
@@ -1408,4 +1628,32 @@ def verify_result(result):
                 added += 1
         if result["comparison"]["changed_trades"] != len(removed) + added:
             problems.append("comparison: changed_trades does not match the trade lists")
+    try:
+        manifest = result["manifest"]
+        expected = {
+            "world": fingerprint(result["world"]),
+            "baseline_events": fingerprint(result["baseline"]["events"]),
+            "baseline_trades": fingerprint(result["baseline"]["trades"]),
+            "intervention_events": fingerprint(result["intervention"]["events"]) if result.get("intervention") else None,
+            "intervention_trades": fingerprint(result["intervention"]["trades"]) if result.get("intervention") else None,
+        }
+        for key, value in expected.items():
+            if manifest["checksums"].get(key) != value:
+                problems.append(f"manifest checksum mismatch: {key}")
+        normalized = validate_strategy_plan(manifest["strategy_plan"], result["world"]["agents"])
+        if fingerprint(normalized) != manifest["strategy_plan_hash"]:
+            problems.append("strategy plan hash mismatch")
+        replayed = run_experiment(manifest["config"], manifest["intervention"],
+                                  world=result["world"], strategy_plan=normalized)
+        for name in ("baseline", "intervention"):
+            if result.get(name) != replayed.get(name):
+                recorded = copy.deepcopy(result.get(name))
+                replay = copy.deepcopy(replayed.get(name))
+                if recorded and replay:
+                    recorded["metrics"].pop("runtime_seconds", None)
+                    replay["metrics"].pop("runtime_seconds", None)
+                if recorded != replay:
+                    problems.append(f"{name}: recorded decisions differ from deterministic replay")
+    except (KeyError, TypeError, ValueError) as exc:
+        problems.append(f"replay invalid: {exc}")
     return problems
