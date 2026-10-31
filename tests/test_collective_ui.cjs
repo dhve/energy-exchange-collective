@@ -7,16 +7,16 @@ const vm = require('node:vm');
 const test = require('node:test');
 
 function fixture() {
-  const elements = new Map();
+  const elements = new Map(); let svgCount=0;
   function element(id) {
     if (!elements.has(id)) elements.set(id, {
       value: '', hidden: false, disabled: false, listeners: {},
       classList: {toggle() {}, add() {}, remove() {}},
-      setAttribute() {}, addEventListener(type, callback) {
+      setAttribute(key,value) { (this.attributeValues ||= {})[key]=String(value); }, getAttribute(key) { return this.attributeValues?.[key]; }, replaceChildren() { this.children=[]; }, addEventListener(type, callback) {
         (this.listeners[type] ||= []).push(callback);
       },
       dispatch(type) { for (const callback of this.listeners[type] || []) callback({target: this}); },
-      reportValidity() { return true; },
+      reportValidity() { return true; }, querySelectorAll() { return []; },
       focus() {},
       append(child) { (this.children ||= []).push(child); },
       attributes: new Set(),
@@ -26,7 +26,7 @@ function fixture() {
   }
   const context = vm.createContext({
     console, setInterval, clearInterval, setTimeout, Blob, URL,
-    document: {getElementById: element, querySelectorAll: () => [], createElement: tag => ({tag,click(){}})},
+    document: {getElementById: element, querySelector: element, querySelectorAll: () => [], createElementNS: (_,tag) => Object.assign(element('svg-'+svgCount++),{tag}), createElement: tag => ({tag,click(){}})},
   });
   const source = fs.readFileSync(path.join(__dirname, '../src/energy_exchange/web/collective.js'), 'utf8');
   // Suppress only the initial automatic HTTP run. Event bindings remain real.
@@ -251,4 +251,139 @@ test('an unresolved experiment does not present provisional trades as an outcome
   assert.doesNotMatch(f.element('simple-outcome').textContent,/homes share|different agreements/);
   assert.equal(f.element('affected-result').hidden,true);
   assert.equal(f.element('affected-list').hidden,true);
+});
+
+test('clarification keeps the original instruction and provides no apply path', async () => {
+  const f=fixture();
+  f.element('instruction').value='Keep enough energy for later';
+  f.evaluate(`api=async()=>({errors:[],changes:{reserve_kwh:3},recognized:[],normalized_prompt:'Keep energy in reserve',clarification_questions:['How many kWh should stay in reserve?'],assumptions:[],translation:{mode:'rules',status:'fallback'}}); globalThis.pending=preview();`);
+  await f.context.pending;
+  assert.equal(f.evaluate('state.draft'),null);
+  assert.equal(f.element('instruction').value,'Keep enough energy for later');
+  assert.match(f.element('proposal').innerHTML,/How many kWh/);
+  assert.doesNotMatch(f.element('proposal').innerHTML,/id="confirm"/);
+});
+
+test('translated preview shows interpretation and assumptions but submits only policy fields', async () => {
+  const f=fixture();
+  f.element('instruction').value='Sell later for less';
+  f.evaluate(`api=async()=>({errors:[],changes:{min_price:8},recognized:[],normalized_prompt:'Minimum price ₹8/kWh',clarification_questions:[],assumptions:['Applies to your current selling window'],translation:{mode:'llm',model:'test-model',status:'translated'}}); globalThis.pending=preview();`);
+  await f.context.pending;
+  assert.match(f.element('proposal').innerHTML,/Minimum price ₹8\/kWh/);
+  assert.match(f.element('proposal').innerHTML,/current selling window/);
+  f.evaluate('run=intervention=>{globalThis.submitted=intervention;};');
+  f.element('confirm').onclick();
+  assert.deepEqual(JSON.parse(JSON.stringify(f.context.submitted)),{agent_id:'A17',scenario:'custom',changes:{min_price:8}});
+});
+
+function replayFixture(f) {
+  f.evaluate(`
+    state.result.baseline={events:[{id:'b1',type:'offer_sent',round:1}],trades:[{id:'t1',seller_id:'A17',buyer_id:'A02',quantity_kwh:2,price:6}]};
+    state.result.intervention={events:[
+      {id:'i1',type:'policy_confirmed',round:0,actor_id:'A17',reason:'Floor changed'},
+      {id:'i2',type:'provisional_released',round:0,actor_id:'A17',counterparty_id:'A02',trade_id:'t1',reason:'Price below new floor'},
+      {id:'i3',type:'offer_sent',round:1,actor_id:'A17',counterparty_id:'A03',quantity_kwh:1.5,price:8,reason:'Available surplus',delivery_start:'2026-10-30T15:00:00+05:30',delivery_end:'2026-10-30T16:00:00+05:30'},
+      {id:'i4',type:'terminated',round:2,reason:'No admissible move'}],trades:[]};
+    state.view='intervention';rebuildFrames();
+  `);
+}
+
+test('five replay stages point to real events and starting agreements stay frozen', () => {
+  const f=fixture();replayFixture(f);
+  const stages=JSON.parse(f.evaluate('JSON.stringify(replayStages())'));
+  assert.equal(stages.length,5);
+  assert.deepEqual(stages.map(s=>s.event?.id || null),[null,'i1','i2','i3','i4']);
+  f.evaluate("renderFrame=()=>{};selectStage('starting');");
+  assert.equal(f.evaluate('qty(frameTrades())'),2);
+  assert.equal(f.evaluate('currentEvents().length'),4,'Stage navigation must never inject trace events');
+});
+
+test('a missing affected agreement stage explains the absence without inventing a release', () => {
+  const f=fixture();replayFixture(f);
+  f.evaluate("state.result.intervention.events=state.result.intervention.events.filter(e=>e.type!=='provisional_released');");
+  const stage=JSON.parse(f.evaluate("JSON.stringify(replayStages().find(s=>s.id==='affected'))"));
+  assert.equal(stage.event,null);
+  assert.match(stage.explanation,/no.*agreement.*released|no.*direct.*change/i);
+});
+
+test('comparison always uses starting agreements instead of matching negotiation rounds', () => {
+  const f=fixture();replayFixture(f);
+  f.evaluate(`renderInspector=()=>{};renderDecisionAudit=()=>{};renderLog=()=>{};renderConversation=()=>{};state.view='compare';state.index=2;drawGraph=(svg,trades,event,caption)=>{if(svg===$('compare-graph'))globalThis.compared={trades,event,caption};};renderFrame();`);
+  assert.equal(f.context.compared.trades.length,1);
+  assert.equal(f.context.compared.event,null);
+  assert.match(f.context.compared.caption,/starting agreements/i);
+});
+
+test('conversation uses actual recorded amounts, delivery window and authoritative reason', () => {
+  const f=fixture();replayFixture(f);
+  f.evaluate('state.index=2;renderConversation();');
+  const html=f.element('conversation').innerHTML;
+  assert.match(html,/A17.*A03/s);
+  assert.match(html,/1\.50 kWh.*8\.00/s);
+  assert.match(html,/15:00.*16:00/s);
+  assert.match(html,/Available surplus/);
+  assert.doesNotMatch(html,/A02/,'Unrelated conversations must not be fabricated');
+});
+
+test('inspecting another household preserves the visible controlled name and ID', () => {
+  const f=fixture();
+  f.evaluate("state.result.world.agents=[{id:'A17',name:'Mira',role:'seller',min_price:6},{id:'A02',name:'Arun',role:'buyer'}];renderOwn();renderFrame=()=>{};");
+  f.element('inspect-select').value='A02';f.element('inspect-select').onchange();
+  assert.equal(f.evaluate('state.controlled'),'A17');
+  assert.equal(f.evaluate('state.selected'),'A02');
+  assert.match(f.element('prompt-help').textContent,/Mira.*A17/);
+});
+
+test('delivery and time price summaries use declared timezone terms', () => {
+  const f=fixture();
+  assert.match(f.evaluate("policyValue('time_price',{after:'2026-10-30T15:00:00+05:30',floor:5})"),/5\.00.*15:00.*\+05:30/);
+  assert.match(f.evaluate("deliveryWindow({interval_start:'2026-10-30T14:30:00+05:30',interval_end:'2026-10-30T16:00:00+05:30'})"),/14:30.*16:00.*\+05:30/);
+});
+
+
+function descendants(node) { return (node.children || []).flatMap(child=>[child,...descendants(child)]); }
+
+test('network separates directed messages from agreements and identifies every home', () => {
+  const f=fixture();replayFixture(f);
+  f.evaluate("state.result.world.agents.push({id:'A02',name:'Arun',role:'buyer'},{id:'A03',name:'Leela',role:'buyer'});state.selected='A17';$('role-filter').value='all';drawGraph($('graph'),state.result.baseline.trades,currentEvents()[2],'After');");
+  const nodes=descendants(f.element('graph'));
+  const agreement=nodes.find(n=>n.getAttribute?.('class')==='trade-edge');
+  const message=nodes.find(n=>n.getAttribute?.('class')?.includes('message-edge'));
+  assert.ok(message,'A recorded offer must draw a distinct message arrow');
+  assert.ok(agreement.getAttribute('marker-end'),'Agreements must have a delivery direction');
+  assert.ok(message.getAttribute('marker-end'),'Messages must have a sender-to-recipient direction');
+  assert.notEqual(message.getAttribute('stroke-dasharray'),agreement.getAttribute('stroke-dasharray'));
+  for(const id of ['A17','A02','A03'])assert.ok(nodes.some(n=>n.tag==='text'&&n.textContent===id),`${id} must remain visible`);
+  const active=nodes.find(n=>n.getAttribute?.('data-agent')==='A03');
+  assert.match(active.getAttribute('class'),/active-party/);
+});
+
+test('inactive and exhausted homes have different explanations', () => {
+  const f=fixture();replayFixture(f);
+  f.evaluate("state.result.world.agents=[{id:'A17',role:'seller',forecast_surplus_kwh:3,reserve_kwh:1,max_offer_kwh:2},{id:'A02',role:'buyer',demand_kwh:3},{id:'A03',role:'seller',forecast_surplus_kwh:2,reserve_kwh:0,max_offer_kwh:2}];");
+  assert.match(f.evaluate("householdAvailability(agentById('A17'),state.result.baseline.trades)"),/no free energy/i);
+  assert.match(f.evaluate("householdAvailability(agentById('A03'),state.result.baseline.trades)"),/not in an agreement/i);
+});
+
+test('household results derive energy, payment and utility changes from actual ledgers', () => {
+  const f=fixture();replayFixture(f);
+  f.evaluate("state.result.baseline.agents={A17:{utility:10}};state.result.intervention.agents={A17:{utility:7}};");
+  const row=JSON.parse(f.evaluate("JSON.stringify(householdChanges()[0])"));
+  assert.equal(row.id,'A17');assert.equal(row.energy,-2);assert.equal(row.payment,-12);assert.equal(row.utility,-3);
+});
+
+test('method disclosure distinguishes frozen LLM planning and rules fallback', () => {
+  const f=fixture();
+  f.evaluate("state.result.manifest={config:{negotiation_mode:'bargaining'},strategy_plan:{source:'openai'}};renderMethod();");
+  assert.match(f.element('method-summary').textContent,/LLM.planned bargaining/i);
+  f.evaluate("state.result.manifest.strategy_plan.source='rules_fallback';renderMethod();");
+  assert.match(f.element('method-summary').textContent,/rules.based fallback/i);
+  f.evaluate("state.result.manifest.strategy_plan.source='llm_unavailable';renderMethod();");
+  assert.match(f.element('method-summary').textContent,/rules.based fallback/i);
+});
+
+test('revised requirement stage shows the recorded before and after policy values', () => {
+  const f=fixture();replayFixture(f);
+  f.evaluate("state.result.intervention.events[0].changed_fields=[{agent_id:'A17',field:'min_price',before:6,after:8}];state.stage='requirement';state.index=0;renderConversation();");
+  assert.match(f.element('conversation').innerHTML,/Lowest selling price.*6\.00.*8\.00/s);
 });
