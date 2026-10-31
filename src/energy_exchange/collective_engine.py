@@ -28,7 +28,9 @@ from .collective_time import validate_interval, contains, parse_time, segments
 from .collective_bargaining import (default_strategy_plan, validate_strategy_plan, quote_price)
 
 PROTOCOL_VERSION = "collective-bilateral-v2"
-ENGINE_VERSION = "0.2.0"
+ENGINE_VERSION = "0.2.1"
+CHECKSUM_VERSION = "canonical-json-numbers-v2"
+LEGACY_CHECKSUM_VERSION = "python-json-v1"
 STATUSES = ("locally_stable", "round_limited", "cycle_detected", "unresolved")
 SCENARIOS = ("custom", "price", "supply", "budget", "shock", "none")
 TOPOLOGIES = ("local", "open")
@@ -162,12 +164,30 @@ def affordable_wh(budget_paise, price):
     return max(0, wh)
 
 
+def _canonical_numbers(obj):
+    """JSON numbers retain their value when browsers remove .0 or negative zero."""
+    if isinstance(obj, float) and math.isfinite(obj) and obj.is_integer():
+        return int(obj)
+    if isinstance(obj, dict):
+        return {key: _canonical_numbers(value) for key, value in obj.items()}
+    if isinstance(obj, (tuple, list)):
+        return [_canonical_numbers(value) for value in obj]
+    return obj
+
+
 def canonical_json(obj):
-    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return json.dumps(_canonical_numbers(obj), sort_keys=True,
+                      separators=(",", ":"), ensure_ascii=False)
 
 
-def fingerprint(obj):
-    digest = hashlib.sha256(canonical_json(obj).encode("utf-8")).hexdigest()
+def fingerprint(obj, version=CHECKSUM_VERSION):
+    if version == CHECKSUM_VERSION:
+        serialized = canonical_json(obj)
+    elif version == LEGACY_CHECKSUM_VERSION:
+        serialized = json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    else:
+        raise ValueError(f"unsupported checksum version: {version}")
+    digest = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
     return f"sha256:{digest}"
 
 
@@ -448,9 +468,10 @@ def effective_floor_paise(state, wh, delivery_start=None):
 class _Run:
     """Mutable negotiation state for one run (baseline or intervention)."""
 
-    def __init__(self, world, cfg, tick, cap_wh, name, strategy_plan=None):
+    def __init__(self, world, cfg, tick, cap_wh, name, strategy_plan=None,
+                 checksum_version=CHECKSUM_VERSION):
         self.plan = strategy_plan or default_strategy_plan(world["agents"])
-        self.plan_hash = fingerprint(self.plan)
+        self.plan_hash = fingerprint(self.plan, checksum_version)
         self.name = name
         self.prefix = "ev-" if name == "baseline" else "iv-"
         self.cfg = cfg
@@ -1408,7 +1429,8 @@ def _source_fingerprint():
 # -- public entry points -----------------------------------------------------
 
 
-def run_experiment(config, intervention=None, world=None, strategy_plan=None):
+def run_experiment(config, intervention=None, world=None, strategy_plan=None, *,
+                   checksum_version=CHECKSUM_VERSION):
     """Run a baseline and, when asked, a cloned intervention. Pure: inputs are
     never mutated, and identical inputs give identical outputs apart from
     runtime_seconds."""
@@ -1422,7 +1444,7 @@ def run_experiment(config, intervention=None, world=None, strategy_plan=None):
         strategy_plan if strategy_plan is not None else default_strategy_plan(world["agents"]),
         world["agents"])
     started = time.perf_counter()
-    base = _Run(world, cfg, tick, cap_wh, "baseline", strategy_plan)
+    base = _Run(world, cfg, tick, cap_wh, "baseline", strategy_plan, checksum_version)
     root = base.emit("world_generated", None, None,
                      f"{len(base.agents)} agents, {cfg['topology']} discovery,"
                      f" seed {cfg['seed']}", "seeded",
@@ -1467,22 +1489,23 @@ def run_experiment(config, intervention=None, world=None, strategy_plan=None):
         scenario = "none"
 
     checksums = {
-        "world": fingerprint(world),
-        "baseline_events": fingerprint(base_result["events"]),
-        "baseline_trades": fingerprint(base_result["trades"]),
-        "intervention_events": fingerprint(inter_result["events"]) if inter_result else None,
-        "intervention_trades": fingerprint(inter_result["trades"]) if inter_result else None,
+        "world": fingerprint(world, checksum_version),
+        "baseline_events": fingerprint(base_result["events"], checksum_version),
+        "baseline_trades": fingerprint(base_result["trades"], checksum_version),
+        "intervention_events": fingerprint(inter_result["events"], checksum_version) if inter_result else None,
+        "intervention_trades": fingerprint(inter_result["trades"], checksum_version) if inter_result else None,
         "engine_source": _source_fingerprint(),
     }
     manifest = {
         "protocol_version": PROTOCOL_VERSION, "engine_version": ENGINE_VERSION,
+        "checksum_version": checksum_version,
         "config": copy.deepcopy(config), "population": len(world["agents"]),
         "seed": cfg["seed"], "topology": cfg["topology"],
         "intervention": copy.deepcopy(intervention), "scenario": scenario,
         "changed_fields": changed_fields,
         "price_rule": PRICE_RULE if cfg["negotiation_mode"] == "midpoint" else
             "bounded alternating price quotes from the frozen strategy plan; accepted quote sets price",
-        "strategy_plan": strategy_plan, "strategy_plan_hash": fingerprint(strategy_plan),
+        "strategy_plan": strategy_plan, "strategy_plan_hash": fingerprint(strategy_plan, checksum_version),
         "energy_model": "One flexible energy pool per household over its delivery window; no power, device or per-hour generation limits.",
         "utility_formula": UTILITY_FORMULA,
         "admissible_moves": ADMISSIBLE_MOVES,
@@ -1558,6 +1581,9 @@ def verify_result(result):
     result is consistent."""
     problems = []
     try:
+        checksum_version = result["manifest"].get("checksum_version", LEGACY_CHECKSUM_VERSION)
+        if checksum_version not in (CHECKSUM_VERSION, LEGACY_CHECKSUM_VERSION):
+            return [f"unsupported checksum version: {checksum_version}"]
         cfg, tick, cap_wh = _validate_config(result["manifest"]["config"])
     except (KeyError, ValueError) as exc:
         return [f"manifest config invalid: {exc}"]
@@ -1592,7 +1618,7 @@ def verify_result(result):
                 for key in PRIVATE_FIELDS:
                     if key in e:
                         problems.append(f"{name}: {e['id']} exposes private field {key}")
-        check = _Run(world, cfg, tick, cap_wh, name, run.get("strategy_plan"))
+        check = _Run(world, cfg, tick, cap_wh, name, run.get("strategy_plan"), checksum_version)
         for t in run["trades"]:
             if t["status"] not in ("committed", "provisional"):
                 problems.append(f"{name}: {t['id']} has status {t['status']}")
@@ -1631,20 +1657,21 @@ def verify_result(result):
     try:
         manifest = result["manifest"]
         expected = {
-            "world": fingerprint(result["world"]),
-            "baseline_events": fingerprint(result["baseline"]["events"]),
-            "baseline_trades": fingerprint(result["baseline"]["trades"]),
-            "intervention_events": fingerprint(result["intervention"]["events"]) if result.get("intervention") else None,
-            "intervention_trades": fingerprint(result["intervention"]["trades"]) if result.get("intervention") else None,
+            "world": fingerprint(result["world"], checksum_version),
+            "baseline_events": fingerprint(result["baseline"]["events"], checksum_version),
+            "baseline_trades": fingerprint(result["baseline"]["trades"], checksum_version),
+            "intervention_events": fingerprint(result["intervention"]["events"], checksum_version) if result.get("intervention") else None,
+            "intervention_trades": fingerprint(result["intervention"]["trades"], checksum_version) if result.get("intervention") else None,
         }
         for key, value in expected.items():
             if manifest["checksums"].get(key) != value:
                 problems.append(f"manifest checksum mismatch: {key}")
         normalized = validate_strategy_plan(manifest["strategy_plan"], result["world"]["agents"])
-        if fingerprint(normalized) != manifest["strategy_plan_hash"]:
+        if fingerprint(normalized, checksum_version) != manifest["strategy_plan_hash"]:
             problems.append("strategy plan hash mismatch")
         replayed = run_experiment(manifest["config"], manifest["intervention"],
-                                  world=result["world"], strategy_plan=normalized)
+                                  world=result["world"], strategy_plan=normalized,
+                                  checksum_version=checksum_version)
         for name in ("baseline", "intervention"):
             if result.get(name) != replayed.get(name):
                 recorded = copy.deepcopy(result.get(name))
