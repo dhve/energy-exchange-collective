@@ -34,3 +34,154 @@ summary{cursor:pointer;min-height:44px;padding:10px 0;font-size:17px;font-weight
 .method-details table{border-collapse:collapse;width:100%;font-size:15px}.method-details th,.method-details td{padding:10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}.method-details th{font-weight:500}.unsupported-clauses{border-left:3px solid var(--red);padding-left:12px;margin:14px 0}
 /* Keep the network caption below the plotted homes. */
 .graph-wrap{flex-wrap:wrap}.graph-caption{position:static;flex:0 0 100%;padding:0 16px 12px}
+
+/* A single replay workspace: network, recorded conversation and current policy. */
+main{max-width:1600px;padding:0 28px}
+.intro{margin:24px 0 20px}
+.intro h1{font-size:34px}
+.intro p{font-size:16px}
+.workspace{display:flex;flex-direction:column;gap:20px}
+.workspace>.panel{width:100%}
+.prompt-panel .panel-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:8px 28px;padding:22px 26px}
+.prompt-panel h2,.prompt-home,.home-timing{grid-column:1;margin:0}
+.prompt-panel .input-label,.prompt-panel textarea,.prompt-panel .helper,.quick-examples,.prompt-panel #parse,.proposal{grid-column:2}
+.prompt-panel h2{grid-row:1;font-size:21px}
+.prompt-home{grid-row:2;font-size:16px;line-height:1.5}
+.home-timing{grid-row:3;font-size:13px}
+.prompt-panel .input-label{grid-row:1}
+.prompt-panel textarea{grid-row:2 / span 2;min-height:84px;font-size:16px;width:100%;resize:vertical}
+.prompt-panel .helper{margin:0;font-size:12px}
+.prompt-panel #instruction-help{display:none}
+.quick-examples{margin:3px 0;gap:6px}
+.quick-examples button{padding:7px 10px;font-size:13px}
+.prompt-panel #parse{width:auto;justify-self:start;font-size:15px;min-height:42px}
+.home-options{grid-column:1;grid-row:4 / span 4;margin:8px 0 0;align-self:start}
+.home-options summary{font-size:14px}
+.home-options .input-label{display:block}
+.proposal{margin:0}
+.network-panel .panel-top{padding:18px 24px}
+.network-panel h2{font-size:23px}
+.graph-toolbar{padding:14px 24px}
+.network-panel .notice{font-size:14px;padding:10px 14px;margin:0 24px 10px}
+.segmented button,.play-button{font-size:15px}
+.play-button{padding:10px 14px}
+.replay-stages{padding:0 24px 10px;gap:8px}
+.replay-stages button{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;padding:9px 6px}
+.replay-stages button span{margin:0}
+.playback{padding:8px 24px 14px;display:flex;gap:12px}
+.playback button{padding:7px 10px}
+.playback #position{font-size:13px;min-width:120px}
+.replay-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;border-block:1px solid var(--line);align-items:start}
+.network-canvas{min-width:0}
+.frame-summary{padding:16px 20px 0;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:14px}
+.frame-summary span{color:#59675e}
+.graph-wrap{min-height:0;background:var(--white);flex-wrap:wrap}
+.graph-wrap svg{height:auto;aspect-ratio:880/610;min-height:0;width:100%}
+.graph-wrap.comparing{display:flex;align-items:center}
+.graph-wrap.comparing svg{width:50%;height:auto;min-height:0;aspect-ratio:880/610}
+.graph-caption{font-size:12px;padding:0 16px 8px}
+.replay-sidebar{border-left:1px solid var(--line);max-height:760px;overflow-y:auto;background:#f8f7fa;align-self:stretch}
+.conversation{border-top:0;padding:20px;font-size:14px}
+.conversation h3{font-size:16px;line-height:1.5}
+.conversation-entry{padding-left:10px;margin-top:16px}
+.conversation-entry p,.conversation-entry strong{font-size:13px}
+.focus-home{padding:18px 20px;border-top:1px solid var(--line);background:#f3f5ee}
+.focus-home h3{font-size:17px;margin:8px 0}
+.focus-home p{font-size:13px;line-height:1.5}
+.focus-home .eyebrow,.focus-home small{font-size:11px}
+.focus-home .bound{font-size:12px;gap:14px}
+.focus-home .bound strong{max-width:65%}
+.legend{padding:8px 20px;font-size:12px;gap:16px}
+.legend i{width:12px;height:12px}
+.line-legend{padding:2px 20px 12px;gap:8px 16px;font-size:12px}
+.line-legend .added-key{border-color:#127568;border-width:3px}
+.line-legend .revised-key{border-color:#ae650f;border-width:3px}
+.line-legend .removed-key{border-color:#a14738;border-style:dashed}
+.replay-caption{padding:12px 20px;margin:0;font-size:14px;background:#f3f5ee}
+.trade-differences{padding:20px 24px;border-bottom:1px solid var(--line)}
+.trade-differences h3,.impact-summary h3{font-size:18px}
+.trade-differences table{width:100%;border-collapse:collapse;font-size:13px}
+.trade-differences th,.trade-differences td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.6}
+.trade-differences th{font-weight:500;width:40%}
+.trade-differences thead th{width:auto;color:var(--muted)}
+.pair-select{border:0;background:transparent;text-align:left;padding:0;font-size:13px;line-height:1.6;text-decoration:underline;text-underline-offset:3px}
+.change-tag{display:inline-block;font-size:11px;border-radius:4px;padding:1px 6px;margin:0 8px 5px 0;background:#e3f0ec;color:#176b61}
+.change-tag.revised{background:#f9ecd7;color:#88500a}
+.change-tag.removed{background:#fae8e3;color:#973e30}
+.results-heading{padding:22px 24px 0;margin-bottom:0!important;font-size:18px!important}
+.results-heading small{display:inline-block;font-weight:400;color:var(--muted);font-size:12px;margin-left:12px}
+.simple-results{padding:18px 24px 12px}
+.simple-results strong{font-size:30px}
+.simple-results span,.simple-results small{font-size:14px}
+.impact-summary{padding:0 24px}
+.impact-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.impact-cards article{padding:14px;border:1px solid var(--line);border-radius:8px;font-size:13px}
+.impact-cards strong{font-weight:600}
+.impact-cards p{margin:10px 0 4px;font-size:18px}
+.impact-cards small{color:var(--muted)}
+.impact-summary .helper,.trade-differences .helper{font-size:12px;margin:8px 0 12px;line-height:1.5}
+.simple-outcome{font-size:15px;padding:10px 24px 18px}
+.graph-wrap.comparing .node .node-label{display:none}
+.graph-wrap.comparing .node.changed-node .node-label,.graph-wrap.comparing .node.controlled-node .node-label,.graph-wrap.comparing .node.inspected-node .node-label,.graph-wrap.comparing .node.active-party .node-label,.graph-wrap.comparing .node:focus .node-label{display:block}
+
+@media(max-width:1100px){.replay-layout{grid-template-columns:minmax(0,1fr) 290px}
+.conversation,.focus-home{padding:16px}
+.graph-wrap.comparing{display:block}
+.graph-wrap.comparing svg{width:100%;max-height:360px}
+.replay-sidebar{max-height:900px}
+.replay-stages button{font-size:12px}
+.intro{display:block}
+.intro p{margin-top:10px}
+}
+
+@media(max-width:700px){main{padding:0 12px}
+.intro h1{font-size:28px}
+.prompt-panel .panel-body{display:flex;flex-direction:column;padding:18px;gap:10px}
+.prompt-panel textarea{min-height:80px}
+.home-options{order:10}
+.prompt-panel .input-label{margin:0}
+.home-timing{margin-bottom:4px}
+.prompt-panel #parse{width:100%;justify-content:space-between}
+.replay-layout{display:block}
+.replay-sidebar{border-left:0;border-top:1px solid var(--line);max-height:none;display:grid;grid-template-columns:1fr}
+.conversation{max-height:340px;overflow-y:auto}
+.focus-home{padding:16px}
+.focus-home .bound{font-size:12px}
+.graph-toolbar{padding:12px}
+.replay-stages{padding:0 12px 10px;gap:3px}
+.replay-stages button{display:block;font-size:10px;padding:7px 3px}
+.replay-stages button span{margin-bottom:4px}
+.playback{padding:8px 12px}
+.playback #position{min-width:85px;font-size:11px}
+.frame-summary{padding:12px 14px 0;font-size:12px}
+.graph-wrap svg{min-height:0;height:auto}
+.graph-wrap.comparing svg{width:100%;max-height:none}
+.legend,.line-legend{padding-inline:14px}
+.trade-differences{padding:16px 12px}
+.trade-differences table{min-width:620px}
+.results-heading{padding:18px 16px 0}
+.results-heading small{display:block;margin:6px 0 0}
+.impact-summary{padding:0 16px}
+.impact-cards{grid-template-columns:1fr}
+.impact-cards article{padding:12px}
+.simple-results{padding:16px}
+.node.changed-node .node-label{display:block}
+.play-button{font-size:13px}
+.simple-outcome{padding:12px 16px}
+.network-panel .notice{margin:0 12px 10px}
+}
+
+
+.policy-strip{padding:12px 24px;background:#eef3e5;border-top:1px solid var(--line);font-size:13px;line-height:1.6}
+.policy-strip>strong{margin-right:14px}
+.trade-differences details{margin-top:12px;font-size:13px}
+.trade-differences details summary{cursor:pointer}
+
+
+.earlier-messages{font-size:12px;line-height:1.5;margin:12px 0}
+.earlier-messages summary{cursor:pointer;color:#68507c}
+.conversation{max-height:450px;overflow-y:auto}
+.replay-sidebar{max-height:780px}
+.focus-home .eyebrow{letter-spacing:.06em}
+
+.node{pointer-events:bounding-box;cursor:pointer}
