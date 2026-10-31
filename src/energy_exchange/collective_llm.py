@@ -229,6 +229,34 @@ def _energy_unit(evidence):
         re.search(r'\bkw\b|%|\bpercent(?:age)?\b', evidence, re.I))
 
 
+def _ground_meaning(field, operation, evidence):
+    """Check common units/intents independently of the model's JSON claim."""
+    money = bool(re.search(r'₹|\binr\b|\brs\.?\b|\brupees?\b', evidence, re.I))
+    if field in ('min_price','max_price','budget','conditional_price','time_price') and operation != 'clear' and not money:
+        raise ValueError('A monetary rule needs an explicit rupee amount')
+    intents = {
+        'reserve_kwh': r'\bkeep|reserv|retain|save|hold|aside|for (?:my|our|the) home',
+        'max_offer_kwh': r'\bsell|\bsale|\boffer|\bexport|\bshare',
+        'demand_kwh': r'\bbuy|\bpurchase|\bneed|\bdemand|\brequir|\bcharge',
+        'forecast_surplus_kwh': r'\bsurplus|\bforecast|\bexcess|\bexpect|\bgenerat',
+        'budget': r'\bbudget|\bspend|\btotal|\ballocat|\bafford',
+        'min_price': r'\bprice|\bsell|\bsale|\baccept|\bcharge|\brate|/\s*kwh|\bper\s*kwh',
+        'max_price': r'\bprice|\bbuy|\bpay|\brate|/\s*kwh|\bper\s*kwh',
+    }
+    if field in intents and not re.search(intents[field], evidence, re.I):
+        raise ValueError('The quoted words do not describe this policy field')
+    if operation == 'clear' and not re.search(r'\bclear|\bremove|\bdelete|\bcancel|\bno (?:more|longer)', evidence, re.I):
+        raise ValueError('A discount needs an explicit removal request')
+    if operation in ('increase','decrease'):
+        direction = (r'\bincreas|\brais|\badd|\bmore|\bextra|\bhigher|\bup\b'
+                     if operation == 'increase' else r'\breduc|\blower|\bless|\bfewer|\bdecreas|\bcut|\bdown\b')
+        delta = r'\bby\b|\bmore\b|\bextra\b|\bless\b|\bfewer\b|\badditional\b|\badd\b'
+        if not re.search(direction, evidence, re.I) or not re.search(delta, evidence, re.I):
+            raise ValueError('A relative change needs an explicitly stated difference')
+    elif operation == 'set' and re.search(r'\b(?:increase|raise|lower|reduce|decrease|cut)\b.*\bby\b|\b(?:more|extra|less|fewer)\s*(?:kwh|kilowatt)|\bkwh\s+(?:more|extra|less|fewer)\b', evidence, re.I):
+        raise ValueError('A relative amount cannot be used as an absolute amount')
+
+
 def _explicit_time(value, evidence, agent):
     when = datetime.fromisoformat(value)
     original = datetime.fromisoformat(agent['interval_start'])
@@ -281,6 +309,7 @@ def _validated_translation(data, text, agent, tick):
             raise ValueError('Invalid field or operation')
         if not isinstance(evidence, str) or not evidence.strip() or evidence not in text:
             raise ValueError('The change was not supported by the request')
+        _ground_meaning(field, op, evidence)
         if op == 'clear':
             if field not in ('conditional_price','time_price') or value is not None:
                 raise ValueError('Only an explicit discount can be cleared')
@@ -315,6 +344,14 @@ def _validated_translation(data, text, agent, tick):
             if field == 'deadline_round' and float(value).is_integer():
                 value = int(value)
         changes[field] = value
+    # Every explicit conditional introducer must be represented by a supported
+    # conditional rule. The model may not silently omit a request's exception.
+    conditions = list(re.finditer(r'\bif\b|\bonly when\b|\bprovided that\b', text, re.I))
+    for condition in conditions:
+        if not any(item['field'] in ('conditional_price','time_price') and
+                   text.find(item['evidence']) <= condition.start() < text.find(item['evidence']) + len(item['evidence'])
+                   for item in data['updates']):
+            raise ValueError('An unsupported or ambiguous condition was omitted')
     result['errors'] = validate_policy_changes(changes, agent, tick)
     if not result['errors']:
         result['changes'] = changes
@@ -334,6 +371,10 @@ def translate_instruction(text, agent, price_tick=0.05, *, client=None):
     if not isinstance(text,str) or not 1 <= len(text.strip()) <= 2000:
         result['errors'] = ['Enter an instruction of 1 to 2000 characters.']
         result['translation'] = {'mode':'grammar','status':'invalid_input'}
+        return result
+    if re.search(r'\b(?:weather|rain|rains|raining|rainy|cloudy|temperature|unless|except)\b', text, re.I):
+        result['errors'] = ['This demo cannot apply weather conditions or exceptions such as “unless”. Remove that condition or state an exact energy, price or delivery-time rule. Nothing has been applied.']
+        result['translation'] = {'mode':'grammar','status':'unsupported'}
         return result
     client = client or LLMClient()
     try:
@@ -357,9 +398,6 @@ def prepare_strategy_plan(world, *, client=None):
     from .collective_bargaining import default_strategy_plan, validate_strategy_plan, PLAN_VERSION
     client = client or LLMClient()
     fallback = default_strategy_plan(world['agents'])
-    if not client.api_key:
-        fallback['provenance'] = {'status':'disabled','planner_version':PLANNER_VERSION}
-        return fallback
     # These synthetic profile fields determine a strategy; intervention fields
     # never enter the key. All later interventions reuse this exact artifact.
     context = {'agents':[{k:a.get(k) for k in ['id','role','context','min_price','max_price',

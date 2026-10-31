@@ -182,5 +182,33 @@ class LLMTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual(len(self.calls), 1)
 
+    def test_model_cannot_drop_an_unsupported_condition(self):
+        phrase = 'sell 3 kWh unless it rains'
+        result = self.mod.translate_instruction(phrase, self.agent,
+            client=self.client(translation([update('max_offer_kwh',3,'sell 3 kWh')])))
+        self.assertEqual(result['changes'], {})
+        self.assertTrue(result['errors'])
+
+    def test_numbers_and_operations_need_the_right_meaning(self):
+        cases = [
+            ('My 8 guests arrive soon', update('min_price',8,'8 guests')),
+            ('Please keep 1 kWh at home for me', update('reserve_kwh',1,'keep 1 kWh at home','increase')),
+            ('I have 3 kWh in reserve already', update('max_offer_kwh',3,'3 kWh in reserve')),
+            ('Raise my price to 8 rupees per kWh please', update('min_price',8,'Raise my price to 8 rupees per kWh','increase')),
+            ('keep 1 kWh more at home', update('reserve_kwh',1,'keep 1 kWh more at home','set')),
+        ]
+        for phrase, row in cases:
+            with self.subTest(phrase=phrase):
+                result = self.mod.translate_instruction(phrase, self.agent,
+                    client=self.client(translation([row])))
+                self.assertEqual(result['changes'], {})
+
+    def test_cached_strategy_stays_frozen_if_credential_becomes_unavailable(self):
+        rows = [{'id':a['id'], 'price_positions':[9000,6000,4000] if a['role']=='seller'
+                 else [1000,5000,8000]} for a in self.world['agents']]
+        first = self.mod.prepare_strategy_plan(self.world, client=self.client({'agents':rows}))
+        disabled = self.mod.LLMClient(api_key='', db_path=self.db)
+        self.assertEqual(self.mod.prepare_strategy_plan(self.world, client=disabled), first)
+
 
 if __name__ == '__main__': unittest.main()
