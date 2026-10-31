@@ -147,6 +147,8 @@ class LLMTests(unittest.TestCase):
             client=self.client(translation([update('min_price', 0.5, 'minimum price by 0.5', 'set')])))
         self.assertEqual(result['changes'], {})
         self.assertEqual(result['translation']['status'], 'invalid_output')
+        self.assertEqual(result['translation']['validation_reason'],
+                         'A relative amount cannot be used as an absolute amount')
 
     def test_missing_party_quantity_asks_instead_of_applying_partial_changes(self):
         value = translation([update(value=5, evidence='birthday party')], questions=['How many kWh should stay at home?'])

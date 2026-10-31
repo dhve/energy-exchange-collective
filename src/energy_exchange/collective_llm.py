@@ -486,9 +486,12 @@ def translate_instruction(text, agent, price_tick=0.05, *, client=None):
     except LLMUnavailable as exc:
         result['errors'] = ['Automatic wording help is unavailable right now. Use an example with an exact amount, or try again later.']
         result['translation'] = {'mode':'fallback','model':client.model,'status':exc.status}
-    except (ValueError, TypeError, KeyError, InvalidOperation):
+    except (ValueError, TypeError, KeyError, InvalidOperation) as exc:
         result['errors'] = ['I could not safely turn the whole request into a change. Please state the amount, unit and any delivery times explicitly.']
-        result['translation'] = {'mode':'llm','model':client.model,'status':'invalid_output'}
+        # Local validation diagnostics only; upstream HTTP errors and secrets
+        # are handled separately by LLMClient and never reach this metadata.
+        result['translation'] = {'mode':'llm','model':client.model,'status':'invalid_output',
+                                 'validation_reason':str(exc)[:250]}
     return result
 
 
