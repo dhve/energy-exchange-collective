@@ -648,6 +648,46 @@ test('price-only changes have an explicit graph annotation rather than identical
   assert.equal(edge.getAttribute('stroke'),'#ae650f');
 });
 
+test('graph price changes use recorded prices even when payments round to the same amount', () => {
+  for(const [beforePrice,afterPrice,beforePayment,afterPayment,expected] of [
+    [8,9.05,.80,.91,'₹8.00 → ₹9.05/kWh'],
+    [9.05,9.10,.91,.91,'₹9.05 → ₹9.10/kWh'],
+  ]) {
+    const f=fixture();snapshotFixture(f);
+    f.context.terms={beforePrice,afterPrice,beforePayment,afterPayment};
+    f.evaluate(`
+      const {beforePrice,afterPrice,beforePayment,afterPayment}=globalThis.terms;
+      const trade={id:'t1',seller_id:'A17',buyer_id:'A02',quantity_kwh:.1};
+      state.result.baseline.trades=[{...trade,price:beforePrice,payment:beforePayment}];
+      state.result.intervention.trades=[{...trade,price:afterPrice,payment:afterPayment}];
+      state.stage=null;state.index=1;state.view='compare';rebuildFrames();
+      drawGraph($('graph'),frameTrades(),null,'After');
+    `);
+    const texts=descendants(f.element('graph')).filter(n=>n.tag==='text').map(n=>n.textContent);
+    assert.ok(texts.some(t=>t.includes(expected)),`Expected the recorded price change ${expected}`);
+  }
+});
+
+test('ordinary replay can expand the full current exchange without past or future exchanges', () => {
+  const f=fixture();replayFixture(f);
+  f.evaluate(`
+    const offer={type:'offer_sent',actor_id:'A17',counterparty_id:'A03',quantity_kwh:1.5,price:8};
+    state.result.intervention.events=[
+      {...offer,round:0,reason:'Previous exchange'},
+      {...offer,type:'offer_rejected',round:0,reason:'Previous rejection'},
+      ...Array.from({length:10},(_,i)=>({...offer,id:'current-'+i,round:1,type:i===0?'offer_sent':i===9?'offer_accepted':'counteroffer_sent',reason:'Current message '+i})),
+      {...offer,round:2,reason:'Future exchange'}
+    ];
+    state.stage=null;state.index=11;renderConversation();
+  `);
+  const html=f.element('conversation').innerHTML;
+  assert.match(html,/<summary>Read 7 earlier messages/);
+  assert.equal((html.match(/class="conversation-entry"/g)||[]).length,10);
+  assert.match(html,/Current message 0/);
+  assert.match(html,/Current message 9/);
+  assert.doesNotMatch(html,/Previous exchange|Previous rejection|Future exchange/);
+});
+
 test('an unresolved intervention cannot show household changes as final results', () => {
   const f=fixture();snapshotFixture(f);
   f.evaluate("state.result.intervention.status='unresolved';renderImpactSummary();");

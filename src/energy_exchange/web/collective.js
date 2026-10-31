@@ -363,7 +363,10 @@ function renderConversation() {
   }
   const messageTypes=['offer_sent','counteroffer_sent','price_counter','price_counters','offer_accepted','offer_rejected','provisional_reserved','provisional_released','offer_replaced'];
   const exchange=state.stage==='offers'?replayStages().find(stage=>stage.id==='offers'):null;
-  const list=event&&participants.length===2?currentEvents().slice(exchange?.startIndex ?? 0,state.index+1).filter(e=>messageTypes.includes(e.type)&&participants.includes(e.actor_id)&&participants.includes(e.counterparty_id)).slice(exchange?-8:-3):[];
+  const history=currentEvents().slice(0,state.index+1);
+  const samePair=e=>participants.includes(e.actor_id)&&participants.includes(e.counterparty_id);
+  const startIndex=exchange?.startIndex ?? Math.max(0,history.findLastIndex(e=>e.type==='offer_sent'&&samePair(e)));
+  const list=event&&participants.length===2?history.slice(startIndex).filter(e=>messageTypes.includes(e.type)&&samePair(e)):[];
   const entry=e=>`<article class="conversation-entry"><strong>${esc(homeLabel(e.actor_id))} → ${esc(homeLabel(e.counterparty_id))} · ${esc(eventLabel(e.type))}</strong>${eventTerms(e)?`<p>${esc(eventTerms(e))}</p>`:''}<p>${esc(negotiationExplanation(e))}</p></article>`;
   const earlier=list.length>3?`<details class="earlier-messages"><summary>Read ${list.length-3} earlier messages in this exchange</summary>${list.slice(0,-3).map(entry).join('')}</details>`:'';
   $('conversation').innerHTML=list.length?`<h3>${exchange?'Recorded exchange':'Active conversation'} · ${participants.map(id=>esc(homeLabel(id))).join(' ↔ ')}</h3>${earlier}${list.slice(-3).map(entry).join('')}`:`<h3>${state.stage==='starting'?'Starting agreements':'Recorded response'}</h3><p>${esc(state.stage?replayStages().find(s=>s.id===state.stage)?.explanation:event?recordedReason(event):'Select Play or a replay stage to follow the homes. No conversation is active here.')}</p>`;
@@ -480,7 +483,10 @@ function drawGraph(svg,trades,event,caption,world=frameWorld()) {
   if(focused) {
     const p=pos.get(focused.seller),q=pos.get(focused.buyer);
     if(p&&q){const x=(p.x+q.x)/2+18,y=(p.y+q.y)/2-18;
-      const change=qty(focused.before)!==qty(focused.after)?`${fmt(qty(focused.before))} → ${fmt(qty(focused.after))} kWh`:spend(focused.before)!==spend(focused.after)?`₹${fmt(spend(focused.before)/qty(focused.before))} → ₹${fmt(spend(focused.after)/qty(focused.after))}/kWh`:'Delivery terms revised';
+      // Payments are rounded totals; use recorded quotes for unit prices.
+      const quotedPrice=trades=>trades.reduce((n,t)=>n+Number(t.price)*Number(t.quantity_kwh),0)/qty(trades);
+      const beforePrice=quotedPrice(focused.before),afterPrice=quotedPrice(focused.after);
+      const change=qty(focused.before)!==qty(focused.after)?`${fmt(qty(focused.before))} → ${fmt(qty(focused.after))} kWh`:Math.abs(beforePrice-afterPrice)>.000001?`${focused.before.length>1||focused.after.length>1?'Avg ':''}₹${fmt(beforePrice)} → ₹${fmt(afterPrice)}/kWh`:'Agreement terms revised';
       const text=original?`${focused.seller} → ${focused.buyer}: ${fmt(qty(focused.before))} kWh`:`${focused.seller} → ${focused.buyer}: ${change}`;
       const width=Math.min(820,(text.length*6.7+20)/textScale),height=28/textScale,cx=Math.max(width/2+12,Math.min(868-width/2,x));
       const tag=svgEl('g',{'pointer-events':'none'},root);
