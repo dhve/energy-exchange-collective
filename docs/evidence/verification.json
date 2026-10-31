@@ -221,5 +221,12 @@
       "collective (3.14)",
       "legacy"
     ]
+  },
+  "latest_prompt_fix": {
+    "file": "price-prompt-verification.json",
+    "source_commit": "fd3c28d299fadde285c46766516eb8c4d72ee546",
+    "python_tests_passed": 165,
+    "javascript_tests_passed": 54,
+    "hosted_exact_and_llm_prompts": "passed"
   }
 }

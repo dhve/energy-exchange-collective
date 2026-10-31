@@ -1,0 +1,241 @@
+{
+  "translator_version": "household-translator-v3",
+  "model": "gpt-6-luna",
+  "cases": [
+    {
+      "request": "Make the minimum price 3.5",
+      "agent": "A17",
+      "expected": {
+        "min_price": 3.5
+      },
+      "passed": true,
+      "result": {
+        "changes": {
+          "min_price": 3.5
+        },
+        "recognized": [
+          "Minimum price"
+        ],
+        "errors": [],
+        "requires_confirmation": true,
+        "parser_version": "energy-policy-grammar/2.1",
+        "normalized_prompt": "Make the minimum price 3.5",
+        "clarification_questions": [],
+        "assumptions": [
+          "Using the demo's units: prices in ₹/kWh and budgets in ₹."
+        ],
+        "translation": {
+          "mode": "grammar",
+          "status": "ready"
+        }
+      }
+    },
+    {
+      "request": "could you make the minimum price 3.5 for me",
+      "agent": "A17",
+      "expected": {
+        "min_price": 3.5
+      },
+      "passed": true,
+      "result": {
+        "changes": {
+          "min_price": 3.5
+        },
+        "recognized": [
+          "min_price"
+        ],
+        "errors": [],
+        "requires_confirmation": true,
+        "normalized_prompt": "Set the seller's minimum price to 3.5 INR/kWh.",
+        "clarification_questions": [],
+        "assumptions": [
+          "Using the demo's units: prices in ₹/kWh and budgets in ₹."
+        ],
+        "parser_version": "household-translator-v3",
+        "translation": {
+          "model": "gpt-6-luna",
+          "prompt_version": "household-translator-v3",
+          "usage": {
+            "input_tokens": 1077,
+            "output_tokens": 73
+          },
+          "mode": "llm",
+          "status": "ready"
+        }
+      }
+    },
+    {
+      "request": "lower my minimum price by 0.5 please",
+      "agent": "A17",
+      "expected": {
+        "min_price": 6.0
+      },
+      "passed": true,
+      "result": {
+        "changes": {
+          "min_price": 6.0
+        },
+        "recognized": [
+          "min_price"
+        ],
+        "errors": [],
+        "requires_confirmation": true,
+        "normalized_prompt": "Decrease the seller's minimum price by 0.5 INR/kWh.",
+        "clarification_questions": [],
+        "assumptions": [
+          "Using the demo's units: prices in ₹/kWh and budgets in ₹."
+        ],
+        "parser_version": "household-translator-v3",
+        "translation": {
+          "model": "gpt-6-luna",
+          "prompt_version": "household-translator-v3",
+          "usage": {
+            "input_tokens": 1075,
+            "output_tokens": 76
+          },
+          "mode": "llm",
+          "status": "ready"
+        }
+      }
+    },
+    {
+      "request": "please make my maximum price eight for me",
+      "agent": "A02",
+      "expected": {
+        "max_price": 8
+      },
+      "passed": true,
+      "result": {
+        "changes": {
+          "max_price": 8
+        },
+        "recognized": [
+          "max_price"
+        ],
+        "errors": [],
+        "requires_confirmation": true,
+        "normalized_prompt": "Set my maximum buying price to 8 INR/kWh.",
+        "clarification_questions": [],
+        "assumptions": [
+          "Using the demo's units: prices in ₹/kWh and budgets in ₹."
+        ],
+        "parser_version": "household-translator-v3",
+        "translation": {
+          "model": "gpt-6-luna",
+          "prompt_version": "household-translator-v3",
+          "usage": {
+            "input_tokens": 1071,
+            "output_tokens": 63
+          },
+          "mode": "llm",
+          "status": "ready"
+        }
+      }
+    },
+    {
+      "request": "could you put my budget at 30 please",
+      "agent": "A02",
+      "expected": {
+        "budget": 30
+      },
+      "passed": true,
+      "result": {
+        "changes": {
+          "budget": 30
+        },
+        "recognized": [
+          "budget"
+        ],
+        "errors": [],
+        "requires_confirmation": true,
+        "normalized_prompt": "Set the buyer's total budget to 30 INR.",
+        "clarification_questions": [],
+        "assumptions": [
+          "Using the demo's units: prices in ₹/kWh and budgets in ₹."
+        ],
+        "parser_version": "household-translator-v3",
+        "translation": {
+          "model": "gpt-6-luna",
+          "prompt_version": "household-translator-v3",
+          "usage": {
+            "input_tokens": 1072,
+            "output_tokens": 63
+          },
+          "mode": "llm",
+          "status": "ready"
+        }
+      }
+    }
+  ],
+  "passed": 5,
+  "failed": 0,
+  "final_validator_recheck": "Passed using the four recorded real LLM responses and the free grammar path.",
+  "date": "2026-10-30",
+  "source_commit": "fd3c28d299fadde285c46766516eb8c4d72ee546",
+  "reported_prompt": "Make the minimum price 3.5",
+  "root_cause": [
+    "The grammar rejected ordinary Make/the wording.",
+    "The model correctly inferred INR/kWh, but validation required explicit currency in the source text.",
+    "The hosted LLM wrapped its evidence in quotation marks. Exact-string validation rejected the otherwise correct interpretation. Formatting is now normalized and validated against the original source span."
+  ],
+  "python_tests": {
+    "passed": 165,
+    "failed": 0,
+    "command": ".venv/bin/python -m unittest discover -s tests -p 'test_*.py' -q"
+  },
+  "javascript_tests": {
+    "passed": 54,
+    "failed": 0,
+    "command": "node --test tests/test_collective_ui.cjs tests/collective_streamlit_bridge.test.js"
+  },
+  "review": {
+    "status": "passed",
+    "outstanding_findings": [],
+    "checked": [
+      "known monetary units and explicit contradictory units",
+      "relative operations with shortened model evidence",
+      "currency and delivery assumptions both retained",
+      "quote formatting preserves original condition offsets and amounts",
+      "actual hosted model evidence wrapped in quotation marks"
+    ]
+  },
+  "local_browser": {
+    "exact_prompt_preview": "Minimum price ₹3.50/kWh; explicit confirmation required.",
+    "confirmed_run": "Simulation completed; 56.42 kWh shared and no changed agreements for this baseline."
+  },
+  "hosted_streamlit": {
+    "url": "https://energy-exchange-collective.streamlit.app/",
+    "status": "passed",
+    "confirmed_at": "2026-10-30",
+    "cases": [
+      {
+        "request": "Make the minimum price 3.5",
+        "mode": "grammar",
+        "preview": "₹3.50/kWh",
+        "requires_confirmation": true
+      },
+      {
+        "request": "could you make the minimum price 3.5 for me",
+        "mode": "llm",
+        "model": "gpt-6-luna",
+        "preview": "₹3.50/kWh",
+        "requires_confirmation": true
+      }
+    ],
+    "screenshots": [
+      "../assets/price-prompt-fixed.jpg",
+      "../assets/price-prompt-llm-fixed.jpg"
+    ]
+  },
+  "github_ci": {
+    "url": "https://github.com/dhve/energy-exchange-collective/actions/runs/41159418389",
+    "head_sha": "fd3c28d299fadde285c46766516eb8c4d72ee546",
+    "conclusion": "success",
+    "jobs": [
+      "collective (3.11)",
+      "collective (3.12)",
+      "collective (3.14)",
+      "legacy"
+    ]
+  }
+}

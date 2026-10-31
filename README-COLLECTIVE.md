@@ -61,9 +61,11 @@ The requirements file beside the entry point keeps deployment independent of the
 
 Clear supported instructions use an explicit grammar without a paid model call. For other wording, the server can use OpenAI's Responses API with strict Structured Outputs to propose a validated policy. Ambiguous parties, EV energy quantities, or delivery times produce questions. No model proposal applies without confirmation. The structured policy editor uses the same validation and confirmation.
 
+Ordinary wording such as “Make the minimum price 3.5” uses the demo's known price unit, ₹/kWh. The preview shows ₹3.50/kWh and states the assumed units before confirmation. A named budget without a unit uses rupees. Explicit conflicting units still require correction, and energy amounts still need kWh. “Lower my minimum price by 0.5” reduces the existing floor by ₹0.50/kWh.
+
 | Purpose | Example |
 | --- | --- |
-| Seller price | Raise my minimum price to ₹9/kWh |
+| Seller price | Make the minimum price 3.5 |
 | Seller offer | Sell up to 4 kWh |
 | Forecast | Set my surplus to 3 kWh |
 | Reserve | Keep 1 kWh in reserve |
