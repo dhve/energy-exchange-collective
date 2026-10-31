@@ -196,6 +196,9 @@ class LLMTests(unittest.TestCase):
             ('I have 3 kWh in reserve already', update('max_offer_kwh',3,'3 kWh in reserve')),
             ('Raise my price to 8 rupees per kWh please', update('min_price',8,'Raise my price to 8 rupees per kWh','increase')),
             ('keep 1 kWh more at home', update('reserve_kwh',1,'keep 1 kWh more at home','set')),
+            ('sell 3 kWh for ₹8 total please', update('min_price',8,'sell 3 kWh for ₹8 total')),
+            ('accept ₹5 per kWh if I have 3 guests', update('conditional_price',{'floor':5,'minimum_kwh':3},'accept ₹5 per kWh if I have 3 guests')),
+            ('Please keep 3 guests comfortable using 1 kWh', update('reserve_kwh',3,'keep 3 guests comfortable using 1 kWh')),
         ]
         for phrase, row in cases:
             with self.subTest(phrase=phrase):

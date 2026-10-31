@@ -229,11 +229,29 @@ def _energy_unit(evidence):
         re.search(r'\bkw\b|%|\bpercent(?:age)?\b', evidence, re.I))
 
 
+def _amount_with_unit(value, evidence, unit):
+    source = evidence.lower()
+    words = dict(zero=0, one=1, two=2, three=3, four=4, five=5, six=6, seven=7,
+                 eight=8, nine=9, ten=10, eleven=11, twelve=12, twenty=20,
+                 thirty=30, forty=40, fifty=50, hundred=100)
+    for word, number in words.items():
+        source = re.sub(r'\b'+word+r'\b', str(number), source)
+    amount = r'(?<![\w.])-?\d+(?:\.\d+)?'
+    if unit == 'energy':
+        pattern = rf'({amount})\s*(?:k\s*w\s*h\b|kilowatt[ -]?hours?\b)'
+    else:
+        pattern = rf'(?:₹|\binr\b|\brs\.?)\s*({amount})|({amount})\s*(?:rupees?\b|inr\b|rs\b)'
+    return any(Decimal(str(value)) == Decimal(number) for match in re.finditer(pattern, source)
+               for number in match.groups() if number is not None)
+
+
 def _ground_meaning(field, operation, evidence):
     """Check common units/intents independently of the model's JSON claim."""
     money = bool(re.search(r'₹|\binr\b|\brs\.?\b|\brupees?\b', evidence, re.I))
     if field in ('min_price','max_price','budget','conditional_price','time_price') and operation != 'clear' and not money:
         raise ValueError('A monetary rule needs an explicit rupee amount')
+    if field in ('min_price','max_price','conditional_price','time_price') and re.search(r'\btotal\b|\boverall\b|\ball in\b', evidence, re.I):
+        raise ValueError('A total payment cannot become a price per kWh')
     intents = {
         'reserve_kwh': r'\bkeep|reserv|retain|save|hold|aside|for (?:my|our|the) home',
         'max_offer_kwh': r'\bsell|\bsale|\boffer|\bexport|\bshare',
@@ -319,10 +337,16 @@ def _validated_translation(data, text, agent, tick):
                 raise ValueError('Invalid condition')
             if not _explicit_number(value['floor'], evidence):
                 raise ValueError('The discount price was not stated')
+            if not _amount_with_unit(value['floor'], evidence, 'money'):
+                raise ValueError('The discount needs a stated rupee price')
             if field == 'conditional_price' and not _explicit_number(value['minimum_kwh'], evidence):
                 raise ValueError('The bundle amount was not stated')
             if field == 'conditional_price' and not _energy_unit(evidence):
                 raise ValueError('The bundle needs an explicit kWh amount')
+            if field == 'conditional_price':
+                condition = re.split(r'\bif\b|\bwhen\b|\bprovided that\b', evidence, flags=re.I)[-1]
+                if not _amount_with_unit(value['minimum_kwh'], condition, 'energy'):
+                    raise ValueError('The bundle condition needs a stated kWh amount')
             if field == 'time_price':
                 _explicit_time(value['after'], evidence, agent)
         elif field.startswith('interval_'):
@@ -334,6 +358,10 @@ def _validated_translation(data, text, agent, tick):
                 raise ValueError('Please state the exact amount instead of asking the model to guess it')
             if field.endswith('_kwh') and not _energy_unit(evidence):
                 raise ValueError('Please state energy in kWh, not power or a percentage')
+            if field.endswith('_kwh') and not _amount_with_unit(value, evidence, 'energy'):
+                raise ValueError('The energy amount must be stated with its kWh unit')
+            if field in ('min_price','max_price','budget') and not _amount_with_unit(value, evidence, 'money'):
+                raise ValueError('The monetary amount must be stated in rupees')
             if field == 'deadline_round' and not re.search(r'\bround\b', evidence, re.I):
                 raise ValueError('A delivery time cannot become a negotiation round')
             if op in ('increase','decrease'):
