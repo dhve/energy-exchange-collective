@@ -1,12 +1,12 @@
 """Strict, deterministic instruction proposals. Parsing never executes a trade."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 import math
 import re
 
-PARSER_VERSION = 'energy-policy-grammar/1.0'
+PARSER_VERSION = 'energy-policy-grammar/2.0'
 NUM = r'(\d+(?:\.\d+)?)'
 MONEY = r'(?:₹|inr\s*|rs\.?\s*)?'
 UNIT = r'(?:\s*/\s*kwh|\s+per\s+kwh)?'
@@ -58,6 +58,8 @@ def parse_instruction(text: str, agent: dict, price_tick: float = 0.05) -> dict:
             lambda m: add('max_offer_kwh', float(m[1]), 'Maximum offer', 'seller'))
     consume(r'(?:buy|purchase|need)\s+(?:up\s+to\s+)?' + NUM + r'\s*kwh',
             lambda m: add('demand_kwh', float(m[1]), 'Energy requirement', 'buyer'))
+    consume(r'(?:keep|reserve)\s+(?:at\s+least\s+)?' + NUM + r'\s*kwh(?:\s+in\s+reserve)?',
+            lambda m: add('reserve_kwh', float(m[1]), 'Minimum reserve', 'seller'))
     consume(r'(?:at\s+)?at\s+least\s+' + MONEY + NUM + UNIT,
             lambda m: add('min_price', float(m[1]), 'Minimum price', 'seller'))
     consume(r'(?:at\s+)?at\s+most\s+' + MONEY + NUM + UNIT,
@@ -72,32 +74,43 @@ def parse_instruction(text: str, agent: dict, price_tick: float = 0.05) -> dict:
             lambda m: add('budget', float(m[1]), 'Budget', 'buyer'))
     consume(r'(?:(?:set|change|reduce|increase)\s+)?(?:my\s+)?(?:available\s+)?(?:solar\s+)?surplus\s+(?:to\s+)?' + NUM + r'\s*kwh',
             lambda m: add('forecast_surplus_kwh', float(m[1]), 'Forecast surplus', 'seller'))
-    consume(r'(?:keep|reserve)\s+(?:at\s+least\s+)?' + NUM + r'\s*kwh(?:\s+in\s+reserve)?',
-            lambda m: add('reserve_kwh', float(m[1]), 'Minimum reserve', 'seller'))
     consume(r'(?:(?:set|change)\s+)?(?:my\s+)?deadline\s+(?:to\s+)?round\s+' + NUM,
             lambda m: add('deadline_round', float(m[1]), 'Deadline round'))
 
-    def time_window(m):
-        def hour(value, meridiem):
-            number = int(value)
-            if not 1 <= number <= 12:
-                raise ValueError
-            return number % 12 + (12 if meridiem == 'pm' else 0)
-        try:
-            period = m[4]
-            start = hour(m[1], m[2] or period)
-            end = hour(m[3], period)
-            expected_start = datetime.fromisoformat(agent['interval_start'])
-            expected_end = datetime.fromisoformat(agent['interval_end'])
-            if (start, end) != (expected_start.hour, expected_end.hour):
-                errors.append('This single-interval experiment supports 2 to 4 PM Asia/Kolkata only. Start a separate experiment for another interval.')
-                return
-            add('interval_start', agent['interval_start'], 'Interval start, Asia/Kolkata')
-            add('interval_end', agent['interval_end'], 'Interval end, Asia/Kolkata')
-        except (ValueError, KeyError):
-            errors.append('The interval could not be validated.')
+    def wall_time(value, minute, meridiem):
+        number = int(value)
+        minutes = int(minute or 0)
+        if not 1 <= number <= 12 or not 0 <= minutes < 60:
+            raise ValueError('Use a valid time with AM or PM.')
+        hour = number % 12 + (12 if meridiem == 'pm' else 0)
+        return datetime.fromisoformat(agent['interval_start']).replace(hour=hour, minute=minutes, second=0, microsecond=0)
 
-    consume(r'from\s+(\d{1,2})\s*(am|pm)?\s*(?:-|to)\s*(\d{1,2})\s*(am|pm)', time_window)
+    def time_window(m):
+        try:
+            start = wall_time(m[1], m[2], m[3] or m[6])
+            end = wall_time(m[4], m[5], m[6])
+            if end <= start:
+                if m[3] == 'pm' and m[6] == 'am':
+                    end += timedelta(days=1)
+                else:
+                    raise ValueError('Give both times with AM or PM and put the ending time after the start.')
+            add('interval_start', start.isoformat(), 'Delivery starts, Asia/Kolkata')
+            add('interval_end', end.isoformat(), 'Delivery ends, Asia/Kolkata')
+        except (ValueError, KeyError) as exc:
+            errors.append(str(exc) or 'The delivery window could not be validated.')
+
+    def late_price(m):
+        try:
+            when = wall_time(m[2], m[3], m[4])
+            add('time_price', {'after': when.isoformat(), 'floor': float(m[1])},
+                'Lower selling price for later delivery', 'seller')
+        except (ValueError, KeyError):
+            errors.append('Give a valid delivery time for the lower price.')
+
+    consume(r'from\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*(?:-|to)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)', time_window)
+    consume(r'accept\s+' + MONEY + NUM + UNIT + r'\s+after\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)', late_price)
+    consume(r'(?:remove|clear)\s+(?:my\s+)?(?:later|time)\s+discount',
+            lambda m: add('time_price', None, 'Remove later delivery discount', 'seller'))
     remaining = re.sub(r'\b(?:and|with|please)\b', ' ', remaining)
     remaining = re.sub(r'[\s,;.!]+', '', remaining)
     if remaining:
@@ -129,7 +142,31 @@ def parse_instruction(text: str, agent: dict, price_tick: float = 0.05) -> dict:
             errors.append('A bundle needs a positive quantity and a discount below the ordinary floor.')
         if conditional['minimum_kwh'] > changes.get('max_offer_kwh', agent.get('max_offer_kwh', 0)):
             errors.append('The bundle threshold exceeds the maximum offered quantity.')
+    errors.extend(validate_policy_changes(changes, agent, price_tick))
     if not errors:
         result['changes'] = changes
     result['recognized'] = list(dict.fromkeys(recognized))
     return result
+
+
+def validate_policy_changes(changes: dict, agent: dict, price_tick: float = 0.05) -> list[str]:
+    """Independent bounds check shared by grammar and model translation."""
+    from .collective_engine import _validate_changes
+    if not changes:
+        return ['No complete policy change was provided.']
+    for key, value in changes.items():
+        if key in LIMITS:
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                return [f'{key} must be a finite number.']
+            if not 0 <= value <= LIMITS[key]:
+                return [f'{key} must be between 0 and {LIMITS[key]}.']
+        if key in ('conditional_price', 'time_price') and value is not None:
+            if not isinstance(value, dict) or not isinstance(value.get('floor'), (int, float)) or isinstance(value.get('floor'), bool) or not math.isfinite(value['floor']) or not 0 <= value['floor'] <= 100:
+                return ['A conditional price must be a finite amount from 0 to 100.']
+            if key == 'conditional_price' and (not isinstance(value.get('minimum_kwh'), (int, float)) or isinstance(value.get('minimum_kwh'), bool) or not 0 < value['minimum_kwh'] <= 1000):
+                return ['The bundle quantity must be above 0 and at most 1000 kWh.']
+    try:
+        _validate_changes(agent, changes, round(price_tick * 100))
+    except (ValueError, KeyError, TypeError, OverflowError) as exc:
+        return [str(exc)[:250]]
+    return []

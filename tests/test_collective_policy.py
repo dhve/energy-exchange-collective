@@ -53,9 +53,21 @@ class PolicyTests(unittest.TestCase):
         self.assertEqual(result['errors'], [])
         self.assertEqual(result['changes'], {'demand_kwh': 5, 'max_price': 8, 'budget': 35})
 
-    def test_time_outside_demo_interval_is_explicitly_rejected(self):
+    def test_delivery_window_can_change_to_a_partial_overlap(self):
         result = policy.parse_instruction('Sell up to 4 kWh from 3-5 PM at at least ₹7/kWh', self.seller)
-        self.assertTrue(result['errors'])
+        self.assertEqual(result['errors'], [])
+        self.assertEqual(result['changes']['interval_start'], '2026-10-28T15:00:00+05:30')
+        self.assertEqual(result['changes']['interval_end'], '2026-10-28T17:00:00+05:30')
+
+    def test_reserve_at_least_is_not_misread_as_a_price(self):
+        result = policy.parse_instruction('Keep at least 3 kWh in reserve', self.seller)
+        self.assertEqual(result['errors'], [])
+        self.assertEqual(result['changes'], {'reserve_kwh': 3})
+
+    def test_later_delivery_floor_is_an_explicit_policy(self):
+        result = policy.parse_instruction('Sell 4 kWh from 8-10 PM; accept ₹5/kWh after 9 PM', self.seller)
+        self.assertEqual(result['errors'], [])
+        self.assertEqual(result['changes']['time_price'], {'after':'2026-10-28T21:00:00+05:30','floor':5})
 
     def test_simple_budget_and_deadline(self):
         result = policy.parse_instruction('Set my budget to INR 30 and my deadline to round 6', self.buyer)
