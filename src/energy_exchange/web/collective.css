@@ -228,3 +228,4 @@ main{max-width:1600px;padding:0 28px}
 }
 #play{background:var(--green);color:white;border:0;font-size:15px;min-height:42px;padding:11px 17px;border-radius:8px}
 .network-options>.helper{font-size:12px;line-height:1.5;color:var(--muted)}
+.legend .seller,.legend .buyer{background:#7b8573}

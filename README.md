@@ -36,6 +36,6 @@ A locally stable result applies only to the recorded strategy and bounded bilate
 
 The [run guide](README-COLLECTIVE.md) explains assumptions, validation, exports, and cost controls. [Verification evidence](docs/evidence) records checked scenarios and results. GitHub Actions runs collective and legacy checks.
 
-The collective engine uses NandaTown concepts without importing its runtime. The [original six-household lab](README-LEGACY.md), including its NandaTown integration and meter-supported settlement, remains available through `streamlit_app.py`.
+The animation uses the actual React/D3 Player from [NandaTown](frontend/vendor/nandatown/README.md), including its message trails, ripples, dragging, and zooming. The pinned original source, images, Apache 2.0 license, checksums, and explicit energy adaptations are included. A permanent negotiation history shows all recorded exchanges through the current step, with matching home colors and linked hover or keyboard focus. The collective engine remains independent of the NandaTown Python runtime. The [original six-household lab](README-LEGACY.md), including its NandaTown integration and meter-supported settlement, remains available through `streamlit_app.py`.
 
 Claude Fable 5.1 with Ultracode reviewed the source PDF and engine. The Codex team implemented the refined negotiation flow, policy interface, services, visual workspace, integration, and verification.

@@ -748,3 +748,10 @@ test('history hover colors and highlights both participants on both visible comp
     assert.equal(descendants(node).find(n=>n.getAttribute('class')==='node-shape').getAttribute('fill'),f.evaluate("EnergyReplay.color('A17')"));
   }
 });
+
+test('leaving a hovered message restores the keyboard-focused pair',()=>{
+  const f=fixture();replayFixture(f);
+  f.evaluate("state.index=2;state.town={update(m){globalThis.townModel=m;}};renderConversation();document.activeElement={closest(){return {dataset:{participants:'A17|A02'}};}};");
+  f.element('conversation').onmouseout({relatedTarget:{closest(){return null;}}});
+  assert.deepEqual(Array.from(f.context.townModel.highlighted),['A17','A02']);
+});

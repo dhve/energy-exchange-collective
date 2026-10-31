@@ -39,6 +39,7 @@ patch('              {ripples.map(', '              {(energy?.reducedMotion ? []
 patch('              {inFlight.map(', '              {(energy?.reducedMotion ? [] : inFlight).map(');
 patch('              const isFocus = focused === a.id;', '              const isFocus = energy ? energy.highlighted.includes(a.id) || energy.selected === a.id : focused === a.id;');
 patch('              const dimmed =\n', '              const dimmed = energy ? energy.highlighted.length > 0 && !energy.highlighted.includes(a.id) :\n');
+patch('                    opacity: dimmed ? 0.18 : 1,', '                    opacity: dimmed ? (energy ? 0.38 : 0.18) : 1,');
 patch('              const color = roleColor(a.role);','              const color = energy?.colors[a.id] ?? roleColor(a.role);');
 patch('                derived.agents.length <= 24 || isHover || isFocus;', '                !!energy || derived.agents.length <= 24 || isHover || isFocus;');
 patch('                  data-agent={a.id}',`                  data-agent={a.id}
