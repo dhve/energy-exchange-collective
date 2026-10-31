@@ -387,3 +387,48 @@ test('revised requirement stage shows the recorded before and after policy value
   f.evaluate("state.result.intervention.events[0].changed_fields=[{agent_id:'A17',field:'min_price',before:6,after:8}];state.stage='requirement';state.index=0;renderConversation();");
   assert.match(f.element('conversation').innerHTML,/Lowest selling price.*6\.00.*8\.00/s);
 });
+
+test('method comparison displays recorded results for the same world and current run view', () => {
+  const f=fixture();
+  f.evaluate(`state.result.method_comparison={world_checksum:'world-42',note:'Both runs reached their move limit.',baseline:{bargaining:{committed_kwh:7.25,unfilled_demand_kwh:2.75,payments:43.5,message_count:18},midpoint:{committed_kwh:8,unfilled_demand_kwh:2,payments:48,message_count:9}},intervention:{bargaining:{committed_kwh:5,unfilled_demand_kwh:5,payments:40,message_count:23},midpoint:{committed_kwh:6,unfilled_demand_kwh:4,payments:45,message_count:11}}};state.result.intervention={events:[],trades:[]};renderMethod();`);
+  assert.equal(f.element('method-comparison').hidden,false);
+  assert.match(f.element('method-comparison-table').innerHTML,/7\.25 kWh.*8\.00 kWh/s);
+  assert.match(f.element('method-comparison-table').innerHTML,/43\.50 INR.*48\.00 INR/s);
+  assert.match(f.element('method-comparison-note').textContent,/move limit/);
+  assert.match(f.element('method-comparison-context').textContent,/same household profiles and delivery windows/i);
+  assert.match(f.element('method-comparison-context').textContent,/own initial allocation/i);
+  f.evaluate("state.view='intervention';renderMethod();");
+  assert.match(f.element('method-comparison-table').innerHTML,/5\.00 kWh.*6\.00 kWh/s);
+  assert.match(f.element('method-comparison-title').textContent,/after your change/i);
+  f.evaluate("state.view='compare';renderMethod();");
+  assert.match(f.element('method-comparison-table').innerHTML,/23.*11/s);
+});
+
+test('method comparison never substitutes starting metrics for an unavailable intervention comparison', () => {
+  const f=fixture();
+  f.evaluate("state.result.method_comparison={world_checksum:'world-42',baseline:{bargaining:{committed_kwh:9},midpoint:{committed_kwh:10}},intervention:null};state.result.intervention={};state.view='intervention';renderMethod();");
+  assert.equal(f.element('method-comparison').hidden,true);
+});
+
+test('clarification also displays unsupported clauses so an answer cannot imply they will apply', async () => {
+  const f=fixture();f.element('instruction').value='Keep enough for my party if it rains';
+  f.evaluate(`api=async()=>({errors:['Rain conditions are unsupported.'],changes:{},clarification_questions:['How many kWh should stay in reserve?']});globalThis.pending=preview();`);
+  await f.context.pending;
+  assert.match(f.element('proposal').innerHTML,/How many kWh/);
+  assert.match(f.element('proposal').innerHTML,/Rain conditions are unsupported/);
+  assert.doesNotMatch(f.element('proposal').innerHTML,/id="confirm"/);
+  assert.equal(f.evaluate('state.draft'),null);
+});
+
+test('conversation explains recorded constraint codes without inventing household quotes', () => {
+  const f=fixture();replayFixture(f);
+  f.evaluate("state.result.intervention.events[2]={id:'i3',type:'offer_rejected',round:1,actor_id:'A03',counterparty_id:'A17',quantity_kwh:1.5,price:8,reason:'A03 rejects: over_budget',reason_code:'over_budget'};state.index=2;renderConversation();");
+  assert.match(f.element('conversation').innerHTML,/buyer.*remaining budget/i);
+  assert.doesNotMatch(f.element('conversation').innerHTML,/over_budget/);
+  f.evaluate("state.result.intervention.events[2].reason='A03 rejects: interval_mismatch';state.result.intervention.events[2].reason_code='interval_mismatch';renderConversation();");
+  assert.match(f.element('conversation').innerHTML,/delivery windows do not overlap/i);
+  assert.doesNotMatch(f.element('conversation').innerHTML,/I |my /i);
+  f.evaluate("state.result.intervention.events[2].reason='A03 rejects: responder_not_improving';state.result.intervention.events[2].reason_code='responder_not_improving';renderConversation();");
+  assert.match(f.element('conversation').innerHTML,/responding household model utility/);
+  assert.doesNotMatch(f.element('conversation').innerHTML,/responder_/);
+});

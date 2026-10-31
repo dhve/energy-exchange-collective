@@ -210,8 +210,8 @@ function replayStages() {
   const final={index:Math.max(0,events.length-1),event:events.at(-1)||null};
   return [
     {id:'starting',title:'Starting agreements',index:-1,event:null,explanation:'Original agreements before your change. These stay fixed as the reference.'},
-    {id:'requirement',title:'Revised requirement',...policy,explanation:policy.event?policy.event.reason:'No revised requirement is recorded. Review and apply an instruction to try a change.'},
-    {id:'affected',title:'Affected agreement',...affected,explanation:affected.event?affected.event.reason:'No prior agreement was released or directly changed at this stage.'},
+    {id:'requirement',title:'Revised requirement',...policy,explanation:policy.event?recordedReason(policy.event):'No revised requirement is recorded. Review and apply an instruction to try a change.'},
+    {id:'affected',title:'Affected agreement',...affected,explanation:affected.event?recordedReason(affected.event):'No prior agreement was released or directly changed at this stage.'},
     {id:'offers',title:'Offers and responses',...offers,explanation:offers.event?eventDescription(offers.event):'No offers or responses were recorded for this run.'},
     {id:'final',title:'Final allocation',...final,explanation:currentRun()?.status==='unresolved'?'The run did not produce a final allocation.':eventDescription(final.event)}
   ];
@@ -241,15 +241,38 @@ function eventTerms(event) {
   const window=terms.delivery_start&&terms.delivery_end?` · ${deliveryWindow(terms)}`:'';
   return amount+price+window;
 }
+function recordedReason(event) {
+  if(!event)return '';
+  const explanations={
+    over_budget:"the offer exceeds the buyer's remaining budget",
+    over_supply:"the offer exceeds the seller's available energy after reserves and existing agreements",
+    over_demand:"the offer exceeds the buyer's remaining energy requirement",
+    interval_mismatch:'the delivery windows do not overlap',
+    deadline_passed:'the last permitted negotiation round has passed',
+    price_below_floor:"the price is below the seller's minimum for these delivery terms",
+    price_above_max:"the price is above the buyer's maximum",
+    bundle_below_minimum:'the quantity is too small for the bundle discount',
+    cap_exhausted:'the simulation trading cap has been reached',
+    not_improving:'the proposed trade does not improve the household model utility enough',
+    responder_not_improving:'the proposed replacement does not improve the responding household model utility enough',
+    stale_replacement:'the agreement proposed for replacement is no longer available',
+    strategy_exhausted:'the recorded strategy has no further permitted price concession',
+    strategy_quote:'the price follows the recorded household strategy',
+    accepted_quote:'the quoted terms were accepted after the recorded constraint checks',
+    delivery_offer:'the offer uses the recorded household delivery window'
+  };
+  const reason=event.reason || event.reason_code || '';
+  return reason.replace(/[a-z]+(?:_[a-z]+)+/g,code=>explanations[code] || words(code)) || 'No reason recorded.';
+}
 function renderConversation() {
   const event=activeEvent(),participants=[event?.actor_id,event?.counterparty_id].filter(Boolean);
   if(event?.type==='policy_confirmed') {
-    $('conversation').innerHTML=`<h3>Revised requirement</h3><p>${esc(event.reason || 'Confirmed policy change')}</p>${(event.changed_fields || []).map(change=>`<p><strong>${esc(change.agent_id)} · ${esc(fieldNames[change.field] || label(change.field))}</strong><br>${esc(policyValue(change.field,change.before))} → ${esc(policyValue(change.field,change.after))}</p>`).join('')}`;
+    $('conversation').innerHTML=`<h3>Revised requirement</h3><p>${esc(recordedReason(event))}</p>${(event.changed_fields || []).map(change=>`<p><strong>${esc(change.agent_id)} · ${esc(fieldNames[change.field] || label(change.field))}</strong><br>${esc(policyValue(change.field,change.before))} → ${esc(policyValue(change.field,change.after))}</p>`).join('')}`;
     return;
   }
   const messageTypes=['offer_sent','counteroffer_sent','price_counter','price_counters','offer_accepted','offer_rejected','provisional_reserved','provisional_released','offer_replaced'];
   const list=event&&participants.length===2?currentEvents().slice(0,state.index+1).filter(e=>messageTypes.includes(e.type)&&participants.includes(e.actor_id)&&participants.includes(e.counterparty_id)).slice(-3):[];
-  $('conversation').innerHTML=list.length?`<h3>Active conversation · ${participants.map(esc).join(' ↔ ')}</h3>${list.map(e=>`<article class="conversation-entry"><strong>${esc(e.actor_id)} → ${esc(e.counterparty_id)} · ${esc(label(e.type))}</strong>${eventTerms(e)?`<p>${esc(eventTerms(e))}</p>`:''}<p>${esc(e.reason || words(e.reason_code) || 'No reason recorded.')}</p></article>`).join('')}`:`<h3>${state.stage==='starting'?'Starting agreements':'Recorded response'}</h3><p>${esc(state.stage?replayStages().find(s=>s.id===state.stage)?.explanation:event?.reason || 'Select Play or a replay stage to follow the homes. No conversation is active here.')}</p>`;
+  $('conversation').innerHTML=list.length?`<h3>Active conversation · ${participants.map(esc).join(' ↔ ')}</h3>${list.map(e=>`<article class="conversation-entry"><strong>${esc(e.actor_id)} → ${esc(e.counterparty_id)} · ${esc(label(e.type))}</strong>${eventTerms(e)?`<p>${esc(eventTerms(e))}</p>`:''}<p>${esc(recordedReason(e))}</p></article>`).join('')}`:`<h3>${state.stage==='starting'?'Starting agreements':'Recorded response'}</h3><p>${esc(state.stage?replayStages().find(s=>s.id===state.stage)?.explanation:event?recordedReason(event):'Select Play or a replay stage to follow the homes. No conversation is active here.')}</p>`;
 }
 function translationDescription(translation) {
   const mode=translation.mode || 'unknown';
@@ -265,7 +288,7 @@ function renderFrame() {
   $('round-label').textContent=`Round ${event?.round ?? 0}`;
   $('event-type').textContent=words(event?.type || 'baseline').toUpperCase();
   $('event-title').textContent=event ? `${event.actor_id || 'Market'}${event.counterparty_id?' → '+event.counterparty_id:''} · ${label(event.type)}` : 'Baseline ready';
-  $('event-reason').textContent=event?.reason || words(event?.reason_code) || 'Inspect the recorded event details in the trace export.';
+  $('event-reason').textContent=event?recordedReason(event):'Inspect the recorded event details in the trace export.';
   $('causal').hidden=!event?.caused_by?.length; $('causal').textContent=state.causal.size?'Clear causal highlight':'Highlight causal chain ↗';
   $('graph-wrap').classList.toggle('comparing',state.view==='compare'); $('compare-graph').toggleAttribute('hidden',state.view!=='compare');
   const trades=frameTrades();
@@ -375,7 +398,7 @@ function renderInspector() {
   const trades=frameTrades().filter(t=>t.seller_id===a.id||t.buyer_id===a.id);
   let memory=a.memory || [];
   if(!Array.isArray(memory))memory=Object.entries(memory).map(([id,text])=>({id,text}));
-  $('inspection').innerHTML=`<div class="inspector-id"><span class="role-tag">${esc(a.role.toUpperCase())}</span><span class="tiny-label">${esc(a.id)}</span></div><h3>${esc(a.name || a.id)}</h3><h4>Hard constraints</h4>${boundHTML(a)}${a.conditional_price?`<div class="bound"><span>Bundle discount (private)</span><strong>₹${fmt(a.conditional_price.floor)} for ≥${fmt(a.conditional_price.minimum_kwh)} kWh</strong></div>`:''}<div class="bound"><span>Time window</span><strong>${esc(deliveryWindow(a))}</strong></div><p>${esc(householdAvailability(a,frameTrades()))}</p><h4>Reservations at this event</h4>${trades.length?trades.map(t=>`<div class="bound"><span>${esc(t.seller_id)} → ${esc(t.buyer_id)}</span><strong>${fmt(t.quantity_kwh)} kWh<br>₹${fmt(t.price)}/kWh<br><small>${esc(deliveryWindow(t))}</small></strong></div>`).join(''):'<p class="muted">No active reservation at this point.</p>'}<h4>Latest recorded decision</h4><p>${esc(last?.reason || words(last?.reason_code) || 'No decision recorded yet at this replay position.')}</p>${last?.rule_checks?`<p class="muted small">Checks: ${esc(Array.isArray(last.rule_checks)?last.rule_checks.join(', '):JSON.stringify(last.rule_checks))}</p>`:''}<details><summary>Private context & memory (${memory.length})</summary><div class="private">Research inspection only. Private context is not shared in agent messages.</div><p>${esc(typeof a.context==='string'?a.context:JSON.stringify(a.context))}</p>${memory.map(m=>`<div class="memory-record">${esc(m.text || m.content || JSON.stringify(m))}<small>Source ${esc(m.id || m.record_id || 'synthetic memory')} · ${state.config.memory_enabled?'Retrieval enabled':'Retrieval disabled'}</small>${m.preference?.type==='preferred_counterparty'?`<small>Soft preference: ${esc(m.preference.agent_id)} wins equal-value ties</small>`:''}</div>`).join('')}<p class="muted small">Memory can rank feasible alternatives. It cannot override a hard constraint.</p></details>`;
+  $('inspection').innerHTML=`<div class="inspector-id"><span class="role-tag">${esc(a.role.toUpperCase())}</span><span class="tiny-label">${esc(a.id)}</span></div><h3>${esc(a.name || a.id)}</h3><h4>Hard constraints</h4>${boundHTML(a)}${a.conditional_price?`<div class="bound"><span>Bundle discount (private)</span><strong>₹${fmt(a.conditional_price.floor)} for ≥${fmt(a.conditional_price.minimum_kwh)} kWh</strong></div>`:''}<div class="bound"><span>Time window</span><strong>${esc(deliveryWindow(a))}</strong></div><p>${esc(householdAvailability(a,frameTrades()))}</p><h4>Reservations at this event</h4>${trades.length?trades.map(t=>`<div class="bound"><span>${esc(t.seller_id)} → ${esc(t.buyer_id)}</span><strong>${fmt(t.quantity_kwh)} kWh<br>₹${fmt(t.price)}/kWh<br><small>${esc(deliveryWindow(t))}</small></strong></div>`).join(''):'<p class="muted">No active reservation at this point.</p>'}<h4>Latest recorded decision</h4><p>${esc(last?recordedReason(last):'No decision recorded yet at this replay position.')}</p>${last?.rule_checks?`<p class="muted small">Checks: ${esc(Array.isArray(last.rule_checks)?last.rule_checks.join(', '):JSON.stringify(last.rule_checks))}</p>`:''}<details><summary>Private context & memory (${memory.length})</summary><div class="private">Research inspection only. Private context is not shared in agent messages.</div><p>${esc(typeof a.context==='string'?a.context:JSON.stringify(a.context))}</p>${memory.map(m=>`<div class="memory-record">${esc(m.text || m.content || JSON.stringify(m))}<small>Source ${esc(m.id || m.record_id || 'synthetic memory')} · ${state.config.memory_enabled?'Retrieval enabled':'Retrieval disabled'}</small>${m.preference?.type==='preferred_counterparty'?`<small>Soft preference: ${esc(m.preference.agent_id)} wins equal-value ties</small>`:''}</div>`).join('')}<p class="muted small">Memory can rank feasible alternatives. It cannot override a hard constraint.</p></details>`;
 }
 function renderDecisionAudit() {
   const a=agentById(state.selected,state.view!=='baseline');if(!a)return;
@@ -383,7 +406,7 @@ function renderDecisionAudit() {
   const decision=relevant.findLast(e=>e.utility_before&&a.id in e.utility_before),offer=relevant.at(-1);
   const retrieved=relevant.filter(e=>e.type==='profile_retrieved'&&e.actor_id===a.id);
   let html='';
-  if(decision)html+=`<h4>Last allocation decision</h4><p>${esc(words(decision.reason))}</p><div class="bound"><span>Utility before</span><strong>₹${fmt(decision.utility_before[a.id])}</strong></div><div class="bound"><span>Utility after</span><strong>₹${fmt(decision.utility_after[a.id])}</strong></div><p class="muted small">${esc(decision.id)} · Round ${decision.round}<br>${esc((decision.rule_checks||[]).map(words).join(', '))}</p>`;
+  if(decision)html+=`<h4>Last allocation decision</h4><p>${esc(recordedReason(decision))}</p><div class="bound"><span>Utility before</span><strong>₹${fmt(decision.utility_before[a.id])}</strong></div><div class="bound"><span>Utility after</span><strong>₹${fmt(decision.utility_after[a.id])}</strong></div><p class="muted small">${esc(decision.id)} · Round ${decision.round}<br>${esc((decision.rule_checks||[]).map(words).join(', '))}</p>`;
   if(offer&&['offer_sent','counteroffer_sent'].includes(offer.type))html+=`<h4>Pending offer at this event</h4><p>${esc(offer.actor_id)} → ${esc(offer.counterparty_id)}<br>${fmt(offer.quantity_kwh)} kWh at ₹${fmt(offer.price)}/kWh</p>`;
   if(retrieved.length)html+=`<details><summary>Memory used in this run (${retrieved.length})</summary>${retrieved.map(e=>`<p>${esc(e.reason)}<br><small>Source ${(e.memory_ids||[]).map(esc).join(', ')} · ${esc(e.id)}</small></p>`).join('')}</details>`;
   $('inspection').insertAdjacentHTML('beforeend',html);
@@ -436,6 +459,18 @@ function renderMethod() {
   const manifest=state.result?.manifest || {},mode=manifest.config?.negotiation_mode || state.config?.negotiation_mode || 'midpoint',source=manifest.strategy_plan?.source || '';
   $('method-summary').textContent=mode==='midpoint'?'Midpoint comparison: rules choose the middle of the feasible price range.':(/openai|llm/i.test(source)&&!/fallback|unavailable|disabled/i.test(source))?'LLM-planned bargaining: frozen household strategies guide executable offers and price concessions.':'Bargaining with a rules-based fallback: frozen strategies guide offers and price concessions.';
   $('method-source').textContent=`Strategy source: ${source || 'not recorded'}. The original world and strategy plan are reused for your change. Replay makes no translation or planning requests.`;
+  const comparison=state.result?.method_comparison,view=state.view==='baseline'||!state.result?.intervention?'baseline':'intervention';
+  const pair=comparison?.[view],available=!!(pair?.bargaining&&pair?.midpoint);
+  $('method-comparison').hidden=!available;
+  $('method-comparison-table').innerHTML='';
+  if(available) {
+    const measures=[['Energy agreed','committed_kwh',' kWh'],['Unfilled demand','unfilled_demand_kwh',' kWh'],['Simulated payments','payments',' INR'],['Negotiation messages','message_count','']];
+    $('method-comparison-title').textContent=`Same world, two methods${view==='intervention'?' after your change':' before your change'}`;
+    $('method-comparison-context').textContent='Both methods use the same household profiles and delivery windows. Each method forms its own initial allocation before applying your change.';
+    $('method-comparison-table').innerHTML=measures.map(([name,key,unit])=>`<tr><th scope="row">${name}</th><td>${fmt(pair.bargaining[key],key==='message_count'?0:2)}${unit}</td><td>${fmt(pair.midpoint[key],key==='message_count'?0:2)}${unit}</td></tr>`).join('');
+    $('method-comparison-note').textContent=comparison.note || '';
+    $('method-world-checksum').textContent=`Shared world checksum: ${comparison.world_checksum || 'not recorded'}`;
+  }
 }
 function drawDistribution(values) {
   const svg=$('distribution');svg.replaceChildren();svgEl('line',{x1:30,y1:95,x2:580,y2:95,stroke:'#dbe2d2'},svg);
@@ -469,7 +504,7 @@ async function preview(text=$('instruction').value) {
   stop();clearDraft();setBusy(true);const controlled=state.controlled, revision=state.draftRevision;
   try{const result=await api('/api/policy',{config:state.config,agent_id:controlled,text});
     if(revision!==state.draftRevision || controlled!==state.controlled || state.dirty)return;
-    if(result.clarification_questions?.length){state.draft=null;$('proposal').className='proposal';$('proposal').hidden=false;$('proposal').innerHTML=`<h4>A detail is needed</h4>${result.clarification_questions.map(q=>`<p>${esc(q)}</p>`).join('')}<p>Add your answer to the instruction above, then review it again. Nothing has been applied.</p>`;$('instruction-help').textContent='Keep your instruction and add the missing amount, unit or time.';}
+    if(result.clarification_questions?.length){state.draft=null;$('proposal').className='proposal';$('proposal').hidden=false;$('proposal').innerHTML=`<h4>A detail is needed</h4>${result.clarification_questions.map(q=>`<p>${esc(q)}</p>`).join('')}${result.errors?.length?`<div class="unsupported-clauses"><strong>Also needs changing</strong>${result.errors.map(error=>`<p>${esc(error)}</p>`).join('')}</div>`:''}<p>Add your answer${result.errors?.length?' and remove or revise the unsupported parts':''} in the instruction above, then review it again. Nothing has been applied.</p>`;$('instruction-help').textContent='Keep your instruction and add the missing amount, unit or time.';}
     else if(result.errors?.length){state.draft=null;$('proposal').className='proposal error';$('proposal').hidden=false;$('proposal').innerHTML=`<h4>No changes applied</h4>${result.errors.map(e=>`<p>${esc(e)}</p>`).join('')}<p>Use a short instruction like the examples above, then edit the numbers.</p>`;}
     else displayDraft({agent_id:controlled,scenario:'custom',changes:result.changes,normalized_prompt:result.normalized_prompt,assumptions:result.assumptions,translation:result.translation},result.recognized);
   }catch(e){notify(e.message,true);}finally{setBusy(false);}
