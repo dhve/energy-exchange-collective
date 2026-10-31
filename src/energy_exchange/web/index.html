@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#f4f5ef"><title>Collective energy exchange | NANDA</title>
-  <link rel="stylesheet" href="collective.css"><script src="streamlit-bridge.js" defer></script><script src="collective.js" defer></script>
+  <link rel="stylesheet" href="energy-town.css"><link rel="stylesheet" href="collective.css"><script src="streamlit-bridge.js" defer></script><script src="energy-replay.js" defer></script><script src="energy-town.js" defer></script><script src="collective.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#instruction">Skip to your instruction</a>
@@ -32,23 +32,24 @@
     <section class="panel network-panel" aria-labelledby="network-title">
       <div class="panel-top"><div><h2 id="network-title">Your neighbourhood</h2><p id="graph-subtitle">Getting the simulation ready</p></div></div>
       <div id="notice" class="notice" role="status" hidden></div>
-      <div class="graph-toolbar"><div id="run-view" class="segmented" role="group" aria-label="Run view" hidden><button data-view="baseline" class="selected">Before</button><button data-view="intervention">After</button><button data-view="compare">Compare</button></div><button id="play" class="play-button" aria-label="Play the simulation">▶ Play the simulation</button></div>
-      <nav id="replay-stages" class="replay-stages" aria-label="Five replay stages"></nav>
+      <div class="graph-toolbar"><div id="run-view" class="segmented" role="group" aria-label="Run view" hidden><button data-view="baseline" class="selected">Before</button><button data-view="intervention">After</button><button data-view="compare">Compare</button></div><button id="play" class="play-button" aria-label="Play the simulation">▶ Watch negotiations</button></div>
+      <details class="replay-milestones"><summary>Jump to a replay stage</summary><nav id="replay-stages" class="replay-stages" aria-label="Five replay stages"></nav></details>
       <div class="playback"><button id="back" aria-label="Previous event">←</button><button id="next" aria-label="Next event">→</button><label class="sr-only" for="timeline">Replay position</label><input id="timeline" type="range" value="0" min="0" max="0"><span id="position">Getting ready</span></div>
       <div id="policy-strip" class="policy-strip" hidden></div>
       <div class="replay-layout">
         <div class="network-canvas">
           <div id="frame-summary" class="frame-summary" aria-live="off"></div>
-          <div id="graph-wrap" class="graph-wrap"><div id="graph-loading" class="graph-loading"><span class="loading-orbit"></span><strong>Getting your neighbourhood ready</strong><p>This usually takes a few seconds.</p></div><svg id="compare-graph" viewBox="0 0 880 610" aria-label="Before: original agreements" role="group" hidden></svg><svg id="graph" viewBox="0 0 880 610" aria-label="Interactive logical energy trading network" role="group"></svg><div class="graph-caption" id="graph-caption">Select a home or agreement to inspect it.</div></div>
-          <div class="legend"><span><i class="seller"></i>Seller</span><span><i class="buyer"></i>Buyer</span><span><i class="controlled"></i>Your home</span></div>
+          <div id="graph-wrap" class="graph-wrap"><div id="graph-loading" class="graph-loading"><span class="loading-orbit"></span><strong>Getting your neighbourhood ready</strong><p>This usually takes a few seconds.</p></div><div id="energy-town" class="energy-town" hidden></div><svg id="compare-graph" viewBox="0 0 880 610" aria-label="Before: original agreements" role="group" hidden></svg><svg id="graph" viewBox="0 0 880 610" aria-label="Interactive logical energy trading network" role="group"></svg><div class="graph-caption" id="graph-caption">Select a home or agreement to inspect it.</div></div>
+          <p id="town-legend" class="town-legend" hidden>Glowing trails are messages. Lines are energy agreements at this step. Node rings match the message colors. Your home has a double-weight ring.</p><div class="legend"><span><i class="seller"></i>Seller</span><span><i class="buyer"></i>Buyer</span><span><i class="controlled"></i>Your home</span></div>
           <div class="line-legend"><span><i class="added-key"></i>New</span><span><i class="revised-key"></i>Revised</span><span><i class="removed-key"></i>Removed</span><span><i class="message-key"></i>Negotiation</span><span>Faint: unchanged</span></div>
           <p id="replay-caption" class="replay-caption" aria-live="polite" aria-atomic="true">Select Play to follow the homes.</p>
         </div>
         <aside class="replay-sidebar" aria-label="Explanation of the displayed step">
-          <section id="conversation" class="conversation" aria-label="Active recorded negotiation"></section>
-          <section id="focus-home" class="focus-home" aria-label="Household settings at this step"></section>
+          <section id="conversation" class="conversation" aria-label="All recorded negotiations"></section>
+
         </aside>
       </div>
+      <details class="selected-home"><summary>Selected home’s settings and price rules</summary><section id="focus-home" class="focus-home" aria-label="Household settings at this step"></section></details>
       <section id="trade-differences" class="trade-differences" aria-label="Agreement changes at this step" hidden></section>
       <h3 class="results-heading">End-of-run results <small>These totals stay fixed during replay.</small></h3>
       <section class="simple-results" aria-label="Experiment summary"><div><span>Final energy agreed</span><strong id="metric-energy">—</strong><small id="metric-energy-sub">Getting ready</small></div><div id="affected-result" hidden><span>Homes affected</span><strong id="metric-affected">—</strong><small id="metric-affected-sub">After your change</small></div></section>
@@ -56,7 +57,7 @@
       <p id="simple-outcome" class="simple-outcome" aria-live="polite">Write an instruction to try a change.</p>
       <details id="affected-list" class="affected-list" hidden><summary>See the homes affected</summary><p id="affected-names"></p></details>
       <p id="comparison-caveat" class="notice" role="status" hidden></p>
-      <details class="network-options"><summary>More ways to explore</summary><div class="graph-tools"><button id="zoom-out" aria-label="Zoom out">−</button><button id="fit" title="Fit network">Fit</button><button id="zoom-in" aria-label="Zoom in">+</button></div>
+      <details class="network-options"><summary>More ways to explore</summary><p class="helper">Search and filter the agreement map below. Select Watch negotiations to return to the animation.</p><div class="graph-tools"><button id="zoom-out" aria-label="Zoom out">−</button><button id="fit" title="Fit network">Fit</button><button id="zoom-in" aria-label="Zoom in">+</button></div>
         <div class="graph-filters"><label class="search"><input id="search" placeholder="Find a household…" aria-label="Search household"></label><select id="role-filter" aria-label="Filter households by role"><option value="all">All roles</option><option value="seller">Sellers</option><option value="buyer">Buyers</option></select><label><input type="checkbox" id="discovery">Possible connections</label><label><input type="checkbox" id="only-affected">Changed homes only</label></div>
         <div class="replay-foot"><label>Replay speed<select id="speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label><span id="round-label">Round 0</span><button id="previous-round" class="text-button">Previous round</button><button id="next-round" class="text-button">Next round</button><button id="end" class="text-button">Show final result</button></div>
         <div class="event-strip"><span id="event-type" class="event-type">READY</span><h3 id="event-title">Getting ready</h3><p id="event-reason">You can inspect every recorded step here.</p><button id="causal" class="text-button" hidden>Highlight linked events</button></div>

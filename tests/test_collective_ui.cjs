@@ -17,7 +17,7 @@ function fixture() {
       },
       dispatch(type) { for (const callback of this.listeners[type] || []) callback({target: this}); },
       reportValidity() { return true; }, querySelectorAll() { return []; },
-      focus() {},
+      focus() {}, insertAdjacentHTML(_,html) {this.innerHTML=(this.innerHTML||'')+html;},
       append(child) { (this.children ||= []).push(child); },
       attributes: new Set(),
       toggleAttribute(name, force) { if (force) this.attributes.add(name); else this.attributes.delete(name); },
@@ -28,6 +28,7 @@ function fixture() {
     console, setInterval, clearInterval, setTimeout, Blob, URL,
     document: {getElementById: element, querySelector: element, querySelectorAll: () => [], createElementNS: (_,tag) => Object.assign(element('svg-'+svgCount++),{tag}), createElement: tag => ({tag,click(){}})},
   });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/energy_exchange/web/energy-replay.js'),'utf8'),context);
   const source = fs.readFileSync(path.join(__dirname, '../src/energy_exchange/web/collective.js'), 'utf8');
   // Suppress only the initial automatic HTTP run. Event bindings remain real.
   vm.runInContext(source.replace(/\brun\(\);\s*$/, ''), context);
@@ -322,7 +323,7 @@ test('conversation uses actual recorded amounts, delivery window and authoritati
   assert.match(html,/1\.50 kWh.*8\.00/s);
   assert.match(html,/30 Oct · 3–4 PM \(India time\)/);
   assert.match(html,/Available surplus/);
-  assert.doesNotMatch(html,/A02/,'Unrelated conversations must not be fabricated');
+  assert.match(html,/A02/,'The earlier recorded release must remain in the history');
 });
 
 test('inspecting another household preserves the visible controlled name and ID', () => {
@@ -385,7 +386,7 @@ test('method disclosure distinguishes frozen LLM planning and rules fallback', (
 test('revised requirement stage shows the recorded before and after policy values', () => {
   const f=fixture();replayFixture(f);
   f.evaluate("state.result.intervention.events[0].changed_fields=[{agent_id:'A17',field:'min_price',before:6,after:8}];state.stage='requirement';state.index=0;renderConversation();");
-  assert.match(f.element('conversation').innerHTML,/Lowest selling price.*6\.00.*8\.00/s);
+  assert.match(f.element('conversation-summary').innerHTML,/Lowest selling price.*6\.00.*8\.00/s);
 });
 
 test('method comparison displays recorded results for the same world and current run view', () => {
@@ -425,10 +426,10 @@ test('conversation explains recorded constraint codes without inventing househol
   f.evaluate("state.result.intervention.events[2]={id:'i3',type:'offer_rejected',round:1,actor_id:'A03',counterparty_id:'A17',quantity_kwh:1.5,price:8,reason:'A03 rejects: over_budget',reason_code:'over_budget'};state.index=2;renderConversation();");
   assert.match(f.element('conversation').innerHTML,/buyer.*remaining budget/i);
   assert.doesNotMatch(f.element('conversation').innerHTML,/over_budget/);
-  f.evaluate("state.result.intervention.events[2].reason='A03 rejects: interval_mismatch';state.result.intervention.events[2].reason_code='interval_mismatch';renderConversation();");
+  f.evaluate("state.result.intervention.events=state.result.intervention.events.map(e=>({...e}));state.result.intervention.events[2].reason='A03 rejects: interval_mismatch';state.result.intervention.events[2].reason_code='interval_mismatch';renderConversation();");
   assert.match(f.element('conversation').innerHTML,/delivery windows do not overlap/i);
   assert.doesNotMatch(f.element('conversation').innerHTML,/I |my /i);
-  f.evaluate("state.result.intervention.events[2].reason='A03 rejects: responder_not_improving';state.result.intervention.events[2].reason_code='responder_not_improving';renderConversation();");
+  f.evaluate("state.result.intervention.events=state.result.intervention.events.map(e=>({...e}));state.result.intervention.events[2].reason='A03 rejects: responder_not_improving';state.result.intervention.events[2].reason_code='responder_not_improving';renderConversation();");
   assert.match(f.element('conversation').innerHTML,/responding household model utility/);
   assert.doesNotMatch(f.element('conversation').innerHTML,/responder_/);
 });
@@ -580,9 +581,9 @@ test('final conversation explains termination plainly while keeping the recorded
   ]) {
     f.context.ending={status,termination_reason:termination,events:[{type:'terminated',reason:status+': '+termination,reason_code:termination}],trades:[]};
     f.evaluate("state.result.baseline=globalThis.ending;state.view='baseline';state.stage=null;state.index=0;renderConversation();");
-    assert.match(f.element('conversation').innerHTML,/<h3>Final allocation<\/h3>/);
-    assert.match(f.element('conversation').innerHTML,expected);
-    assert.doesNotMatch(f.element('conversation').innerHTML,/sweep.clean|locally.stable|invariant.failure|max.messages/i);
+    assert.match(f.element('conversation-summary').innerHTML,/<h3>Final allocation<\/h3>/);
+    assert.match(f.element('conversation-summary').innerHTML,expected);
+    assert.doesNotMatch(f.element('conversation-summary').innerHTML,/sweep.clean|locally.stable|invariant.failure|max.messages/i);
     assert.equal(f.evaluate('currentEvents()[0].reason'),status+': '+termination,'Plain language must not rewrite recorded audit data');
   }
 });
@@ -668,7 +669,7 @@ test('graph price changes use recorded prices even when payments round to the sa
   }
 });
 
-test('ordinary replay can expand the full current exchange without past or future exchanges', () => {
+test('ordinary replay retains all past exchanges while excluding future messages', () => {
   const f=fixture();replayFixture(f);
   f.evaluate(`
     const offer={type:'offer_sent',actor_id:'A17',counterparty_id:'A03',quantity_kwh:1.5,price:8};
@@ -681,11 +682,13 @@ test('ordinary replay can expand the full current exchange without past or futur
     state.stage=null;state.index=11;renderConversation();
   `);
   const html=f.element('conversation').innerHTML;
-  assert.match(html,/<summary>Read 7 earlier messages/);
-  assert.equal((html.match(/class="conversation-entry"/g)||[]).length,10);
+  assert.match(html,/All negotiations/);
+  assert.equal((html.match(/class="conversation-entry"/g)||[]).length,12);
   assert.match(html,/Current message 0/);
   assert.match(html,/Current message 9/);
-  assert.doesNotMatch(html,/Previous exchange|Previous rejection|Future exchange/);
+  assert.match(html,/Previous exchange/);
+  assert.match(html,/Previous rejection/);
+  assert.doesNotMatch(html,/Future exchange/);
 });
 
 test('an unresolved intervention cannot show household changes as final results', () => {
@@ -703,4 +706,25 @@ test('tapping a household refreshes the inline inspector even if SVG capture sup
   graph.listeners.pointerup[0]({});
   assert.equal(f.evaluate('state.selected'),'A02');
   assert.equal(f.context.redraws,1);
+});
+
+
+test('seeking backwards removes future history and reading older messages preserves scroll',()=>{
+  const f=fixture();replayFixture(f);
+  f.evaluate('state.index=3;renderConversation();');
+  assert.match(f.element('conversation').innerHTML,/Available surplus/);
+  f.element('conversation').scrollTop=28;
+  f.evaluate('state.followLatest=false;state.index=2;renderConversation();');
+  assert.equal(f.element('conversation').scrollTop,28);
+  f.evaluate('state.index=1;renderConversation();');
+  assert.doesNotMatch(f.element('conversation').innerHTML,/Available surplus/);
+  assert.match(f.element('conversation').innerHTML,/Price below new floor/);
+});
+
+test('message highlight selects both participants and clears back to the active event',()=>{
+  const f=fixture();replayFixture(f);
+  f.evaluate("state.index=2;state.town={update(model){globalThis.townModel=model;}};highlightMessage(['A17','A02']);");
+  assert.deepEqual(Array.from(f.context.townModel.highlighted),['A17','A02']);
+  f.evaluate('highlightMessage(null);');
+  assert.deepEqual(Array.from(f.context.townModel.highlighted),['A17','A03']);
 });

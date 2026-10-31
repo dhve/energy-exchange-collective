@@ -161,10 +161,17 @@ def create_app():
         from .collective_llm import get_llm_status
         return {'status': 'ok', 'mode': 'synthetic', 'llm': get_llm_status()}
 
+    @app.get('/town-assets/{name}')
+    async def town_assets(name: str):
+        candidate = WEB / 'town-assets' / name
+        if candidate.parent != WEB / 'town-assets' or not candidate.is_file() or candidate.suffix not in ('.png', '.txt'):
+            raise HTTPException(404)
+        return FileResponse(candidate)
+
     @app.get('/assets/{name}')
     @app.get('/{name}')
     async def assets(name: str):
-        if name not in ('collective.js', 'collective.css', 'streamlit-bridge.js'):
+        if name not in ('collective.js', 'collective.css', 'streamlit-bridge.js', 'energy-replay.js', 'energy-town.js', 'energy-town.css', 'energy-town.js.LEGAL.txt'):
             raise HTTPException(404)
         return FileResponse(WEB / name)
 
