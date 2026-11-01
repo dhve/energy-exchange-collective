@@ -2,7 +2,11 @@
 
 A visual sandbox for studying how one household's requirements change negotiations across a synthetic energy market. Built on [Energy Exchange Lab](https://github.com/dhruvsarkar/energy-exchange-lab), with a collective negotiation engine and interactive workspace.
 
-[Open the hosted workspace](https://energy-exchange-collective.streamlit.app/).
+This copy adds purpose-based negotiation summaries. Run it locally using the instructions below. The [original hosted workspace](https://energy-exchange-collective.streamlit.app/) is maintained separately.
+
+After applying an instruction, **What did the homes try?** separates released agreements, renegotiations, replacement attempts and other opportunities. Select a card to keep that conversation highlighted on the network, including declined attempts. The selected conversation shows its recorded terms, outcome and the buyer’s remaining demand; expand its messages for the exact exchange. Successful and declined attempts with the same partner remain separate. The chronological audit log is still available in an expander.
+
+Summaries follow the replay cursor and do not reveal future events. “Replacement sought” means a buyer approached a new seller after a recorded release; it does not assert an unrecorded private motive. Outcomes describe simulated agreements, not measured delivery or settlement.
 
 ![Collective energy exchange workspace](docs/assets/collective-workspace.jpg)
 

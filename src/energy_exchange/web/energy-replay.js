@@ -51,6 +51,52 @@
     const k=Math.min(1.2,820/Math.max(1,right-left),500/Math.max(1,bottom-top));
     return {k,x:450-(left+right)/2*k,y:290-(top+bottom)/2*k};
   }
-  const api={messages,visible,color,toDerived,fitView};
+  // Summaries are derived only from messages already reached in the replay.
+  // A replacement is a new partner approached after that buyer lost an agreement;
+  // it is a chronological classification, not an invented private motivation.
+  function stories(cards, baseline=[], profiles=[]) {
+    const roles=new Map(profiles.map(a=>[a.id,a.role])),lostBuyers=new Set(),groups=new Map();
+    let serial=0;const active=new Map();
+    const pairOf=c=>roles.get(c.actor)==='buyer'?[c.counterparty,c.actor]:[c.actor,c.counterparty];
+    for(const card of cards){
+      const [seller,buyer]=pairOf(card),pair=`${seller}|${buyer}`;
+      const released=['provisional_released','trade_released'].includes(card.type);
+      if(released)lostBuyers.add(buyer);
+      const before=baseline.filter(t=>t.seller_id===seller&&t.buyer_id===buyer);
+      const kind=released?'disrupted':before.length?'renegotiated':lostBuyers.has(buyer)?'replacement':'other';
+      let id;
+      if(released){id=`disrupted:${pair}:${serial++}`;}
+      else {
+        if(card.type==='offer_sent'||!active.has(pair))active.set(pair,`${kind}:${pair}:${serial++}`);
+        id=active.get(pair);
+      }
+      if(!groups.has(id))groups.set(id,{id,kind,seller,buyer,before,cards:[],dimensions:new Set(),attempts:0});
+      const group=groups.get(id);group.cards.push(card);
+      if(card.type==='offer_sent')group.attempts++;
+      for(const dimension of card.event.negotiation?.changed||[])group.dimensions.add(dimension);
+      const previous=group.cards.at(-2)?.terms;
+      if(previous&&card.type==='counteroffer_sent'){
+        if(previous.price!==card.terms.price)group.dimensions.add('price');
+        if(previous.quantity_kwh!==card.terms.quantity_kwh)group.dimensions.add('quantity');
+        if(previous.delivery_start!==card.terms.delivery_start||previous.delivery_end!==card.terms.delivery_end)group.dimensions.add('delivery');
+      }
+    }
+    const episodes=[...groups.values()].map(group=>{
+      const last=group.cards.at(-1),reserved=group.cards.filter(c=>['provisional_reserved','offer_replaced','commitment_finalized'].includes(c.type));
+      const outcome=group.kind==='disrupted'?'Released':reserved.length?'Agreement recorded':last.type==='offer_accepted'?'Terms accepted':last.type==='offer_rejected'?'Declined':'In progress';
+      return {...group,dimensions:[...group.dimensions],last,outcome,reserved};
+    });
+    // Repeated failed attempts share a card; successful exchanges stay separate.
+    const merged=new Map();
+    for(const episode of episodes){
+      const key=episode.outcome==='Declined'?`${episode.kind}:${episode.seller}:${episode.buyer}:declined`:episode.id;
+      const existing=merged.get(key);
+      if(!existing){merged.set(key,episode);continue;}
+      existing.cards.push(...episode.cards);existing.attempts+=episode.attempts;existing.last=episode.last;
+      existing.dimensions=[...new Set([...existing.dimensions,...episode.dimensions])];
+    }
+    return [...merged.values()];
+  }
+  const api={messages,visible,color,toDerived,fitView,stories};
   if(typeof module==='object')module.exports=api;else root.EnergyReplay=api;
 })(typeof window==='object'?window:globalThis);

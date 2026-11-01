@@ -36,6 +36,7 @@
       <details class="replay-milestones"><summary>Jump to a replay stage</summary><nav id="replay-stages" class="replay-stages" aria-label="Five replay stages"></nav></details>
       <div class="playback"><button id="back" aria-label="Previous event">←</button><button id="next" aria-label="Next event">→</button><label class="sr-only" for="timeline">Replay position</label><input id="timeline" type="range" value="0" min="0" max="0"><span id="position">Getting ready</span></div>
       <div id="policy-strip" class="policy-strip" hidden></div>
+      <section id="negotiation-stories" class="negotiation-stories" aria-label="Negotiations by purpose" hidden></section>
       <div class="replay-layout">
         <div class="network-canvas">
           <div id="frame-summary" class="frame-summary" aria-live="off"></div>
@@ -45,7 +46,8 @@
           <p id="replay-caption" class="replay-caption" aria-live="polite" aria-atomic="true">Select Play to follow the homes.</p>
         </div>
         <aside class="replay-sidebar" aria-label="Explanation of the displayed step">
-          <section id="conversation" class="conversation" aria-label="All recorded negotiations"></section>
+          <section id="story-detail" class="story-detail" aria-label="Selected negotiation" hidden></section>
+          <details class="raw-history"><summary>All recorded messages · chronological log</summary><section id="conversation" class="conversation" aria-label="All recorded negotiations"></section></details>
 
         </aside>
       </div>
