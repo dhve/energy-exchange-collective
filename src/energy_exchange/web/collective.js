@@ -149,7 +149,6 @@ function render() {
   renderOwn(); renderFrame(); renderAnalysis(); renderOutcome(); renderMethod(); renderImpactSummary();
   $('manifest').textContent=JSON.stringify(state.result.manifest,null,2);
   $('protocol-scope').textContent=typeof run.stability_scope==='string'?run.stability_scope:JSON.stringify(run.stability_scope || state.result.manifest?.protocol || 'See the manifest for protocol scope.');
-  $('footer-run').textContent=`Seed ${state.config.seed} · ${state.result.manifest?.protocol_version || state.result.manifest?.version || 'Deterministic bilateral protocol'}`;
 }
 function renderOutcome() {
   const before=state.result.baseline, after=state.result.intervention, delta=changed();
