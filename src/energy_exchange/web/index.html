@@ -48,9 +48,9 @@
           <section id="story-detail" class="story-detail" aria-label="Selected negotiation" hidden></section>
           <details class="raw-history"><summary>All recorded messages · chronological log</summary><section id="conversation" class="conversation" aria-label="All recorded negotiations"></section></details>
 
+          <details class="selected-home"><summary>Selected home’s settings and price rules</summary><div class="home-selector"><label for="inspect-select">Inspect a home</label><select id="inspect-select" disabled></select></div><section id="focus-home" class="focus-home" aria-label="Household settings at this step"></section></details>
         </aside>
       </div>
-      <details class="selected-home"><summary>Selected home’s settings and price rules</summary><section id="focus-home" class="focus-home" aria-label="Household settings at this step"></section></details>
       <section id="trade-differences" class="trade-differences" aria-label="Agreement changes at this step" hidden></section>
       <h3 class="results-heading">End-of-run results <small>These totals stay fixed during replay.</small></h3>
       <section class="simple-results" aria-label="Experiment summary"><div><span>Final energy agreed</span><strong id="metric-energy">—</strong><small id="metric-energy-sub">Getting ready</small></div><div id="affected-result" hidden><span>Homes affected</span><strong id="metric-affected">—</strong><small id="metric-affected-sub">After your change</small></div></section>
@@ -78,16 +78,14 @@
 
       <h3>Try a prepared scenario</h3><div class="scenario-grid"><button data-scenario="price">Raise a selling price</button><button data-scenario="supply">Less solar energy</button><button data-scenario="budget">Lower a buying budget</button><button data-scenario="shock">Less sun for everyone</button><button data-scenario="none">Keep everything the same</button></div>
     </div></details>
-    <details id="household-details" class="disclosure"><summary>Household details</summary>    <aside class="detail-inspector">
-      <div class="panel-top"><h2>Household details</h2><span class="section-number">03</span></div>
-      <label for="inspect-select" class="sr-only">Inspect household</label><select id="inspect-select" disabled></select>
-      <div id="inspection"><p class="muted">Select a household to examine its constraints and decisions.</p></div>
-      <div class="divider"></div><div class="label-row"><h3>Event log</h3><span id="log-count" class="tiny-label">0 EVENTS</span></div>
-      <label for="event-filter" class="sr-only">Filter event log</label><select id="event-filter"><option value="all">All market events</option><option value="agent">Selected agent only</option><option value="changes">Allocation changes</option></select>
-      <div id="event-log" class="event-log" tabindex="0" aria-label="Recorded event log"></div>
-    </aside>
-</details>
     <details id="research-details" class="disclosure"><summary>Detailed results and downloads</summary><div class="disclosure-body">
+      <details id="technical-audit" class="technical-audit"><summary>Decision checks, memory and event log</summary><div class="detail-inspector">
+        <p class="helper">Follows the home selected beside the graph and the current replay step. These are research details from simulated households.</p>
+        <div id="inspection"></div>
+        <div class="divider"></div><div class="label-row"><h3>Event log</h3><span id="log-count" class="tiny-label">0 EVENTS</span></div>
+        <label for="event-filter">Filter event log</label><select id="event-filter"><option value="all">All market events</option><option value="agent">Selected agent only</option><option value="changes">Allocation changes</option></select>
+        <div id="event-log" class="event-log" tabindex="0" aria-label="Recorded event log"></div>
+      </div></details>
       <details class="method-details"><summary>How negotiation works</summary><p id="method-summary"></p><p id="method-source"></p><p>Energy is one flexible pool per home within its delivery window. There are no hourly power, device or weather limits. These logical connections do not establish grid feasibility.</p><p>A stopping result means no further admissible move under the recorded strategy and bounded rules. It does not establish a global optimum or physical delivery.</p><section id="method-comparison" hidden aria-labelledby="method-comparison-title"><h3 id="method-comparison-title">Same world, two methods</h3><p id="method-comparison-context"></p><div class="table-scroll"><table><thead><tr><th>Measure</th><th>Bargaining</th><th>Midpoint</th></tr></thead><tbody id="method-comparison-table"></tbody></table></div><p id="method-comparison-note"></p><p id="method-world-checksum" class="helper"></p></section><p>The method setting in Simulation settings starts a separate experiment when you rebuild the market. Use the table above to compare both methods on the same world when comparison results are available.</p></details>
       <section class="metric-strip" aria-label="Detailed metrics"><div><span>Unfilled demand</span><strong id="metric-demand">—</strong></div><div><span>Negotiation messages</span><strong id="metric-messages">—</strong><small id="metric-rounds"></small></div><div><span>Resolution</span><strong id="metric-status">Preparing</strong><small id="metric-status-sub"></small></div></section>
       <button id="export" class="button light" disabled>Download the full experiment</button>

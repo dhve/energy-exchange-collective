@@ -495,7 +495,7 @@ test('preference details follow historical windows and remain separate from firm
     Object.assign(state.result.updated_world.agents[0],{negotiation_preferences:preferences,interval_start:'2026-11-01T18:00:00+05:30',interval_end:'2026-11-01T20:00:00+05:30'});
     renderReplayContext();renderInspector();
   `);
-  for(const id of ['focus-home','inspection']) {
+  for(const id of ['focus-home']) {
     const html=f.element(id).innerHTML;
     assert.match(html,/Firm limits.*Flexible preferences/s);
     assert.match(html,/Price aim.*₹7\.00\/kWh.*negotiable/s);
@@ -506,19 +506,20 @@ test('preference details follow historical windows and remain separate from firm
   }
   f.evaluate("state.stage='requirement';renderReplayContext();renderInspector();");
   assert.match(f.element('focus-home').innerHTML,/Preferred delivery.*7–8 PM/s);
-  assert.match(f.element('inspection').innerHTML,/Preferred delivery.*7–8 PM/s);
+  assert.doesNotMatch(f.element('inspection').innerHTML,/Firm limits|Flexible preferences|Preferred delivery/);
+  assert.match(f.element('inspection').innerHTML,/Recorded rule checks|Private context/);
 });
 
 test('starting agreements use original profiles in both inspection and node availability', () => {
   const f=fixture();snapshotFixture(f);
-  f.evaluate("renderInspector();$('role-filter').value='all';drawGraph($('graph'),frameTrades(),null,'Starting');");
-  assert.match(f.element('inspection').innerHTML,/Price floor.*6\.00/s);
-  assert.doesNotMatch(f.element('inspection').innerHTML,/9\.00/);
-  assert.match(f.element('inspection').innerHTML,/4\.00 kWh still available/);
+  f.evaluate("renderReplayContext();renderInspector();$('role-filter').value='all';drawGraph($('graph'),frameTrades(),null,'Starting');");
+  assert.match(f.element('focus-home').innerHTML,/Price floor.*6\.00/s);
+  assert.doesNotMatch(f.element('focus-home').innerHTML,/9\.00/);
+  assert.match(f.element('focus-home').innerHTML,/4\.00 kWh still available/);
   const own=descendants(f.element('graph')).find(n=>n.getAttribute?.('data-agent')==='A17');
   assert.match(own.getAttribute('aria-label'),/4\.00 kWh still available/);
-  f.evaluate("state.stage='requirement';renderInspector();");
-  assert.match(f.element('inspection').innerHTML,/Price floor.*9\.00/s);
+  f.evaluate("state.stage='requirement';renderReplayContext();renderInspector();");
+  assert.match(f.element('focus-home').innerHTML,/Price floor.*9\.00/s);
 });
 
 test('fixed comparison graph explicitly uses original household profiles after a policy change', () => {
