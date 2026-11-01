@@ -472,7 +472,7 @@ function updateTown() {
   $('energy-town').hidden=!showTown;$('graph').toggleAttribute('hidden',showTown);
   $('town-legend').hidden=!showTown;
   $('graph-wrap').classList.toggle('town-mode',showTown);
-  state.town?.update({events,agents:state.result.world.agents,index:starting?events.length-1:state.index,playing:!!state.townPlaying&&!starting&&showTown,speed:Number($('speed').value)||1,
+  state.town?.update({events,agents:state.result.world.agents,index:starting?events.length-1:state.index,playing:!!state.townPlaying&&!starting&&showTown,speed:1,
     selected:state.selected,controlled:state.controlled,trades:frameTrades(),highlighted:state.hoveredPair || (state.causal.size?[...new Set(events.filter(e=>state.causal.has(e.id)).flatMap(e=>[e.actor_id,e.counterparty_id]).filter(Boolean))]:[event?.actor_id,event?.counterparty_id].filter(Boolean))});
 }
 function translationDescription(translation) {
@@ -486,11 +486,6 @@ function renderFrame() {
   $('replay-caption').textContent=stage?.explanation || eventDescription(event);
   renderStages();renderConversation();renderStories();renderReplayContext();
   $('back').disabled=state.index===0; $('next').disabled=state.index>=events.length-1;
-  $('round-label').textContent=`Round ${event?.round ?? 0}`;
-  $('event-type').textContent=words(event?.type || 'baseline').toUpperCase();
-  $('event-title').textContent=event ? `${event.actor_id || 'Market'}${event.counterparty_id?' → '+event.counterparty_id:''} · ${label(event.type)}` : 'Baseline ready';
-  $('event-reason').textContent=event?recordedReason(event):'Inspect the recorded event details in the trace export.';
-  $('causal').hidden=!event?.caused_by?.length; $('causal').textContent=state.causal.size?'Clear causal highlight':'Highlight causal chain ↗';
   $('graph-wrap').classList.toggle('comparing',state.view==='compare'); $('compare-graph').toggleAttribute('hidden',state.view!=='compare');
   updateTown();drawReplayGraphs();
   renderInspector(); renderDecisionAudit(); renderLog();
@@ -549,7 +544,7 @@ function labelPositions(points,font) {
 function drawGraph(svg,trades,event,caption,world=frameWorld()) {
   svg.replaceChildren();
   const diffs=frameDifferences(),diffMap=new Map(diffs.map(d=>[d.key,d]));
-  const pos=positions(),delta={affected:new Set(diffs.flatMap(d=>[d.seller,d.buyer]))},search=$('search').value.trim().toLowerCase(),only=$('only-affected').checked;
+  const pos=positions(),delta={affected:new Set(diffs.flatMap(d=>[d.seller,d.buyer]))};
   const markerPrefix=svg.id || (svg===$('compare-graph')?'comparison':'main');
   const defs=svgEl('defs',{},svg);
   for(const [name,color] of [['agreement','#527a59'],['message','#79548f'],['release','#a14738'],['new','#127568'],['revised','#ae650f']]) {
@@ -566,17 +561,12 @@ function drawGraph(svg,trades,event,caption,world=frameWorld()) {
     const length=Math.hypot(b.x-a.x,b.y-a.y)||1,dx=(b.x-a.x)/length,dy=(b.y-a.y)/length;
     return svgEl('path',{d:`M${a.x+dx*20},${a.y+dy*20} Q${(a.x+b.x)/2+18},${(a.y+b.y)/2-18} ${b.x-dx*23},${b.y-dy*23}`,fill:'none',...attrs},edges);
   }
-  if($('discovery').checked)for(const item of state.result.world.discovery_edges || []) {
-    const from=Array.isArray(item)?item[0]:item.source || item.seller_id || item.from,to=Array.isArray(item)?item[1]:item.target || item.buyer_id || item.to;
-    edge(from,to,{stroke:'#cbd4c0','stroke-width':.7,'stroke-dasharray':'3 6',opacity:.3});
-  }
   const story=state.storyFocused?state.story:null;
   const original=svg===$('compare-graph'),showDiffs=state.view!=='baseline'&&!!state.result?.intervention;
   if(showDiffs&&!original)for(const d of diffs.filter(d=>d.kind==='removed'))edge(d.seller,d.buyer,{stroke:'#a14738','stroke-width':3,'stroke-dasharray':'6 5',opacity:.8,'marker-end':`url(#${markerPrefix}-release)`,'aria-label':`${d.seller} to ${d.buyer}: removed agreement`});
   for(const t of trades) {
     const difference=diffMap.get(tradeKey(t)),kind=difference?.kind;
-    const active=[t.seller_id,t.buyer_id].includes(state.selected),affected=delta.affected.has(t.seller_id)||delta.affected.has(t.buyer_id);
-    if(only&&!affected)continue;
+    const active=[t.seller_id,t.buyer_id].includes(state.selected);
     const description=`${t.seller_id} → ${t.buyer_id}: ${fmt(t.quantity_kwh)} kWh at ₹${fmt(t.price)}/kWh · ${deliveryWindow(t)}`;
     const path=edge(t.seller_id,t.buyer_id,{stroke:kind==='removed'?'#a14738':kind==='revised'?'#ae650f':kind==='new'?'#127568':active?'#315d49':'#a6b995','stroke-width':kind?3.5:active?2.5:1,'stroke-dasharray':kind==='removed'?'6 5':'none',opacity:(story&&state.mapMode==='agreements'&&!original)? .15 :(kind || active) ? .95 : showDiffs ? .18 : .55,'marker-end':`url(#${markerPrefix}-${kind==='removed'?'release':kind==='new'?'new':kind==='revised'?'revised':'agreement'})`,class:'trade-edge',tabindex:0,role:'button','aria-label':description});
     if(path) {
@@ -620,7 +610,7 @@ function drawGraph(svg,trades,event,caption,world=frameWorld()) {
   for(const a of world?.agents || []) {
     const point=pos.get(a.id);if(!point)continue;
     const affected=delta.affected.has(a.id),selected=a.id===state.selected,own=a.id===state.controlled,active=activeParties.has(a.id);
-    const match=(!search||`${a.id} ${a.name}`.toLowerCase().includes(search))&&($('role-filter').value==='all'||$('role-filter').value===a.role),dim=!match||(only&&!affected&&!own)||!!((state.hoveredPair||(story&&state.mapMode==='agreements'))&&!active);
+    const dim=!!((state.hoveredPair||(story&&state.mapMode==='agreements'))&&!active);
     const availability=householdAvailability(a,trades);
     const g=svgEl('g',{transform:`translate(${point.x} ${point.y})`,class:`node${affected?' changed-node':''}${active?' active-party':''}${own?' controlled-node':''}${selected?' inspected-node':''}`,'data-agent':a.id,tabindex:0,role:'button','aria-label':`Inspect ${a.id}, ${a.name || ''}, ${a.role}. ${availability}${affected?', affected':''}`,opacity:dim?.15:1},nodes);
     if(active)svgEl('circle',{r:28,fill:'#ede4f3',stroke:'#79548f','stroke-width':1.5},g);
@@ -782,7 +772,7 @@ function stepRound(direction) {
   renderFrame();
 }
 function stop(){clearInterval(state.timer);state.timer=null;state.townPlaying=false;if(state.town)updateTown();$('replay-caption').setAttribute('aria-live','polite');$('play').textContent='▶ Watch negotiations';$('play').setAttribute('aria-label','Play the simulation');}
-function play(){if(state.view==='compare'){state.view='intervention';document.querySelectorAll('[data-view]').forEach(b=>{const selected=b.dataset.view===state.view;b.classList.toggle('selected',selected);b.setAttribute('aria-pressed',selected);});}state.mapMode='animation';state.stage=null;if(state.timer||state.townPlaying){stop();return;}if(!currentEvents().length)return;$('replay-caption').setAttribute('aria-live','off');if(state.index>=currentEvents().length-1)state.index=0;$('play').textContent='Ⅱ Pause';$('play').setAttribute('aria-label','Pause the simulation');state.townPlaying=!!state.town;renderFrame();if(state.town)return;state.timer=setInterval(()=>{if(state.index>=currentEvents().length-1){stop();return;}state.index++;renderFrame();},1400/Number($('speed').value));}
+function play(){if(state.view==='compare'){state.view='intervention';document.querySelectorAll('[data-view]').forEach(b=>{const selected=b.dataset.view===state.view;b.classList.toggle('selected',selected);b.setAttribute('aria-pressed',selected);});}state.mapMode='animation';state.stage=null;if(state.timer||state.townPlaying){stop();return;}if(!currentEvents().length)return;$('replay-caption').setAttribute('aria-live','off');if(state.index>=currentEvents().length-1)state.index=0;$('play').textContent='Ⅱ Pause';$('play').setAttribute('aria-label','Pause the simulation');state.townPlaying=!!state.town;renderFrame();if(state.town)return;state.timer=setInterval(()=>{if(state.index>=currentEvents().length-1){stop();return;}state.index++;renderFrame();},1400);}
 function download(name,text,type){if(state.exportURL)URL.revokeObjectURL(state.exportURL);state.exportURL=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement('a');a.href=state.exportURL;a.download=name;a.textContent=`Download ${name}`;notify('Your export is ready. ');$('notice').append(a);$('export-title').textContent=`View or copy ${name}`;$('export-text').value=text;$('export-preview').hidden=false;$('notice').scrollIntoView?.({block:'nearest'});}
 function exportLedger(){const q=s=>`"${String(s??'').replaceAll('"','""')}"`;const columns=['run','id','seller_id','buyer_id','quantity_kwh','price','payment','status','delivery_start','delivery_end'];const rows=[columns.join(',')];for(const name of ['baseline','intervention'])for(const t of state.result[name]?.trades||[])rows.push([name,...columns.slice(1).map(k=>t[k])].map(q).join(','));download('energy-trade-ledger.csv',rows.join('\n'),'text/csv');}
 function bindPan(svg){let drag=null;svg.addEventListener('pointerdown',e=>{if(e.target.closest('.trade-edge'))return;const node=e.target.closest('.node'),id=node?.getAttribute('data-agent'),origin=id?(state.nodeOffsets[id]||{x:0,y:0}):state.pan;drag={x:e.clientX,y:e.clientY,px:origin.x,py:origin.y,id};if(id){state.selected=id;state.focusedPair=null;state.storyFocused=false;$('inspect-select').value=id;}});svg.addEventListener('pointermove',e=>{if(!drag||Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<4)return;if(!drag.moved)svg.setPointerCapture(e.pointerId);drag.moved=true;const rect=svg.getBoundingClientRect(),scale=1/Math.min(rect.width/880,rect.height/610)/(drag.id?state.zoom:1),next={x:drag.px+(e.clientX-drag.x)*scale,y:drag.py+(e.clientY-drag.y)*scale};if(drag.id)state.nodeOffsets[drag.id]=next;else state.pan=next;renderFrame();});svg.addEventListener('pointerup',()=>{const selected=drag?.id,moved=drag?.moved;drag=null;if((selected||moved)&&state.result)renderFrame();});svg.addEventListener('pointercancel',()=>drag=null);}
@@ -801,15 +791,8 @@ document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{if(!state.res
 $('timeline').oninput=()=>{stop();state.stage=null;state.index=Number($('timeline').value);renderFrame();};
 $('back').onclick=()=>{stop();state.stage=null;state.index=Math.max(0,state.index-1);renderFrame();};
 $('next').onclick=()=>{stop();state.stage=null;state.index=Math.min(currentEvents().length-1,state.index+1);renderFrame();};
-$('previous-round').onclick=()=>stepRound(-1);$('next-round').onclick=()=>stepRound(1);
-$('end').onclick=()=>{stop();state.stage=null;state.index=Math.max(0,currentEvents().length-1);renderFrame();};
-$('play').onclick=play;$('speed').onchange=()=>{if(state.town)updateTown();else if(state.timer){stop();play();}};
-for(const id of ['search','discovery','only-affected','role-filter'])$(id).addEventListener(id==='search'?'input':'change',()=>{state.mapMode='agreements';stop();if(state.result)renderFrame();});
+$('play').onclick=play;
 $('event-filter').onchange=()=>{if(state.result)renderLog();};
-$('zoom-in').onclick=()=>{state.mapMode='agreements';stop();state.zoom=Math.min(2.5,state.zoom+.2);if(state.result)renderFrame();};
-$('zoom-out').onclick=()=>{state.mapMode='agreements';stop();state.zoom=Math.max(.6,state.zoom-.2);if(state.result)renderFrame();};
-$('fit').onclick=()=>{state.mapMode='agreements';stop();state.zoom=1;state.pan={x:0,y:0};state.nodeOffsets={};if(state.result)renderFrame();};
-$('causal').onclick=()=>{if(state.causal.size){state.causal.clear();renderFrame();return;}const map=new Map([...state.result.baseline.events,...(state.result.intervention?.events||[])].map(e=>[e.id,e]));function visit(id){if(state.causal.has(id))return;state.causal.add(id);for(const parent of map.get(id)?.caused_by||[])visit(parent);}const e=currentEvents()[state.index];visit(e.id);renderFrame();};
 $('export').onclick=()=>download(`energy-experiment-seed-${state.config.seed}.json`,JSON.stringify(state.result,null,2),'application/json');
 $('trace-export').onclick=()=>download(`energy-${state.view}-trace.jsonl`,currentEvents().map(e=>JSON.stringify(e)).join('\n'),'application/x-ndjson');
 $('ledger-export').onclick=exportLedger;
