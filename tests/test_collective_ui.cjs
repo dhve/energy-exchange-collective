@@ -529,17 +529,12 @@ test('preference details follow historical windows and remain separate from firm
     assert.match(html,/Price aim.*₹7\.00\/kWh.*negotiable/s);
     assert.match(html,/Preferred delivery.*3–4 PM/s);
     assert.match(html,/Preferred amount.*At least 3\.00 kWh per agreement/s);
-    assert.match(html,/How preferences affect offers/);
-    assert.match(html,/raises the minimum price/);
-    assert.match(html,/Outside its preferred time: ₹0\.50\/kWh/);
-    assert.match(html,/Below its preferred amount of 3\.00 kWh: ₹0\.25\/kWh/);
-    assert.match(html,/price adjustment is ₹0\.75\/kWh/);
-    assert.doesNotMatch(html,/extra payments/i);
+    assert.doesNotMatch(html,/How preferences affect offers|message-policy/);
     assert.doesNotMatch(html,/7–8 PM/);
   }
   const buyerHTML=f.evaluate("preferencesHTML({...state.result.world.agents[0],role:'buyer',negotiation_preferences:{...state.result.world.agents[0].negotiation_preferences,quantity_direction:'at_most'}})");
-  assert.match(buyerHTML,/lowers the maximum price/);
-  assert.match(buyerHTML,/Above its preferred amount/);
+  assert.match(buyerHTML,/Preferred amount.*At most 3\.00 kWh per agreement/s);
+  assert.doesNotMatch(buyerHTML,/How preferences affect offers|message-policy/);
   f.evaluate("state.stage='requirement';renderReplayContext();renderInspector();");
   assert.match(f.element('focus-home').innerHTML,/Preferred delivery.*7–8 PM/s);
   assert.doesNotMatch(f.element('inspection').innerHTML,/Firm limits|Flexible preferences|Preferred delivery/);

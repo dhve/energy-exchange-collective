@@ -198,11 +198,7 @@ function preferencesHTML(a) {
     const start=Date.parse(a.interval_start),end=Date.parse(a.interval_end),middle=start+(end-start)/2;
     window=Number.isFinite(middle)&&end>start?deliveryWindow({delivery_start:new Date(p.delivery==='earlier'?start:middle).toISOString(),delivery_end:new Date(p.delivery==='earlier'?middle:end).toISOString()}):'Preferred window not recorded';
   }
-  const adjustment=a.role==='seller'?'raises the minimum price it will consider':'lowers the maximum price it will offer';
-  const timing=p.delivery==='any'?'Any time within the delivery window works.':`Outside its preferred time: ₹${fmt(p.time_premium)}/kWh.`;
-  const amount=p.quantity_direction==='at_least'?'Below':'Above';
-  const combined=Number(p.quantity_premium)+(p.delivery==='any'?0:Number(p.time_premium));
-  return `<section class="flexible-preferences"><h4>Flexible preferences</h4><p class="helper">These can change for a better offer. Firm limits always apply.</p><div class="bound"><span>Price aim</span><strong>₹${fmt(p.price_target)}/kWh · negotiable</strong></div><div class="bound"><span>Preferred delivery</span><strong>${esc(window)}</strong></div><div class="bound"><span>Preferred amount</span><strong>${p.quantity_direction==='at_least'?'At least':'At most'} ${fmt(p.preferred_quantity_kwh)} kWh per agreement</strong></div><details class="message-policy"><summary>How preferences affect offers</summary><p>When a trade misses a preference, this home ${adjustment}:</p><p>${timing}<br>${amount} its preferred amount of ${fmt(p.preferred_quantity_kwh)} kWh: ₹${fmt(p.quantity_premium)}/kWh.</p>${p.delivery!=='any'?`<p>If both preferences are missed, the price adjustment is ₹${fmt(combined)}/kWh. Larger values make the home less willing to compromise.</p>`:''}</details></section>`;
+  return `<section class="flexible-preferences"><h4>Flexible preferences</h4><p class="helper">These can change for a better offer. Firm limits always apply.</p><div class="bound"><span>Price aim</span><strong>₹${fmt(p.price_target)}/kWh · negotiable</strong></div><div class="bound"><span>Preferred delivery</span><strong>${esc(window)}</strong></div><div class="bound"><span>Preferred amount</span><strong>${p.quantity_direction==='at_least'?'At least':'At most'} ${fmt(p.preferred_quantity_kwh)} kWh per agreement</strong></div></section>`;
 }
 function renderOwn() {
   const a=agentById(state.controlled);
