@@ -397,7 +397,7 @@ function renderReplayContext() {
   $('focus-home').innerHTML=a?`<span class="eyebrow">${frameWorld()===state.result.world?'Original settings':'Settings at this step'}</span><p>${esc(householdAvailability(a,trades))}</p><h4>Firm limits</h4>${boundHTML(a,true)}<div class="bound"><span>Delivery window</span><strong>${esc(deliveryWindow(a))}</strong></div>${a.time_price?`<div class="bound"><span>Later price</span><strong>${esc(policyValue('time_price',a.time_price))}</strong></div>`:''}${a.conditional_price?`<div class="bound"><span>Bundle sensitivity</span><strong>${esc(policyValue('conditional_price',a.conditional_price))}</strong></div>`:''}${preferencesHTML(a)}<h4>Agreements at this step</h4>${homeTrades.length?homeTrades.map(t=>`<div class="bound"><span>${esc(t.seller_id)} → ${esc(t.buyer_id)}</span><strong>${fmt(t.quantity_kwh)} kWh<br>₹${fmt(t.price)}/kWh<br><small>${esc(deliveryWindow(t))}</small></strong></div>`).join(''):'<p>No active agreement at this point.</p>'}<h4>Latest recorded decision</h4><p>${esc(lastDecision?recordedReason(lastDecision):'No decision recorded yet at this replay position.')}</p><small>Private settings shown for research inspection.</small>`:'';
   const box=$('trade-differences');box.hidden=state.view==='baseline'||!state.result?.intervention;
   const ordered=[...diffs].sort((a,b)=>Number([b.seller,b.buyer].includes(state.selected))-Number([a.seller,a.buyer].includes(state.selected)));
-  const rows=ordered.map(d=>`<tr><th scope="row"><span class="change-tag ${d.kind}">${label(d.kind)}</span><button class="pair-select" data-home="${esc(d.seller)}" data-pair="${esc(d.key)}">${esc(homeLabel(d.seller))} → ${esc(homeLabel(d.buyer))}</button></th><td>${esc(ledgerTerms(d.before))}</td><td>${esc(ledgerTerms(d.after))}</td></tr>`);
+  const rows=ordered.map(d=>`<tr><th scope="row"><span class="change-tag ${d.kind}">${label(d.kind)}</span><button class="pair-select" data-home="${esc(d.seller)}" data-pair="${esc(d.key)}">${esc(homeLabel(d.seller))} → ${esc(homeLabel(d.buyer))}</button></th><td data-label="Before">${esc(ledgerTerms(d.before))}</td><td data-label="${ended?'After':'At this step'}">${esc(ledgerTerms(d.after))}</td></tr>`);
   const table=items=>`<div class="table-scroll"><table><thead><tr><th>Trading pair</th><th>Before</th><th>${ended?'After':'At this step'}</th></tr></thead><tbody>${items.join('')}</tbody></table></div>`;
   box.innerHTML=`<h3>What changed ${ended?'by the end':'at this step'}?</h3><p class="helper">Compared with the original agreements.</p>${rows.length?table(rows.slice(0,3))+(rows.length>3?`<details><summary>Show ${rows.length-3} more changed pairs</summary>${table(rows.slice(3))}</details>`:''):'<p>No agreement differences at this step.</p>'}`;
   box.querySelectorAll('[data-home]').forEach(b=>b.onclick=()=>{state.selected=b.dataset.home;state.focusedPair=b.dataset.pair;state.storyFocused=false;renderFrame();});
@@ -459,7 +459,7 @@ function renderStories() {
   state.story=stories.find(s=>s.id===state.storyId)||null;
   const html=`<div class="story-heading"><div><span class="eyebrow">FOLLOW THE CHANGE</span><h3>What did the homes try?</h3></div><span>${stories.length} conversations through this step</span></div><p class="helper">Select a conversation to see its messages and highlight the homes. Declined attempts stay visible after playback.</p><div class="story-tabs" role="group" aria-label="Conversation purpose">${Object.entries(storyKinds).map(([kind,title])=>`<button type="button" data-story-kind="${kind}" aria-pressed="${state.storyKind===kind}" ${stories.some(s=>s.kind===kind)?'':'disabled'}>${title} <b>${stories.filter(s=>s.kind===kind).length}</b></button>`).join('')}</div><div class="story-groups">${Object.entries(storyKinds).map(([kind,title])=>{
     const group=stories.filter(s=>s.kind===kind);if(!group.length||kind!==state.storyKind)return '';
-    const buttons=group.map(s=>`<button class="story-card ${s.id===state.storyId?'selected':''}" type="button" data-story="${esc(s.id)}" aria-pressed="${s.id===state.storyId}"><span class="story-status ${s.outcome==='Declined'?'declined':''}">${esc(s.outcome)}</span><strong>${esc(homeLabel(s.buyer))} ↔ ${esc(homeLabel(s.seller))}</strong><span>${s.kind==='disrupted'?`${fmt(qty(s.cards.map(c=>c.terms)))} kWh released`:esc(eventTerms(s.last.event))}</span><small>${s.attempts>1?`${s.attempts} attempts · `:''}${s.cards.length} recorded ${s.cards.length===1?'event':'events'} · ${s.dimensions.length?s.dimensions.map(d=>({delivery:'time',quantity:'quantity',price:'price'}[d]||d)).join(', ')+' changed':'offered terms'}</small></button>`);
+    const buttons=group.map(s=>`<button class="story-card ${s.id===state.storyId?'selected':''}" type="button" data-story="${esc(s.id)}" aria-pressed="${s.id===state.storyId}"><span class="story-status ${s.outcome==='Declined'?'declined':''}">${esc(s.outcome)}</span><strong>${esc(homeLabel(s.buyer))} ↔ ${esc(homeLabel(s.seller))}</strong><span>${s.kind==='disrupted'?`${fmt(qty(s.cards.map(c=>c.terms)))} kWh released`:esc(eventTerms(s.last.event))}</span><small>${s.attempts>1?`${s.attempts} attempts · `:''}${s.cards.length} recorded ${s.cards.length===1?'event':'events'} · ${s.dimensions.length?s.dimensions.map(d=>({delivery:'time',quantity:'quantity',price:'price'}[d]||d)).join(', ')+' negotiated':'offered terms'}</small></button>`);
     return `<section class="story-group"><h4>${title} <span>${group.length}</span></h4>${buttons.slice(0,2).join('')}${buttons.length>2?`<details><summary>${buttons.length-2} more conversations</summary>${buttons.slice(2).join('')}</details>`:''}</section>`;
   }).join('')}</div>${!stories.length?'<p>No negotiations yet at this replay step.</p>':''}`;
   if(html!==state.storyMarkup){
@@ -476,7 +476,7 @@ function renderStories() {
   if(detailHTML!==state.storyDetailMarkup){const open=state.storyDetailId===s.id&&detail.querySelector?.('details')?.open;detail.innerHTML=detailHTML;const messages=detail.querySelector?.('details');if(messages)messages.open=!!open;state.storyDetailMarkup=detailHTML;state.storyDetailId=s.id;}
 }
 function selectStoryKind(kind) {
-  stop();state.storyKind=kind;state.storyId=null;state.storyFocused=false;state.hoveredPair=null;
+  stop();state.storyKind=kind;state.storyId=null;state.storyFocused=false;state.hoveredPair=null;state.focusedPair=null;
   renderFrame();
 }
 function selectStory(id) {
@@ -529,7 +529,7 @@ function updateTown() {
   $('energy-town').hidden=!showTown;$('graph').toggleAttribute('hidden',showTown);
   $('graph-wrap').classList.toggle('town-mode',showTown);
   state.town?.update({events,agents:state.result.world.agents,index:starting?events.length-1:state.index,playing:!!state.townPlaying&&!starting&&showTown,speed:1,
-    selected:state.selected,controlled:state.controlled,trades:frameTrades(),comparison:state.view==='compare'?comparisonTrades():null,highlighted:state.hoveredPair || (state.storyFocused&&state.story?[state.story.seller,state.story.buyer]:null) || (state.causal.size?[...new Set(events.filter(e=>state.causal.has(e.id)).flatMap(e=>[e.actor_id,e.counterparty_id]).filter(Boolean))]:[event?.actor_id,event?.counterparty_id].filter(Boolean))});
+    selected:state.selected,controlled:state.controlled,trades:frameTrades(),focusedPair:state.focusedPair,conversation:state.storyFocused?state.story:null,comparison:state.view==='compare'?comparisonTrades():null,highlighted:state.hoveredPair || (state.storyFocused&&state.story?[state.story.seller,state.story.buyer]:null) || (state.focusedPair?state.focusedPair.split('|'):null) || (state.causal.size?[...new Set(events.filter(e=>state.causal.has(e.id)).flatMap(e=>[e.actor_id,e.counterparty_id]).filter(Boolean))]:[event?.actor_id,event?.counterparty_id].filter(Boolean))});
 }
 function renderFrame() {
   const events=currentEvents(), stage=state.stage?replayStages().find(s=>s.id===state.stage):null, event=stage?stage.event:events[state.index];
@@ -620,7 +620,7 @@ function drawGraph(svg,trades,event,caption,world=frameWorld()) {
     const active=[t.seller_id,t.buyer_id].includes(state.selected);
     const own=[t.seller_id,t.buyer_id].includes(state.controlled);
     const description=`${t.seller_id} → ${t.buyer_id}: ${fmt(t.quantity_kwh)} kWh at ₹${fmt(t.price)}/kWh · ${deliveryWindow(t)}`;
-    const path=edge(t.seller_id,t.buyer_id,{stroke:kind==='removed'?'#a14738':kind==='revised'?'#ae650f':kind==='new'?'#127568':active?'#315d49':'#a6b995','stroke-width':kind?3.5:active?2.5:1,'stroke-dasharray':kind==='removed'?'6 5':'none',opacity:(story&&state.mapMode==='agreements'&&!original)? .15 :(kind || active) ? .95 : showDiffs ? .18 : .55,'marker-end':`url(#${markerPrefix}-${kind==='removed'?'release':kind==='new'?'new':kind==='revised'?'revised':'agreement'})`,class:'trade-edge',tabindex:0,role:'button','aria-label':description});
+    const path=edge(t.seller_id,t.buyer_id,{stroke:kind==='removed'?'#a14738':kind==='revised'?'#ae650f':kind==='new'?'#127568':active?'#315d49':'#a6b995','stroke-width':kind?3.5:active?2.5:1,'stroke-dasharray':kind==='removed'?'6 5':'none',opacity:(story&&!original)? .15 :(kind || active) ? .95 : showDiffs ? .18 : .55,'marker-end':`url(#${markerPrefix}-${kind==='removed'?'release':kind==='new'?'new':kind==='revised'?'revised':'agreement'})`,class:'trade-edge',tabindex:0,role:'button','aria-label':description});
     if(path) {
       if(own){path.setAttribute('stroke-width','4.5');path.setAttribute('opacity','1');path.setAttribute('data-own-agreement','true');}
       svgEl('title',{},path,description);
@@ -629,7 +629,7 @@ function drawGraph(svg,trades,event,caption,world=frameWorld()) {
     }
   }
   const focused=diffs.find(d=>d.key===state.focusedPair)||diffs.find(d=>[d.seller,d.buyer].includes(state.selected));
-  if(focused&&state.view!=='compare'&&!(story&&state.mapMode==='agreements'&&!original)) {
+  if(focused&&state.view!=='compare'&&!(story&&!original)) {
     const p=pos.get(focused.seller),q=pos.get(focused.buyer);
     if(p&&q){const x=(p.x+q.x)/2+18,y=(p.y+q.y)/2-18;
       // Payments are rounded totals; use recorded quotes for unit prices.
@@ -650,7 +650,7 @@ function drawGraph(svg,trades,event,caption,world=frameWorld()) {
     const kind=release?'release':message?'message':'agreement';
     edge(e.actor_id,e.counterparty_id,{stroke:release?'#a14738':message?'#79548f':'#315d49','stroke-width':2.5,'stroke-dasharray':message?'7 5':release?'3 4':'none','marker-end':`url(#${markerPrefix}-${kind})`,class:`event-edge ${message?'message-edge':release?'event-release':'event-accept'}`,opacity:.95});
   }
-  if(story&&!original&&state.mapMode==='agreements'){
+  if(story&&!original){
     const c=story.cards?.findLast(c=>['offer_sent','counteroffer_sent','offer_accepted','offer_rejected'].includes(c.type)) || story.last,p=pos.get(c.actor),q=pos.get(c.counterparty);
     const overlayLabel=story.outcome==='Agreement recorded'&&c.type==='offer_accepted'?'Accepted terms':story.outcome;
     edge(c.actor,c.counterparty,{stroke:'#79548f','stroke-width':4,'stroke-dasharray':'8 6','marker-end':`url(#${markerPrefix}-message)`,class:'story-message-edge','aria-label':`${c.actor} to ${c.counterparty}: ${overlayLabel}, ${fmt(c.terms.quantity_kwh)} kWh`});

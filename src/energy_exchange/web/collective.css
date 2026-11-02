@@ -268,3 +268,14 @@ main{max-width:1600px;padding:0 28px}
 main{padding-bottom:80px}
 
 .network-panel #notice{margin-top:16px}
+
+/* Keep before/after terms readable without sideways scrolling on phones. */
+@media(max-width:600px){
+  .trade-differences table,.trade-differences tbody,.trade-differences tr,.trade-differences th,.trade-differences td{display:block;width:100%;min-width:0}
+  .trade-differences thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  .trade-differences tbody tr{margin:12px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .trade-differences tbody th,.trade-differences td{padding:10px 12px}
+  .trade-differences td::before{content:attr(data-label);display:block;font-weight:600;color:var(--muted);margin-bottom:4px}
+  .trade-differences td:last-child{border-bottom:0}
+  .comparison-overflow button{width:100%;font-size:14px}
+}

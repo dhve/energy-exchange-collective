@@ -50,6 +50,7 @@ patch('                  data-agent={a.id}',`                  data-agent={a.id}
                   onKeyDown={(e) => {if (energy && ['Enter',' '].includes(e.key)) {e.preventDefault();energy.onSelect(a.id);}}}
                   onClick={() => energy?.onSelect(a.id)}`);
 patch('                  {(active || isHover || isFocus) && (',`                  {energy && <circle cx={pos.x} cy={pos.y} r={size * 0.85} fill={color} fillOpacity={0.08} stroke={color} strokeWidth={energy.controlled === a.id ? 3 : 1.5} />}
+                  {energy?.highlighted.includes(a.id) && <circle className="selected-home-ring" cx={pos.x} cy={pos.y} r={size * 1.2} fill="none" stroke="#79548f" strokeWidth={3} vectorEffect="non-scaling-stroke" />}
                   {(active || isHover || isFocus) && (`);
 patch('                      {a.id}\n', '                      {energy?.agreementNames[a.id] || a.id}\n');
 patch('        {tooltipTarget && tooltipPos && tooltipStats && (','        {!energy && tooltipTarget && tooltipPos && tooltipStats && (');

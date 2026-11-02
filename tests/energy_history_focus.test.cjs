@@ -27,12 +27,21 @@ test('keyboard focus on recorded history highlights both homes in the actual Pla
     const highlighted=()=>Array.from(d.querySelectorAll('#energy-town [data-highlighted="true"]'),el=>el.dataset.agent).sort();
     for(let i=0;i<40&&highlighted().length!==2;i++)await pause();
     assert.deepEqual(highlighted(),['A02','A17']);
+    assert.equal(d.querySelectorAll('.selected-home-ring').length,2,'Both participants get a visible outline');
     d.querySelectorAll('.conversation-entry')[1].focus();
     for(let i=0;i<40&&!highlighted().includes('A03');i++)await pause();
     assert.deepEqual(highlighted(),['A03','A17']);
     d.querySelector('#play').focus();
     for(let i=0;i<40&&highlighted().length;i++)await pause();
     assert.deepEqual(highlighted(),[],'Leaving the history restores the final-event view');
+    vm.runInContext("state.focusedPair='A17|A03';updateTown();",context);
+    for(let i=0;i<40&&!highlighted().includes('A03');i++)await pause();
+    assert.deepEqual(highlighted(),['A03','A17'],'Selecting an agreement emphasizes both homes');
+    vm.runInContext(`state.focusedPair=null;state.storyFocused=true;state.story={seller:'A17',buyer:'A02',outcome:'Declined',last:{actor:'A02',counterparty:'A17',terms:{quantity_kwh:.5}}};updateTown();`,context);
+    for(let i=0;i<40&&!d.querySelector('#energy-town .story-message-edge');i++)await pause();
+    assert.match(d.querySelector('#energy-town .story-message-edge').getAttribute('aria-label'),/Declined, 0.5 kWh/);
+    assert.deepEqual(highlighted(),['A02','A17']);
+
   }finally{
     vm.runInContext('state.town?.dispose()',context);
     w.close();

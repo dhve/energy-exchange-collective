@@ -23,7 +23,7 @@ test('returning to the final step restores recorded conversation details after r
   const timeline=d.querySelector('#timeline');
   timeline.value='0';timeline.dispatchEvent(new w.Event('input'));
   assert.equal(d.querySelectorAll('#story-detail .conversation-entry').length,0);
-  d.querySelector('#end').click();
+  d.querySelector('[data-stage="final"]').click();
   assert.equal(d.querySelectorAll('#story-detail .conversation-entry').length,1);
   assert.ok(d.querySelector('#story-detail details.story-messages'));
 });
