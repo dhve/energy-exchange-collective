@@ -264,6 +264,7 @@ function selectView(view) {
   if(!state.result)return;
   stop();
   state.view=view;
+  state.mapMode='animation';
   // Event indices belong to individual runs; they are not comparable across runs.
   state.stage='final';
   state.causal.clear();
@@ -345,11 +346,44 @@ function frameDifferences() {
 function ledgerTerms(trades) {
   return trades.length?trades.map(t=>`${fmt(t.quantity_kwh)} kWh · ₹${fmt(t.price)}/kWh · ${deliveryWindow(t)}`).join('; '):'No agreement';
 }
+function comparisonTrades() {
+  const before=state.result?.baseline?.trades||[],after=frameTrades();
+  const differences=new Map(agreementDifferences(before,after).map(d=>[d.key,d]));
+  const name=id=>(agentById(id)?.name||id).split(' (')[0];
+  return [...new Set([...before,...after].map(tradeKey))].map(key=>{
+    const [seller,buyer]=key.split('|'),a=before.filter(t=>tradeKey(t)===key),b=after.filter(t=>tradeKey(t)===key);
+    const kind=differences.get(key)?.kind||'unchanged';
+    const price=ts=>qty(ts)?ts.reduce((n,t)=>n+Number(t.price)*Number(t.quantity_kwh),0)/qty(ts):null;
+    const amount=kind==='unchanged'?`${fmt(qty(b))} kWh`:`${fmt(qty(a))} → ${fmt(qty(b))} kWh`;
+    const pa=price(a),pb=price(b),average=a.length>1||b.length>1?'Avg ':'';
+    let terms=kind==='removed'?'Agreement removed':kind==='new'?`₹${fmt(pb)}/kWh`:Math.abs(pa-pb)>.000001?`${average}₹${fmt(pa)} → ₹${fmt(pb)}/kWh`:`${average}₹${fmt(pb)}/kWh`;
+    const windows=ts=>ts.map(t=>`${t.delivery_start}|${t.delivery_end}`).sort().join('~');
+    const windowChanged=a.length&&b.length&&windows(a)!==windows(b);
+    if(windowChanged)terms+=' · delivery changed';
+    return {key,seller,buyer,kind,before:a,after:b,title:`${name(seller)} → ${name(buyer)}`,lines:[amount,terms],
+      color:({removed:'#a14738',revised:'#ae650f',new:'#127568',unchanged:'#315d49'})[kind],
+      own:[seller,buyer].includes(state.controlled),focused:state.focusedPair===key,
+      description:`${name(seller)} → ${name(buyer)} · ${label(kind)}. Before: ${ledgerTerms(a)}. After: ${ledgerTerms(b)}.`};
+  });
+}
+function comparisonExplanation() {
+  const name=(agentById(state.controlled)?.name||state.controlled).split(' (')[0];
+  const policy=frameEvents().find(e=>e.type==='policy_confirmed');
+  const fields=(policy?.changed_fields||[]).filter(c=>c.agent_id===state.controlled);
+  const change=fields.map(c=>`${name}’s ${c.field==='reserve_kwh'?'reserve':(fieldNames[c.field]||words(c.field)).toLowerCase()}: ${policyValue(c.field,c.before)} → ${policyValue(c.field,c.after)}.`).join(' ');
+  const own=ts=>ts.filter(t=>t.seller_id===state.controlled||t.buyer_id===state.controlled);
+  const before=qty(own(state.result.baseline.trades||[])),after=qty(own(frameTrades()));
+  const direction=agentById(state.controlled)?.role==='seller'?'sales':'purchases';
+  return `${change}${change?' ':''}${name}’s agreed ${direction}: ${fmt(before)} → ${fmt(after)} kWh.${frameDifferences().length?'':' No agreements changed.'}`;
+}
 function renderReplayContext() {
   const trades=frameTrades(),diffs=frameDifferences(),event=activeEvent();
   const ended=state.stage==='final'||event?.type==='terminated';
   const policy=state.view!=='baseline'&&state.stage!=='starting'?frameEvents().find(e=>e.type==='policy_confirmed'):null;
-  $('policy-strip').hidden=!policy;
+  $('policy-strip').hidden=!policy||state.view==='compare';
+  $('comparison-note').hidden=state.view!=='compare';
+  $('comparison-note').textContent=state.view==='compare'?comparisonExplanation():'';
+  $('comparison-key').hidden=state.view!=='compare';
   $('policy-strip').innerHTML=policy?`<strong>Applied change</strong> ${(policy.changed_fields || []).map(c=>`${esc(c.agent_id)} · ${esc(fieldNames[c.field] || label(c.field))}: <b>${esc(policyValue(c.field,c.before))} → ${esc(policyValue(c.field,c.after))}</b>`).join(' · ')}`:'';
   $('graph-caption').textContent=`Selected: ${homeLabel(state.selected)}. Select a home or agreement to inspect it.`;
   $('frame-summary').innerHTML=`<strong>${ended?(state.view==='baseline'?'Original agreements':'At the end'):state.stage==='starting'?'Original agreements':'At this replay step'}: ${fmt(qty(trades))} kWh agreed</strong><span>${trades.length} ${trades.length===1?'agreement':'agreements'}${state.view!=='baseline'&&state.result?.intervention?` · ${diffs.length} ${diffs.length===1?'pair differs':'pairs differ'} from before`:''}</span>`;
@@ -411,7 +445,7 @@ function storyConsequence(story) {
 }
 function renderStories() {
   const box=$('negotiation-stories'),detail=$('story-detail');
-  const intervention=state.view!=='baseline'&&state.stage!=='starting'&&state.result?.intervention;
+  const intervention=state.view==='intervention'&&state.stage!=='starting'&&state.result?.intervention;
   box.hidden=!intervention;detail.hidden=!intervention;
   if(!intervention){state.storyFocused=false;state.story=null;state.storyId=null;state.storyMarkup=null;return;}
   const cards=EnergyReplay.visible(state.history?.cards || EnergyReplay.messages(currentEvents(),state.result.world,state.result.updated_world),state.index);
@@ -480,14 +514,15 @@ function updateTown() {
   if(!state.town&&typeof window!=='undefined'&&window.EnergyTown)state.town=window.EnergyTown.mount($('energy-town'),{
     onIndex(index){if(!state.townPlaying)return;state.index=index;renderFrame();},
     onStop(){stop();},
-    onSelect(id){state.selected=id;state.focusedPair=null;state.storyFocused=false;$('inspect-select').value=id;renderFrame();}
+    onSelect(id){state.selected=id;state.focusedPair=null;state.storyFocused=false;$('inspect-select').value=id;renderFrame();},
+    onPair(pair){state.focusedPair=pair;state.selected=pair.split('|')[0];state.storyFocused=false;$('inspect-select').value=state.selected;renderFrame();}
   });
-  const showTown=!!state.town&&state.view!=='compare'&&state.mapMode!=='agreements';
+  const showTown=!!state.town&&state.mapMode!=='agreements';
   $('energy-town').hidden=!showTown;$('graph').toggleAttribute('hidden',showTown);
-  $('town-legend').hidden=!showTown;
+  $('town-legend').hidden=!showTown||state.view==='compare';
   $('graph-wrap').classList.toggle('town-mode',showTown);
   state.town?.update({events,agents:state.result.world.agents,index:starting?events.length-1:state.index,playing:!!state.townPlaying&&!starting&&showTown,speed:1,
-    selected:state.selected,controlled:state.controlled,trades:frameTrades(),highlighted:state.hoveredPair || (state.causal.size?[...new Set(events.filter(e=>state.causal.has(e.id)).flatMap(e=>[e.actor_id,e.counterparty_id]).filter(Boolean))]:[event?.actor_id,event?.counterparty_id].filter(Boolean))});
+    selected:state.selected,controlled:state.controlled,trades:frameTrades(),comparison:state.view==='compare'?comparisonTrades():null,highlighted:state.hoveredPair || (state.causal.size?[...new Set(events.filter(e=>state.causal.has(e.id)).flatMap(e=>[e.actor_id,e.counterparty_id]).filter(Boolean))]:[event?.actor_id,event?.counterparty_id].filter(Boolean))});
 }
 function translationDescription(translation) {
   const mode=translation.mode || 'unknown';
@@ -500,14 +535,13 @@ function renderFrame() {
   $('replay-caption').textContent=stage?.explanation || eventDescription(event);
   renderStages();renderConversation();renderStories();renderReplayContext();
   $('back').disabled=state.index===0; $('next').disabled=state.index>=events.length-1;
-  $('graph-wrap').classList.toggle('comparing',state.view==='compare'); $('compare-graph').toggleAttribute('hidden',state.view!=='compare');
+  $('graph-wrap').classList.toggle('comparing',state.view==='compare');
   updateTown();drawReplayGraphs();
   renderInspector(); renderDecisionAudit(); renderLog();
 }
 function drawReplayGraphs() {
   const event=activeEvent();
-  if(!state.town||state.view==='compare'||state.mapMode==='agreements')drawGraph($('graph'),frameTrades(),event,state.view==='baseline'?'Before':state.stage==='starting'?'Original agreements':event?.type==='terminated'||state.stage==='final'?'After · final agreements':'After · at this step');
-  if(state.view==='compare')drawGraph($('compare-graph'),state.result.baseline.trades || [],null,'Before · original agreements',state.result.world);
+  if(!state.town||state.mapMode==='agreements')drawGraph($('graph'),frameTrades(),event,state.view==='compare'?'Before → After':state.view==='baseline'?'Before':state.stage==='starting'?'Original agreements':event?.type==='terminated'||state.stage==='final'?'After · final agreements':'After · at this step');
 }
 function eventDescription(event) {
   if(!event)return 'Each shape is a home. Lines show their energy agreements.';
@@ -592,7 +626,7 @@ function drawGraph(svg,trades,event,caption,world=frameWorld()) {
     }
   }
   const focused=diffs.find(d=>d.key===state.focusedPair)||diffs.find(d=>[d.seller,d.buyer].includes(state.selected));
-  if(focused&&!(story&&state.mapMode==='agreements'&&!original)) {
+  if(focused&&state.view!=='compare'&&!(story&&state.mapMode==='agreements'&&!original)) {
     const p=pos.get(focused.seller),q=pos.get(focused.buyer);
     if(p&&q){const x=(p.x+q.x)/2+18,y=(p.y+q.y)/2-18;
       // Payments are rounded totals; use recorded quotes for unit prices.
@@ -640,7 +674,13 @@ function drawGraph(svg,trades,event,caption,world=frameWorld()) {
     const inspect=()=>{state.selected=a.id;state.focusedPair=null;state.storyFocused=false;$('inspect-select').value=a.id;renderFrame();};
     g.addEventListener('click',inspect);g.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();inspect();}});
   }
-  for(const l of EnergyReplay.agreementLabels(trades,state.controlled,world?.agents||[],pos,textScale,{left:0,right:880})){
+  if(state.view==='compare')for(const l of EnergyReplay.comparisonLabels(comparisonTrades(),pos,textScale,{left:0,right:880})) {
+    const tag=svgEl('g',{class:'comparison-label','pointer-events':'none','aria-label':l.description},root);
+    svgEl('path',{d:`M${l.anchor.x} ${l.anchor.y} L${l.x} ${l.y}`,stroke:l.color},tag);
+    svgEl('rect',{x:l.x-l.width/2,y:l.y-l.height/2,width:l.width,height:l.height,rx:6/textScale,fill:'#fffef9',stroke:l.color},tag);
+    [l.title,...l.lines].forEach((line,i)=>svgEl('text',{x:l.x,y:l.y+(i-1)*17/textScale+4/textScale,'text-anchor':'middle','font-size':12/textScale,fill:l.color,'font-weight':i===0?700:500},tag,line));
+  }
+  for(const l of state.view==='compare'?[]:EnergyReplay.agreementLabels(trades,state.controlled,world?.agents||[],pos,textScale,{left:0,right:880})){
     const tag=svgEl('g',{class:'own-agreement-label','pointer-events':'none','aria-label':`${l.title}: ${l.terms}`},root);
     svgEl('path',{d:`M${l.anchor.x} ${l.anchor.y} L${l.x} ${l.y}`,stroke:'#315d49','stroke-width':1/textScale},tag);
     svgEl('rect',{x:l.x-l.width/2,y:l.y-l.height/2,width:l.width,height:l.height,rx:6/textScale,fill:'#fffef9',stroke:'#315d49','stroke-width':1.5/textScale},tag);
@@ -817,7 +857,7 @@ $('export').onclick=()=>download(`energy-experiment-seed-${state.config.seed}.js
 $('trace-export').onclick=()=>download(`energy-${state.view}-trace.jsonl`,currentEvents().map(e=>JSON.stringify(e)).join('\n'),'application/x-ndjson');
 $('ledger-export').onclick=exportLedger;
 $('select-export').onclick=()=>{$('export-text').focus();$('export-text').select();};
-bindHistory($('conversation'));bindHistory($('story-detail'));bindPan($('graph'));bindPan($('compare-graph'));
+bindHistory($('conversation'));bindHistory($('story-detail'));bindPan($('graph'));
 if(typeof window!=='undefined') {
   let width=window.innerWidth,resizeTimer;
   window.addEventListener('resize',()=>{

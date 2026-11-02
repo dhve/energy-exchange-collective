@@ -21,15 +21,31 @@ function Town({model,callbacks}:any){
   const colors=useMemo(()=>Object.fromEntries(model.agents.map((a:any)=>[a.id,replay.color(a.id)])),[model.agents]);
   const labels=useMemo(()=>Object.fromEntries(model.agents.map((a:any)=>[a.id,`${a.name||a.role}, ${a.id}${a.id===model.controlled?', your home':''}`])),[model.agents,model.controlled]);
   const ownIds=new Set(model.trades.filter((t:any)=>[t.seller_id,t.buyer_id].includes(model.controlled)).flatMap((t:any)=>[t.seller_id,t.buyer_id]));
+  for(const t of model.comparison||[])if(t.own||t.kind!=='unchanged'){ownIds.add(t.seller);ownIds.add(t.buyer);}
   const agreementNames=Object.fromEntries(model.agents.filter((a:any)=>ownIds.has(a.id)||a.id===model.controlled).map((a:any)=>[a.id,`${(a.name||a.id).split(' (')[0]} · ${a.id}${a.id===model.controlled?' (you)':''}`]));
   const energy={agreementNames,fit:replay.fitView,colors,labels,reducedMotion,selected:model.selected,controlled:model.controlled,highlighted:model.highlighted||[],onSelect:callbacks.onSelect,
-    agreementLabels:(positions:Map<string,any>,scale:number,bounds:any)=>{scale=Math.max(.25,scale);return <g className="own-agreement-labels" pointerEvents="none">{replay.agreementLabels(model.trades,model.controlled,model.agents,positions,scale,bounds).map((l:any,i:number)=><g key={l.trade.id||i} aria-label={`${l.title}: ${l.terms}`}>
+    agreementLabels:(positions:Map<string,any>,scale:number,bounds:any)=>{scale=Math.max(.25,scale);
+      if(model.comparison)return <g className="comparison-labels" pointerEvents="none">{replay.comparisonLabels(model.comparison,positions,scale,bounds).map((l:any)=><g key={l.key} aria-label={l.description}>
+        <path d={`M${l.anchor.x},${l.anchor.y} L${l.x},${l.y}`} stroke={l.color} strokeWidth={1/scale}/>
+        <rect x={l.x-l.width/2} y={l.y-l.height/2} width={l.width} height={l.height} rx={6/scale} fill="#fffef9" stroke={l.color} strokeWidth={1.5/scale}/>
+        {[l.title,...l.lines].map((line:string,i:number)=><text key={i} x={l.x} y={l.y+(i-1)*17/scale+4/scale} textAnchor="middle" fontSize={12/scale} fontWeight={i===0?700:500} fill={l.color}>{line}</text>)}
+      </g>)}</g>;
+      return <g className="own-agreement-labels" pointerEvents="none">{replay.agreementLabels(model.trades,model.controlled,model.agents,positions,scale,bounds).map((l:any,i:number)=><g key={l.trade.id||i} aria-label={`${l.title}: ${l.terms}`}>
       <path d={`M${l.anchor.x},${l.anchor.y} L${l.x},${l.y}`} stroke="#315d49" strokeWidth={1/scale}/>
       <rect x={l.x-l.width/2} y={l.y-l.height/2} width={l.width} height={l.height} rx={6/scale} fill="#fffef9" stroke="#315d49" strokeWidth={1.5/scale}/>
       <text x={l.x} y={l.y-5/scale} textAnchor="middle" fontSize={12/scale} fontWeight={700} fill="#264b38">{l.title}</text>
       <text x={l.x} y={l.y+12/scale} textAnchor="middle" fontSize={12/scale} fill="#264b38">{l.terms}</text>
     </g>)}</g>;},
-    overlay:(positions:Map<string,any>)=><g className="town-agreements">{model.trades.map((t:any)=>{const a=positions.get(t.seller_id),b=positions.get(t.buyer_id);if(!a||!b)return null;
+    overlay:(positions:Map<string,any>)=>model.comparison?<g className="town-comparison">{model.comparison.map((t:any)=>{
+      const a=positions.get(t.seller),b=positions.get(t.buyer);if(!a||!b)return null;
+      const changed=t.kind!=='unchanged',strong=changed||t.own||t.focused;
+      const select=()=>callbacks.onPair(t.key);
+      return <g key={t.key} role="button" tabIndex={0} aria-label={t.description} onClick={select} onKeyDown={e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();select();}}} style={{cursor:'pointer'}}>
+        <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={16}/>
+        <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={t.color} strokeWidth={t.focused?6:t.own?4.5:changed?3.5:1.1} strokeDasharray={t.kind==='removed'?'8 6':undefined} opacity={strong?1:.15}/>
+        <title>{t.description}</title>
+      </g>;
+    })}</g>:<g className="town-agreements">{model.trades.map((t:any)=>{const a=positions.get(t.seller_id),b=positions.get(t.buyer_id);if(!a||!b)return null;
       const focused=[t.seller_id,t.buyer_id].includes(model.selected),highlighted=(model.highlighted||[]).includes(t.seller_id)&&(model.highlighted||[]).includes(t.buyer_id);
       const own=[t.seller_id,t.buyer_id].includes(model.controlled);
       return <line key={t.id||`${t.seller_id}-${t.buyer_id}`} data-own-agreement={own||undefined} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={own?'#315d49':highlighted?'#C45A3C':'#526d58'} strokeWidth={own?4.5:highlighted?3:focused?2:1.1} opacity={own?1:highlighted ? .85 : focused ? .5 : .18}><title>{`${t.seller_id} to ${t.buyer_id}: ${t.quantity_kwh} kWh at ₹${t.price}/kWh`}</title></line>;

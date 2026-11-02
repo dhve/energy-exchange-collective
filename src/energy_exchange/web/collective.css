@@ -251,3 +251,10 @@ main{max-width:1600px;padding:0 28px}
 @media(max-width:800px){.story-tabs{display:grid;grid-template-columns:1fr 1fr}.story-tabs button{text-align:left;padding:10px;font-size:12px}.story-group,.story-group>details[open]{display:block}.story-groups{margin-top:14px}}
 /* One home inspector beside the map; research audit lives with detailed results. */
 .home-selector{display:grid;gap:8px;margin-top:16px}.home-selector label{font-size:13px;color:var(--muted)}.home-selector select{width:100%;min-width:0;font-size:14px;padding:10px}.selected-home .focus-home h4{font-size:15px;margin:18px 0 10px}.selected-home .focus-home .bound{gap:12px}.technical-audit{border:1px solid var(--line);border-radius:10px;margin-bottom:18px}.technical-audit>summary{padding:16px;cursor:pointer;font-size:16px}.technical-audit .detail-inspector{padding:0 16px 16px}.technical-audit #event-filter{max-width:100%;margin:8px 0}
+
+/* Compare uses one full-width map and explicit before/after trade labels. */
+.graph-wrap.comparing svg{width:100%;max-height:none;aspect-ratio:880/610}
+.graph-wrap.comparing.town-mode svg{aspect-ratio:auto}
+.comparison-note{margin:12px 20px 8px;font-size:15px;line-height:1.6;color:#294d3b}
+.comparison-key{display:flex;flex-wrap:wrap;gap:8px 14px;padding:0 20px 14px;font-size:12px;line-height:1.5}
+.comparison-key .revised{color:#945509}.comparison-key .added{color:#127568}.comparison-key .removed{color:#a14738}.comparison-key small{flex-basis:100%;color:#59675e;font-size:12px}

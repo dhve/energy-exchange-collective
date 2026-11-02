@@ -114,6 +114,22 @@
       return [{trade:t,title,terms,x,y,width,height,anchor}];
     });
   }
-  const api={messages,visible,color,toDerived,fitView,stories,agreementLabels};
+  function comparisonLabels(items,positions,scale=1,bounds=null) {
+    const placed=[];
+    // Keep the controlled home's trades prominent; a selected edge takes priority.
+    const shown=items.filter(t=>t.own||t.focused||t.kind!=='unchanged').sort((a,b)=>Number(b.focused)-Number(a.focused)||Number(b.own)-Number(a.own)||a.key.localeCompare(b.key)).slice(0,6);
+    return shown.flatMap((item,i)=>{
+      const a=positions.get(item.seller),b=positions.get(item.buyer);if(!a||!b)return [];
+      const title=`${item.title} · ${item.kind[0].toUpperCase()+item.kind.slice(1)}`;
+      const lines=item.lines,width=(Math.max(title.length,...lines.map(s=>s.length))*6.2+22)/scale,height=64/scale;
+      const anchor={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+      let x=anchor.x+(i%2?1:-1)*(width/2+16/scale),y=anchor.y;
+      if(bounds)x=Math.max(bounds.left+width/2+8/scale,Math.min(bounds.right-width/2-8/scale,x));
+      while(placed.some(p=>Math.abs(x-p.x)<(width+p.width)/2+4/scale&&Math.abs(y-p.y)<height+6/scale))y+=height+8/scale;
+      placed.push({x,y,width});
+      return [{...item,title,x,y,width,height,anchor}];
+    });
+  }
+  const api={messages,visible,color,toDerived,fitView,stories,agreementLabels,comparisonLabels};
   if(typeof module==='object')module.exports=api;else root.EnergyReplay=api;
 })(typeof window==='object'?window:globalThis);

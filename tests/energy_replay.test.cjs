@@ -4,6 +4,19 @@ const replay = require('../src/energy_exchange/web/energy-replay.js');
 const world = {agents:[{id:'A17',name:'Yash',role:'seller',min_price:6,conditional_price:{floor:4,minimum_kwh:5},time_price:{floor:3,after:'2026-10-29T08:30:00Z'}},{id:'A22',role:'buyer'},{id:'A03',role:'seller'}]};
 const quote = (extra={}) => ({id:'q1',type:'offer_sent',actor_id:'A17',counterparty_id:'A22',quantity_kwh:6,price:5.275,delivery_start:'2026-10-29T09:00:00Z',delivery_end:'2026-10-29T10:00:00Z',reason_code:'strategy_quote',...extra});
 
+test('comparison labels stay separate and include unchanged own trades and an inspected remote trade',()=>{
+  const items=Array.from({length:9},(_,i)=>({key:'A'+i,seller:'seller',buyer:'buyer',title:'Yash → Buyer '+i,lines:['2.50 → 2.00 kWh','₹6.65/kWh'],kind:i===1?'unchanged':'revised',own:i<2,focused:i===8}));
+  const points=new Map([['seller',{x:300,y:100}],['buyer',{x:400,y:300}]]);
+  const labels=replay.comparisonLabels(items,points,1,{left:0,right:880});
+  assert.equal(labels.length,6);
+  assert.ok(labels.some(l=>l.key==='A1'&&l.title.endsWith('Unchanged')));
+  assert.equal(labels[0].key,'A8');
+  for(let i=0;i<labels.length;i++)for(let j=i+1;j<labels.length;j++){
+    const a=labels[i],b=labels[j];
+    assert.ok(Math.abs(a.x-b.x)>=(a.width+b.width)/2||Math.abs(a.y-b.y)>=(a.height+b.height)/2,'Labels must not cover one another');
+  }
+});
+
 test('history includes every pair and survives termination, with no future messages after seek',()=>{
   const events=[quote(),quote({id:'q2',actor_id:'A03'}),{id:'done',type:'terminated'}];
   const cards=replay.messages(events,world);

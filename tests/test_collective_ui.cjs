@@ -122,13 +122,20 @@ test('round stepping moves to the adjacent recorded round', () => {
   assert.equal(f.evaluate('state.index'),2);
 });
 
-test('comparison visibility changes the SVG hidden attribute', () => {
-  const f=fixture();
-  f.element('compare-graph').attributes.add('hidden');
-  f.evaluate("drawGraph=()=>{};renderInspector=()=>{};renderDecisionAudit=()=>{};renderLog=()=>{};state.result.baseline={events:[],trades:[]};state.result.intervention={events:[],trades:[]};state.view='compare';renderFrame();");
-  assert.equal(f.element('compare-graph').attributes.has('hidden'),false,'SVG visibility must remove the actual attribute');
+test('Compare uses one NandaTown map with both original and updated trade terms', () => {
+  const f=fixture();replayFixture(f);
+  f.evaluate("renderInspector=()=>{};renderDecisionAudit=()=>{};renderLog=()=>{};state.town={update(model){globalThis.model=model;}};state.view='compare';state.stage='final';state.index=3;renderFrame();");
+  assert.equal(f.element('energy-town').hidden,false);
+  assert.equal(f.element('graph').attributes.has('hidden'),true);
+  assert.equal(f.context.model.comparison[0].kind,'removed');
+  assert.equal(f.context.model.comparison[0].before[0].quantity_kwh,2);
+  assert.equal(f.context.model.comparison[0].after.length,0);
+  assert.equal(f.element('comparison-note').hidden,false);
   f.evaluate("state.view='baseline';renderFrame();");
-  assert.equal(f.element('compare-graph').attributes.has('hidden'),true);
+  assert.equal(f.context.model.comparison,null);
+  assert.equal(f.element('comparison-note').hidden,true);
+  const html=fs.readFileSync(path.join(__dirname,'../src/energy_exchange/web/index.html'),'utf8');
+  assert.doesNotMatch(html,/id="compare-graph"/);
 });
 
 test('exports expose a persistent direct download link containing the displayed data', async () => {
@@ -329,10 +336,11 @@ test('a missing affected agreement stage explains the absence without inventing 
 
 test('comparison always uses starting agreements instead of matching negotiation rounds', () => {
   const f=fixture();replayFixture(f);
-  f.evaluate(`renderInspector=()=>{};renderDecisionAudit=()=>{};renderLog=()=>{};renderConversation=()=>{};state.view='compare';state.index=2;drawGraph=(svg,trades,event,caption)=>{if(svg===$('compare-graph'))globalThis.compared={trades,event,caption};};renderFrame();`);
-  assert.equal(f.context.compared.trades.length,1);
-  assert.equal(f.context.compared.event,null);
-  assert.match(f.context.compared.caption,/Before.*original agreements/i);
+  f.evaluate("state.view='compare';state.index=2;");
+  const item=f.evaluate('comparisonTrades()[0]');
+  assert.equal(item.before.length,1);
+  assert.equal(item.before[0].quantity_kwh,2);
+  assert.equal(item.after.length,0,'The reference stays fixed even while replaying early intervention events');
 });
 
 test('conversation uses actual recorded amounts, delivery window and authoritative reason', () => {
@@ -542,11 +550,13 @@ test('starting agreements use original profiles in both inspection and node avai
   assert.match(f.element('focus-home').innerHTML,/Price floor.*9\.00/s);
 });
 
-test('fixed comparison graph explicitly uses original household profiles after a policy change', () => {
+test('comparison model preserves original quotes and revised quotes separately', () => {
   const f=fixture();snapshotFixture(f);
-  f.evaluate("renderDecisionAudit=()=>{};renderLog=()=>{};state.view='compare';state.stage=null;state.index=1;$('role-filter').value='all';renderFrame();");
-  const before=descendants(f.element('compare-graph')).find(n=>n.getAttribute?.('data-agent')==='A17');
-  assert.match(before.getAttribute('aria-label'),/4\.00 kWh still available/);
+  f.evaluate("state.result.intervention.trades=[{...state.result.baseline.trades[0],price:9}];state.view='compare';state.stage='final';state.index=1;");
+  const item=f.evaluate('comparisonTrades()[0]');
+  assert.equal(item.before[0].price,7);
+  assert.equal(item.after[0].price,9);
+  assert.match(item.description,/Before:.*₹7.00.*After:.*₹9.00/);
 });
 
 test('affected stage excludes replacements caused by later negotiations and stays before offers', () => {
@@ -734,6 +744,32 @@ test('price-only changes have an explicit graph annotation rather than identical
   assert.equal(edge.getAttribute('stroke'),'#ae650f');
 });
 
+test('Compare labels the reserve change, unchanged own trade, and new or removed agreements from the ledgers', () => {
+  const f=fixture();
+  f.evaluate(`
+    const trade=(seller_id,buyer_id,quantity_kwh,price)=>({seller_id,buyer_id,quantity_kwh,price});
+    state.result={world:{agents:[{id:'A17',name:'Yash',role:'seller'},{id:'A18',name:'Tanvi'},{id:'A22',name:'Harish'},{id:'A27',name:'Omkar'}]},
+      baseline:{events:[],trades:[trade('A17','A18',2.5,6.65),trade('A17','A22',1,7.6)]},
+      intervention:{events:[{type:'policy_confirmed',changed_fields:[{agent_id:'A17',field:'reserve_kwh',before:2,after:3}]},{type:'terminated'}],trades:[trade('A17','A18',2,6.65),trade('A17','A22',1,7.6)]}};
+    state.view='compare';state.stage='final';state.index=1;
+  `);
+  let items=f.evaluate('comparisonTrades()');
+  assert.equal(items[0].kind,'revised');
+  assert.equal(items[0].lines[0],'2.50 → 2.00 kWh');
+  assert.equal(items[1].kind,'unchanged');
+  assert.equal(items[1].own,true);
+  assert.equal(items[1].lines[0],'1.00 kWh');
+  assert.match(f.evaluate('comparisonExplanation()'),/Yash’s reserve: 2.000 kWh → 3.000 kWh.*sales: 3.50 → 3.00 kWh/);
+  f.evaluate("state.result.intervention.trades=[{seller_id:'A27',buyer_id:'A22',quantity_kwh:.88,price:7.65}];");
+  items=f.evaluate('comparisonTrades()');
+  assert.deepEqual(Array.from(items,i=>i.kind),['removed','removed','new']);
+  assert.equal(items[0].lines[0],'2.50 → 0.00 kWh');
+  assert.equal(items[2].lines[0],'0.00 → 0.88 kWh');
+  assert.equal(items[2].lines[1],'₹7.65/kWh');
+  f.evaluate('state.result.intervention.trades=state.result.baseline.trades;');
+  assert.match(f.evaluate('comparisonExplanation()'),/No agreements changed/);
+});
+
 test('graph price changes use recorded prices even when payments round to the same amount', () => {
   for(const [beforePrice,afterPrice,beforePayment,afterPayment,expected] of [
     [8,9.05,.80,.91,'₹8.00 → ₹9.05/kWh'],
@@ -848,10 +884,10 @@ test('Watch negotiations leaves comparison and starts the visible animation',()=
   assert.equal(f.element('energy-town').hidden,false);
 });
 
-test('history hover colors and highlights both participants on both visible comparison maps',()=>{
+test('history hover colors and highlights both participants on the single comparison map',()=>{
   const f=fixture();replayFixture(f);
   f.evaluate("state.result.world.agents=[{id:'A17',role:'seller',min_price:6},{id:'A02',role:'buyer'},{id:'A03',role:'buyer'}];state.view='compare';state.index=2;highlightMessage(['A17','A02']);");
-  for(const id of ['graph','compare-graph']){
+  for(const id of ['graph']){
     const nodes=descendants(f.element(id)).filter(n=>n.tag==='g'&&n.getAttribute('data-agent'));
     const highlighted=nodes.filter(n=>n.getAttribute('class').includes('active-party')).map(n=>n.getAttribute('data-agent')).sort();
     assert.deepEqual(highlighted,['A02','A17']);
