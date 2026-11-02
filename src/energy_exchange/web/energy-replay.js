@@ -118,9 +118,10 @@
   }
   function placeLabel(anchor,width,height,index,placed,obstacles,bounds,scale,parties,lines) {
     const gap=8/scale,halfW=width/2,halfH=height/2;
+    const controls=Number.isFinite(bounds?.bottom)?{left:bounds.left,right:bounds.left+150/scale,top:bounds.bottom-64/scale,bottom:bounds.bottom}:null;
     const preferred={x:anchor.x+(index%2?1:-1)*(halfW+24/scale),y:anchor.y};
     const candidates=[preferred,{x:anchor.x-(preferred.x-anchor.x),y:anchor.y}];
-    const blocks=[...obstacles,...placed,...lines.map(({a,b})=>({left:Math.min(a.x,b.x),right:Math.max(a.x,b.x),top:Math.min(a.y,b.y),bottom:Math.max(a.y,b.y)}))];
+    const blocks=[...obstacles,...placed,...(controls?[controls]:[]),...lines.map(({a,b})=>({left:Math.min(a.x,b.x),right:Math.max(a.x,b.x),top:Math.min(a.y,b.y),bottom:Math.max(a.y,b.y)}))];
     for(const b of blocks){
       const xs=[b.left-halfW-gap,b.right+halfW+gap],ys=[b.top-halfH-gap,b.bottom+halfH+gap];
       for(const x of xs){candidates.push({x,y:anchor.y});for(const y of ys)candidates.push({x,y});}
@@ -140,6 +141,7 @@
         if(Number.isFinite(bounds.bottom))y=Math.min(bounds.bottom-halfH-gap,y);
       }
       const box={left:x-halfW,right:x+halfW,top:y-halfH,bottom:y+halfH};
+      if(controls&&area(box,controls)>0)continue;
       // A callout may move farther away, but must never hide an agreement segment.
       if(lines.some(({a,b})=>lineCrossesBox(a,b,box,6/scale)))continue;
       let score=Math.hypot(x-anchor.x,y-anchor.y)+Math.hypot(x-preferred.x,y-preferred.y)*.15;
