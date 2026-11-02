@@ -53,16 +53,6 @@ test('editing instruction while preview is pending invalidates its eventual resp
   assert.equal(f.element('proposal').hidden, true);
 });
 
-for (const [control, event] of [['policy-value', 'input'], ['policy-field', 'change']]) {
-  test(`editing structured ${control} invalidates a displayed draft`, () => {
-    const f = fixture();
-    f.evaluate("displayDraft({agent_id:'A17',scenario:'custom',changes:{min_price:8}});");
-    f.element(control).value = control === 'policy-value' ? '9' : 'reserve_kwh';
-    f.element(control).dispatch(event);
-    assert.equal(f.evaluate('state.draft'), null, 'Structured input changes must invalidate a policy preview');
-  });
-}
-
 test('selecting another controlled agent does not rewrite the completed experiment impact', async () => {
   const f = fixture();
   // Drive the real acceptance path so the app can retain the submitted origin.

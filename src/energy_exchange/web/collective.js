@@ -52,12 +52,11 @@ function readConfig() {
 }
 function setBusy(value) {
   state.busy = value;
-  for (const id of ['reset','parse','structured','controlled','population','topology','seed','max-rounds','max-messages','cap','memory','price-tick','negotiation-mode']) $(id).disabled = value;
+  for (const id of ['reset','parse','controlled','population','topology','seed','max-rounds','max-messages','cap','memory','price-tick','negotiation-mode']) $(id).disabled = value;
   document.querySelectorAll('[data-scenario]').forEach(b => b.disabled=value || !state.result || state.dirty);
   for(let i=0;i<3;i++) $(`example-${i}`).disabled=value || !state.result || state.dirty;
   if ($('confirm')) $('confirm').disabled = value;
   $('parse').disabled = value || !state.result || state.dirty || !$('instruction').value.trim();
-  $('structured').disabled = value || !state.result || state.dirty;
 }
 async function api(path, payload) {
   if (typeof window !== 'undefined' && window.collectiveTransport) return window.collectiveTransport(path, payload);
@@ -215,10 +214,6 @@ function renderOwn() {
   $('home-window').textContent=`Original window: ${deliveryWindow(a)}`;
   $('home-flexibility').textContent=a.time_price?policyValue('time_price',a.time_price):'One flexible energy pool within this window.';
   document.querySelector('.avatar').textContent=a.role==='seller'?'☀':'⌂';
-  const fields=a.role==='seller'?['min_price','max_offer_kwh','forecast_surplus_kwh','reserve_kwh']:['max_price','budget','demand_kwh','deadline_round'];
-  const prev=$('policy-field').value;
-  $('policy-field').innerHTML=fields.map(f=>`<option value="${f}">${fieldNames[f]}</option>`).join('');
-  if(fields.includes(prev)) $('policy-field').value=prev;
 }
 function frameWorld() {
   const original=state.result?.world;
@@ -789,12 +784,9 @@ function bindPan(svg){let drag=null;svg.addEventListener('pointerdown',e=>{if(e.
 $('config-form').onsubmit=e=>{e.preventDefault();state.zoom=1;state.pan={x:0,y:0};state.nodeOffsets={};run();};
 for(const id of ['population','topology','seed','max-rounds','max-messages','cap','memory','price-tick','negotiation-mode'])$(id).addEventListener('change',invalidate);
 $('instruction').addEventListener('input',()=>{const hadDraft=!!state.draft;clearDraft();setBusy(state.busy);if(hadDraft)$('instruction-help').textContent='Your instruction changed. Review it again before applying.';});
-$('policy-value').addEventListener('input',clearDraft);
-$('policy-field').addEventListener('change',clearDraft);
 $('controlled').onchange=()=>{state.controlled=$('controlled').value;state.selected=state.controlled;state.focusedPair=null;state.storyFocused=false;$('inspect-select').value=state.selected;clearDraft();state.causal.clear();render();};
 $('inspect-select').onchange=()=>{state.selected=$('inspect-select').value;state.focusedPair=null;state.storyFocused=false;renderFrame();};
 $('parse').onclick=()=>preview();
-$('structured').onclick=()=>{const v=$('policy-value').value,f=$('policy-field').value,phrases={min_price:`Set my minimum price to INR ${v}`,max_price:`Set my maximum price to INR ${v}`,max_offer_kwh:`Sell up to ${v} kWh`,forecast_surplus_kwh:`Set my surplus to ${v} kWh`,reserve_kwh:`Keep ${v} kWh in reserve`,budget:`Set my budget to INR ${v}`,demand_kwh:`Buy ${v} kWh`,deadline_round:`Set my deadline to round ${v}`};$('instruction').value=phrases[f];preview(phrases[f]);};
 document.querySelectorAll('[data-example-index]').forEach(b=>b.onclick=()=>useExample(Number(b.dataset.exampleIndex)));
 document.querySelectorAll('[data-scenario]').forEach(b=>b.onclick=()=>preset(b.dataset.scenario));
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{if(!state.result)return;stop();state.view=b.dataset.view;state.stage=null;state.causal.clear();rebuildFrames();state.index=Math.min(state.index,Math.max(0,currentEvents().length-1));render();});
