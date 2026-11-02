@@ -434,16 +434,19 @@ function renderConversation() {
   const index=state.stage==='starting'?events.length-1:state.index;
   const changedRun=state.history?.events!==events;
   if(changedRun){state.history={events,cards:EnergyReplay.messages(events,state.result.world,state.stage==='starting'||state.view==='baseline'?null:state.result.updated_world),count:0,index:-1};state.followLatest=true;state.hoveredPair=null;}
-  const cards=EnergyReplay.visible(state.history.cards,index),oldScroll=box.scrollTop || 0;
-  const reset=changedRun||index<state.history.index;
+  const scope=state.messageScope==='all'?'all':state.controlled;
+  $('messages-own').textContent=`${(agentById(state.controlled)?.name||state.controlled).split(' (')[0]}’s interactions`;
+  const scopeChanged=state.history.scope!==scope;
+  const cards=EnergyReplay.visible(state.history.cards,index).filter(c=>scope==='all'||c.actor===scope||c.counterparty===scope),oldScroll=box.scrollTop || 0;
+  const reset=changedRun||scopeChanged||index<state.history.index;
   if(reset){
-    box.innerHTML='<div class="history-heading"><div><span class="eyebrow">RECORDED MESSAGES</span><h3>All negotiations</h3></div><button id="follow-latest" type="button">Following latest</button></div><p class="history-help">Hover or focus a message to find both homes. Scroll up to read earlier messages.</p><div id="conversation-summary" class="conversation-summary"></div>';
+    box.innerHTML='<div class="history-heading"><strong>Chronological order</strong><button id="follow-latest" type="button">Following latest</button></div><p class="history-help">Hover or focus a message to find both homes. Scroll up to read earlier messages.</p><div id="conversation-summary" class="conversation-summary"></div>';
     state.history.count=0;
   }
   if(cards.length>state.history.count)box.insertAdjacentHTML('beforeend',cards.slice(state.history.count).map(historyEntry).join(''));
-  state.history.count=cards.length;state.history.index=index;
-  $('conversation-summary').innerHTML=event?.type==='terminated'?`<h3>Final allocation</h3><p>${esc(eventDescription(event))} All ${cards.length} recorded messages remain below.</p>`:event?.type==='policy_confirmed'?`<h3>Revised requirement</h3>${(event.changed_fields || []).map(c=>`<p>${esc(fieldNames[c.field]||label(c.field))}: ${esc(policyValue(c.field,c.before))} → ${esc(policyValue(c.field,c.after))}</p>`).join('')}`:!cards.length?'<p>Press “Watch negotiations” to see the first offer. Every message will stay here.</p>':'';
-  box.scrollTop=state.followLatest?box.scrollHeight:oldScroll;
+  state.history.count=cards.length;state.history.index=index;state.history.scope=scope;
+  $('conversation-summary').innerHTML=event?.type==='terminated'?`<h3>Final allocation</h3><p>${esc(eventDescription(event))} ${cards.length} recorded messages match this filter.</p>`:event?.type==='policy_confirmed'?`<h3>Revised requirement</h3>${(event.changed_fields || []).map(c=>`<p>${esc(fieldNames[c.field]||label(c.field))}: ${esc(policyValue(c.field,c.before))} → ${esc(policyValue(c.field,c.after))}</p>`).join('')}`:!cards.length?'<p>No interactions match this filter at this step. Continue the replay or choose All interactions.</p>':'';
+  box.scrollTop=state.followLatest?box.scrollHeight:scopeChanged?0:oldScroll;
   $('follow-latest').textContent=state.followLatest?'Following latest':'Follow latest ↓';
   $('follow-latest').onclick=()=>{state.followLatest=true;box.scrollTop=box.scrollHeight;$('follow-latest').textContent='Following latest';};
   box.onscroll=()=>{state.followLatest=box.scrollHeight-box.scrollTop-box.clientHeight<50;$('follow-latest').textContent=state.followLatest?'Following latest':'Follow latest ↓';};
@@ -786,6 +789,7 @@ for(const id of ['population','topology','seed','max-rounds','max-messages','cap
 $('instruction').addEventListener('input',()=>{const hadDraft=!!state.draft;clearDraft();setBusy(state.busy);if(hadDraft)$('instruction-help').textContent='Your instruction changed. Review it again before applying.';});
 $('controlled').onchange=()=>{state.controlled=$('controlled').value;state.selected=state.controlled;state.focusedPair=null;state.storyFocused=false;$('inspect-select').value=state.selected;clearDraft();state.causal.clear();render();};
 $('inspect-select').onchange=()=>{state.selected=$('inspect-select').value;state.focusedPair=null;state.storyFocused=false;renderFrame();};
+$('message-scope').onchange=()=>{state.messageScope=$('message-scope').value;state.followLatest=false;state.hoveredPair=null;if(state.result)renderFrame();};
 $('parse').onclick=()=>preview();
 document.querySelectorAll('[data-example-index]').forEach(b=>b.onclick=()=>useExample(Number(b.dataset.exampleIndex)));
 document.querySelectorAll('[data-scenario]').forEach(b=>b.onclick=()=>preset(b.dataset.scenario));

@@ -737,7 +737,7 @@ test('ordinary replay retains all past exchanges while excluding future messages
     state.stage=null;state.index=11;renderConversation();
   `);
   const html=f.element('conversation').innerHTML;
-  assert.match(html,/All negotiations/);
+  assert.match(html,/Chronological order/);
   assert.equal((html.match(/class="conversation-entry"/g)||[]).length,12);
   assert.match(html,/Current message 0/);
   assert.match(html,/Current message 9/);
@@ -774,6 +774,32 @@ test('seeking backwards removes future history and reading older messages preser
   f.evaluate('state.index=1;renderConversation();');
   assert.doesNotMatch(f.element('conversation').innerHTML,/Available surplus/);
   assert.match(f.element('conversation').innerHTML,/Price below new floor/);
+});
+
+test('message scope defaults to the controlled home, includes both directions, and respects replay time',()=>{
+  const f=fixture();replayFixture(f);
+  f.evaluate(`
+    state.result.world.agents[0].name='Yash (Kandivali)';
+    state.result.intervention.events=[
+      {id:'m1',type:'offer_sent',actor_id:'A17',counterparty_id:'A02',reason:'Yash sends'},
+      {id:'m2',type:'offer_sent',actor_id:'A03',counterparty_id:'A04',reason:'Other homes'},
+      {id:'m3',type:'counteroffer_sent',actor_id:'A02',counterparty_id:'A17',reason:'Yash receives'},
+      {id:'m4',type:'offer_sent',actor_id:'A17',counterparty_id:'A05',reason:'Future exchange'}
+    ];
+    state.index=2;state.selected='A03';renderConversation();
+  `);
+  assert.equal(f.element('messages-own').textContent,'Yash’s interactions');
+  assert.match(f.element('conversation').innerHTML,/Yash sends/);
+  assert.match(f.element('conversation').innerHTML,/Yash receives/);
+  assert.doesNotMatch(f.element('conversation').innerHTML,/Other homes|Future exchange/);
+  f.evaluate("state.messageScope='all';renderConversation();");
+  assert.match(f.element('conversation').innerHTML,/Other homes/);
+  assert.doesNotMatch(f.element('conversation').innerHTML,/Future exchange/);
+  f.evaluate("state.messageScope='own';state.index=1;renderConversation();");
+  assert.doesNotMatch(f.element('conversation').innerHTML,/Yash receives|Other homes/);
+  f.evaluate("state.controlled='A04';renderConversation();");
+  assert.match(f.element('conversation').innerHTML,/Other homes/);
+  assert.doesNotMatch(f.element('conversation').innerHTML,/Yash sends/);
 });
 
 test('message highlight selects both participants and clears back to the active event',()=>{
