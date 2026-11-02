@@ -266,3 +266,5 @@ main{max-width:1600px;padding:0 28px}
 /* Separate optional controls and keep the final disclosure clear of host overlays. */
 .optional-tools{margin-top:20px}
 main{padding-bottom:80px}
+
+.network-panel #notice{margin-top:16px}
