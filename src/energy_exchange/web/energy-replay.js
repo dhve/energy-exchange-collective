@@ -130,6 +130,7 @@
     if(bounds){
       const xs=[bounds.left+halfW+gap,bounds.right-halfW-gap];
       for(const x of xs){candidates.push({x,y:anchor.y});if(Number.isFinite(bounds.top)&&Number.isFinite(bounds.bottom))for(const y of [bounds.top+halfH+gap,bounds.bottom-halfH-gap])candidates.push({x,y});}
+      if(Number.isFinite(bounds.top)&&Number.isFinite(bounds.bottom))for(const x of xs)for(let y=bounds.top+halfH+gap;y<=bounds.bottom-halfH-gap;y+=12/scale)candidates.push({x,y});
     }
     const area=(a,b)=>Math.max(0,Math.min(a.right,b.right)-Math.max(a.left,b.left))*Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top));
     let best,bestScore=Infinity;
@@ -142,6 +143,7 @@
       }
       const box={left:x-halfW,right:x+halfW,top:y-halfH,bottom:y+halfH};
       if(controls&&area(box,controls)>0)continue;
+      if(placed.some(b=>area(box,b)>0))continue;
       // A callout may move farther away, but must never hide an agreement segment.
       if(lines.some(({a,b})=>lineCrossesBox(a,b,box,6/scale)))continue;
       let score=Math.hypot(x-anchor.x,y-anchor.y)+Math.hypot(x-preferred.x,y-preferred.y)*.15;
