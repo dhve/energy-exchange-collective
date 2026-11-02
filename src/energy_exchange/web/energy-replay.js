@@ -97,6 +97,23 @@
     }
     return [...merged.values()];
   }
-  const api={messages,visible,color,toDerived,fitView,stories};
+  // Labels only for the controlled home's actual agreements at this replay step.
+  function agreementLabels(trades,home,agents,positions,scale=1,bounds=null) {
+    const name=id=>(agents.find(a=>a.id===id)?.name||id).split(' (')[0];
+    const number=n=>Number(n).toFixed(2),placed=[];
+    return trades.filter(t=>t.seller_id===home||t.buyer_id===home).sort((a,b)=>`${a.seller_id}|${a.buyer_id}|${a.delivery_start||''}`.localeCompare(`${b.seller_id}|${b.buyer_id}|${b.delivery_start||''}`)).flatMap((t,i)=>{
+      const a=positions.get(t.seller_id),b=positions.get(t.buyer_id);if(!a||!b)return [];
+      const title=`${name(t.seller_id)} → ${name(t.buyer_id)}`;
+      const terms=`${number(t.quantity_kwh)} kWh · ₹${number(t.price)}/kWh`;
+      const width=(Math.max(title.length,terms.length)*6.5+22)/scale,height=44/scale;
+      const anchor={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+      let x=anchor.x+(i%2?1:-1)*(width/2+16/scale),y=anchor.y;
+      if(bounds)x=Math.max(bounds.left+width/2+8/scale,Math.min(bounds.right-width/2-8/scale,x));
+      while(placed.some(p=>Math.abs(x-p.x)<(width+p.width)/2+4/scale&&Math.abs(y-p.y)<height+6/scale))y+=height+8/scale;
+      placed.push({x,y,width});
+      return [{trade:t,title,terms,x,y,width,height,anchor}];
+    });
+  }
+  const api={messages,visible,color,toDerived,fitView,stories,agreementLabels};
   if(typeof module==='object')module.exports=api;else root.EnergyReplay=api;
 })(typeof window==='object'?window:globalThis);

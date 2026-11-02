@@ -569,9 +569,11 @@ function drawGraph(svg,trades,event,caption,world=frameWorld()) {
   for(const t of trades) {
     const difference=diffMap.get(tradeKey(t)),kind=difference?.kind;
     const active=[t.seller_id,t.buyer_id].includes(state.selected);
+    const own=[t.seller_id,t.buyer_id].includes(state.controlled);
     const description=`${t.seller_id} → ${t.buyer_id}: ${fmt(t.quantity_kwh)} kWh at ₹${fmt(t.price)}/kWh · ${deliveryWindow(t)}`;
     const path=edge(t.seller_id,t.buyer_id,{stroke:kind==='removed'?'#a14738':kind==='revised'?'#ae650f':kind==='new'?'#127568':active?'#315d49':'#a6b995','stroke-width':kind?3.5:active?2.5:1,'stroke-dasharray':kind==='removed'?'6 5':'none',opacity:(story&&state.mapMode==='agreements'&&!original)? .15 :(kind || active) ? .95 : showDiffs ? .18 : .55,'marker-end':`url(#${markerPrefix}-${kind==='removed'?'release':kind==='new'?'new':kind==='revised'?'revised':'agreement'})`,class:'trade-edge',tabindex:0,role:'button','aria-label':description});
     if(path) {
+      if(own){path.setAttribute('stroke-width','4.5');path.setAttribute('opacity','1');path.setAttribute('data-own-agreement','true');}
       svgEl('title',{},path,description);
       const inspect=()=>{state.selected=t.seller_id;state.focusedPair=tradeKey(t);state.storyFocused=false;$('inspect-select').value=state.selected;notify(description);renderFrame();};
       path.addEventListener('click',inspect);path.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();inspect();}});
@@ -625,6 +627,13 @@ function drawGraph(svg,trades,event,caption,world=frameWorld()) {
     svgEl('title',{},g,`${a.id} · ${a.name || 'Home'} · ${a.role} · ${availability}`);
     const inspect=()=>{state.selected=a.id;state.focusedPair=null;state.storyFocused=false;$('inspect-select').value=a.id;renderFrame();};
     g.addEventListener('click',inspect);g.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();inspect();}});
+  }
+  for(const l of EnergyReplay.agreementLabels(trades,state.controlled,world?.agents||[],pos,textScale,{left:0,right:880})){
+    const tag=svgEl('g',{class:'own-agreement-label','pointer-events':'none','aria-label':`${l.title}: ${l.terms}`},root);
+    svgEl('path',{d:`M${l.anchor.x} ${l.anchor.y} L${l.x} ${l.y}`,stroke:'#315d49','stroke-width':1/textScale},tag);
+    svgEl('rect',{x:l.x-l.width/2,y:l.y-l.height/2,width:l.width,height:l.height,rx:6/textScale,fill:'#fffef9',stroke:'#315d49','stroke-width':1.5/textScale},tag);
+    svgEl('text',{x:l.x,y:l.y-5/textScale,'text-anchor':'middle','font-size':12/textScale,'font-weight':700,fill:'#264b38'},tag,l.title);
+    svgEl('text',{x:l.x,y:l.y+12/textScale,'text-anchor':'middle','font-size':12/textScale,fill:'#264b38'},tag,l.terms);
   }
 }
 function householdAvailability(a,trades) {

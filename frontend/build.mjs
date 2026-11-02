@@ -35,6 +35,7 @@ patch('      sim.stop();\n    };\n  }, [derived]);','      sim.stop();\n    };\n
 patch('    <div className="space-y-4">','    <div className={energy ? "nanda-player" : "space-y-4"}>');
 patch('          ref={svgRef}','          ref={svgRef}\n          role="group" aria-label="Animated energy marketplace"');
 patch('            {/* Static edges', '            {energy?.overlay?.(positions)}\n            {/* Static edges');
+patch('          </g>\n        </svg>\n\n        {/* Tooltip */}', '            {energy?.agreementLabels?.(positions, view.k * (svgRef.current?.clientWidth || W) / W, {left:-view.x/view.k,right:(W-view.x)/view.k})}\n          </g>\n        </svg>\n\n        {/* Tooltip */}');
 patch('              {ripples.map(', '              {(energy?.reducedMotion ? [] : ripples).map(');
 patch('              {inFlight.map(', '              {(energy?.reducedMotion ? [] : inFlight).map(');
 patch('              const isFocus = focused === a.id;', '              const isFocus = energy ? energy.highlighted.includes(a.id) || energy.selected === a.id : focused === a.id;');
@@ -50,7 +51,7 @@ patch('                  data-agent={a.id}',`                  data-agent={a.id}
                   onClick={() => energy?.onSelect(a.id)}`);
 patch('                  {(active || isHover || isFocus) && (',`                  {energy && <circle cx={pos.x} cy={pos.y} r={size * 0.85} fill={color} fillOpacity={0.08} stroke={color} strokeWidth={energy.controlled === a.id ? 3 : 1.5} />}
                   {(active || isHover || isFocus) && (`);
-patch('                      {a.id}\n', '                      {energy?.controlled === a.id ? `${a.id} (you)` : a.id}\n');
+patch('                      {a.id}\n', '                      {energy?.agreementNames[a.id] || a.id}\n');
 patch('        {tooltipTarget && tooltipPos && tooltipStats && (','        {!energy && tooltipTarget && tooltipPos && tooltipStats && (');
 patch('className="absolute left-4 top-4', 'className="nanda-clock absolute left-4 top-4');
 patch('className="absolute right-4 top-4', 'className="nanda-counters absolute right-4 top-4');
