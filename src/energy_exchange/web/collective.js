@@ -395,7 +395,7 @@ function renderReplayContext() {
   const ordered=[...diffs].sort((a,b)=>Number([b.seller,b.buyer].includes(state.selected))-Number([a.seller,a.buyer].includes(state.selected)));
   const rows=ordered.map(d=>`<tr><th scope="row"><span class="change-tag ${d.kind}">${label(d.kind)}</span><button class="pair-select" data-home="${esc(d.seller)}" data-pair="${esc(d.key)}">${esc(homeLabel(d.seller))} → ${esc(homeLabel(d.buyer))}</button></th><td>${esc(ledgerTerms(d.before))}</td><td>${esc(ledgerTerms(d.after))}</td></tr>`);
   const table=items=>`<div class="table-scroll"><table><thead><tr><th>Trading pair</th><th>Before</th><th>${ended?'After':'At this step'}</th></tr></thead><tbody>${items.join('')}</tbody></table></div>`;
-  box.innerHTML=`<h3>What changed ${ended?'by the end':'at this step'}?</h3><p class="helper">Compared with the original agreements. Select a pair to highlight it.</p>${rows.length?table(rows.slice(0,3))+(rows.length>3?`<details><summary>Show ${rows.length-3} more changed pairs</summary>${table(rows.slice(3))}</details>`:''):'<p>No agreement differences at this step.</p>'}`;
+  box.innerHTML=`<h3>What changed ${ended?'by the end':'at this step'}?</h3><p class="helper">Compared with the original agreements.</p>${rows.length?table(rows.slice(0,3))+(rows.length>3?`<details><summary>Show ${rows.length-3} more changed pairs</summary>${table(rows.slice(3))}</details>`:''):'<p>No agreement differences at this step.</p>'}`;
   box.querySelectorAll('[data-home]').forEach(b=>b.onclick=()=>{state.selected=b.dataset.home;state.focusedPair=b.dataset.pair;state.storyFocused=false;renderFrame();});
 }
 function renderImpactSummary() {
