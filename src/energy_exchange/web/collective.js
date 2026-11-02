@@ -467,8 +467,11 @@ function renderStories() {
     box.querySelectorAll('[data-story]').forEach(b=>{b.onclick=()=>selectStory(b.dataset.story);if(b.dataset.story===focused)b.focus();});
   }
   const s=state.story;if(!s){detail.innerHTML='<p>Messages will appear here as the simulation proceeds.</p>';state.storyDetailMarkup=null;state.storyDetailId=null;return;}
-  const explanation=s.kind==='disrupted'?'An existing agreement was released during this run. The recorded reason appears below.':s.kind==='renegotiated'?'These homes had an original agreement and exchanged terms again.':s.kind==='replacement'?'After this buyer had an agreement released, these homes explored a new trade.':'These homes explored a trade during this run.';
-  const detailHTML=`<span class="eyebrow">${esc(storyKinds[s.kind])}</span><h3>${esc(homeLabel(s.buyer))} ↔ ${esc(homeLabel(s.seller))}</h3><p>${explanation}</p><div class="story-consequence"><strong>${esc(s.outcome)}</strong><p>${esc(storyConsequence(s))}</p></div><p class="helper">Recorded offers below show quantity, price and delivery time. A declined offer is not an energy trade.</p><details class="story-messages"><summary>Read ${s.cards.length} recorded messages</summary>${s.cards.map(historyEntry).join('')}</details>`;
+  const explanation=s.kind==='disrupted'?'':s.kind==='renegotiated'?'These homes had an original agreement and exchanged terms again.':s.kind==='replacement'?'After this buyer had an agreement released, these homes explored a new trade.':'These homes explored a trade during this run.';
+  const context=s.kind==='disrupted'?'':`<p>${explanation}</p><div class="story-consequence"><strong>${esc(s.outcome)}</strong><p>${esc(storyConsequence(s))}</p></div>`;
+  const messages=s.cards.map(historyEntry).join('');
+  const messageList=s.cards.length===1?messages:`<details class="story-messages"><summary>Read ${s.cards.length} recorded messages</summary>${messages}</details>`;
+  const detailHTML=`<span class="eyebrow">${esc(storyKinds[s.kind])}</span><h3>${esc(homeLabel(s.buyer))} ↔ ${esc(homeLabel(s.seller))}</h3>${context}${messageList}`;
   if(detailHTML!==state.storyDetailMarkup){const open=state.storyDetailId===s.id&&detail.querySelector?.('details')?.open;detail.innerHTML=detailHTML;const messages=detail.querySelector?.('details');if(messages)messages.open=!!open;state.storyDetailMarkup=detailHTML;state.storyDetailId=s.id;}
 }
 function selectStoryKind(kind) {
