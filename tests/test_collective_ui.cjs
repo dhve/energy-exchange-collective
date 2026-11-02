@@ -279,6 +279,36 @@ function replayFixture(f) {
   `);
 }
 
+test('view switches show completed agreements instead of transferring unrelated replay indices', () => {
+  const f=fixture();replayFixture(f);
+  f.evaluate(`
+    render=()=>{};renderFrame=()=>{};
+    state.result.baseline.events=Array.from({length:100},(_,i)=>({id:'b'+i,type:'offer_sent'}));
+    state.index=2;state.stage=null;state.townPlaying=true;
+    state.storyFocused=true;state.hoveredPair='A17|A03';state.focusedPair='A17|A03';
+    selectView('baseline');
+  `);
+  assert.equal(f.evaluate('state.index'),99);
+  assert.equal(f.evaluate('state.stage'),'final');
+  assert.equal(f.evaluate('qty(frameTrades())'),2);
+  assert.equal(f.evaluate('state.townPlaying'),false);
+  assert.equal(f.evaluate('state.storyFocused'),false);
+  assert.equal(f.evaluate('state.hoveredPair'),null);
+  assert.equal(f.evaluate('state.focusedPair'),null);
+  f.evaluate('renderReplayContext();');
+  assert.match(f.element('frame-summary').innerHTML,/Original agreements: 2\.00 kWh agreed/);
+  assert.match(f.element('frame-summary').innerHTML,/>1 agreement</);
+  for(const view of ['intervention','compare']) {
+    f.evaluate(`state.index=0;state.stage=null;selectView('${view}');`);
+    assert.equal(f.evaluate('state.index'),3);
+    assert.equal(f.evaluate('state.stage'),'final');
+    assert.equal(f.evaluate('frameTrades().length'),0);
+  }
+  f.evaluate("selectView('baseline');play();stop();");
+  assert.equal(f.evaluate('state.index'),0,'Explicit playback still starts from the beginning');
+  assert.equal(f.evaluate('state.stage'),null);
+});
+
 test('five replay stages point to real events and starting agreements stay frozen', () => {
   const f=fixture();replayFixture(f);
   const stages=JSON.parse(f.evaluate('JSON.stringify(replayStages())'));

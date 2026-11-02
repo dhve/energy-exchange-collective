@@ -260,6 +260,20 @@ function selectStage(id) {
   const stage=replayStages().find(s=>s.id===id);if(!stage)return;
   stop();state.stage=id;state.index=Math.max(0,stage.index);renderFrame();
 }
+function selectView(view) {
+  if(!state.result)return;
+  stop();
+  state.view=view;
+  // Event indices belong to individual runs; they are not comparable across runs.
+  state.stage='final';
+  state.causal.clear();
+  state.storyFocused=false;
+  state.hoveredPair=null;
+  state.focusedPair=null;
+  rebuildFrames();
+  state.index=Math.max(0,currentEvents().length-1);
+  render();
+}
 function frameTrades() {
   if(state.stage==='starting')return state.result?.baseline?.trades || [];
   if(state.stage==='final')return currentRun()?.trades || [];
@@ -338,7 +352,7 @@ function renderReplayContext() {
   $('policy-strip').hidden=!policy;
   $('policy-strip').innerHTML=policy?`<strong>Applied change</strong> ${(policy.changed_fields || []).map(c=>`${esc(c.agent_id)} · ${esc(fieldNames[c.field] || label(c.field))}: <b>${esc(policyValue(c.field,c.before))} → ${esc(policyValue(c.field,c.after))}</b>`).join(' · ')}`:'';
   $('graph-caption').textContent=`Selected: ${homeLabel(state.selected)}. Select a home or agreement to inspect it.`;
-  $('frame-summary').innerHTML=`<strong>${ended?'At the end':state.stage==='starting'?'Original agreements':'At this replay step'}: ${fmt(qty(trades))} kWh agreed</strong><span>${trades.length} agreements${state.view!=='baseline'&&state.result?.intervention?` · ${diffs.length} ${diffs.length===1?'pair differs':'pairs differ'} from before`:''}</span>`;
+  $('frame-summary').innerHTML=`<strong>${ended?(state.view==='baseline'?'Original agreements':'At the end'):state.stage==='starting'?'Original agreements':'At this replay step'}: ${fmt(qty(trades))} kWh agreed</strong><span>${trades.length} ${trades.length===1?'agreement':'agreements'}${state.view!=='baseline'&&state.result?.intervention?` · ${diffs.length} ${diffs.length===1?'pair differs':'pairs differ'} from before`:''}</span>`;
   const a=frameWorld()?.agents?.find(a=>a.id===state.selected);
   const homeTrades=trades.filter(t=>t.seller_id===state.selected||t.buyer_id===state.selected);
   const lastDecision=frameEvents().findLast(e=>e.actor_id===state.selected||e.counterparty_id===state.selected);
@@ -793,7 +807,7 @@ $('message-scope').onchange=()=>{state.messageScope=$('message-scope').value;sta
 $('parse').onclick=()=>preview();
 document.querySelectorAll('[data-example-index]').forEach(b=>b.onclick=()=>useExample(Number(b.dataset.exampleIndex)));
 document.querySelectorAll('[data-scenario]').forEach(b=>b.onclick=()=>preset(b.dataset.scenario));
-document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{if(!state.result)return;stop();state.view=b.dataset.view;state.stage=null;state.causal.clear();rebuildFrames();state.index=Math.min(state.index,Math.max(0,currentEvents().length-1));render();});
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>selectView(b.dataset.view));
 $('timeline').oninput=()=>{stop();state.stage=null;state.index=Number($('timeline').value);renderFrame();};
 $('back').onclick=()=>{stop();state.stage=null;state.index=Math.max(0,state.index-1);renderFrame();};
 $('next').onclick=()=>{stop();state.stage=null;state.index=Math.min(currentEvents().length-1,state.index+1);renderFrame();};
