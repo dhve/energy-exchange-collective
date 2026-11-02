@@ -17,7 +17,7 @@ test('comparison labels stay separate and include unchanged own trades and an in
   }
 });
 
-test('Omkar–Harish comparison labels avoid both households and their names at different zoom levels',()=>{
+test('Omkar–Harish comparison labels avoid households, names, and every agreement line at different zoom levels',()=>{
   const points=new Map([['A17',{x:430,y:160}],['A18',{x:470,y:450}],['A27',{x:610,y:140}],['A22',{x:610,y:440}],['A02',{x:560,y:320}],['A06',{x:640,y:360}]]);
   const names={A17:'Yash · A17 (you)',A18:'Tanvi · A18',A27:'Omkar · A27',A22:'Harish · A22'};
   const items=[
@@ -38,6 +38,14 @@ test('Omkar–Harish comparison labels avoid both households and their names at 
         assert.equal(overlaps(box,{left:p.x-22,right:p.x+22,top:p.y-22,bottom:p.y+22}),false,`${l.title} covers ${id}'s node`);
         const half=names[id]?names[id].length*3.5:12;
         assert.equal(overlaps(box,{left:p.x-half,right:p.x+half,top:p.y+22,bottom:p.y+38}),false,`${l.title} covers ${id}'s name`);
+      }
+      for(const trade of items){
+        const a=points.get(trade.seller),b=points.get(trade.buyer);
+        // Sample the full connection, not merely its endpoints or midpoint.
+        for(let step=0;step<=1000;step++){
+          const t=step/1000,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;
+          assert.ok(x<box.left||x>box.right||y<box.top||y>box.bottom,`${l.title} covers the ${trade.title} line`);
+        }
       }
     }
   }

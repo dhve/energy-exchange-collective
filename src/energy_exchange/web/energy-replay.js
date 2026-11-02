@@ -102,11 +102,25 @@
     return [...positions].map(([id,p])=>({id,left:p.x-Math.max(24,String(names[id]||id).length*3.8)-padding,
       right:p.x+Math.max(24,String(names[id]||id).length*3.8)+padding,top:p.y-28-padding,bottom:p.y+46+padding}));
   }
-  function placeLabel(anchor,width,height,index,placed,obstacles,bounds,scale,parties) {
+  function lineCrossesBox(a,b,box,padding=0) {
+    let enter=0,exit=1;
+    for(const [axis,low,high] of [['x','left','right'],['y','top','bottom']]){
+      const delta=b[axis]-a[axis],min=box[low]-padding,max=box[high]+padding;
+      if(Math.abs(delta)<1e-9){if(a[axis]<min||a[axis]>max)return false;continue;}
+      const t1=(min-a[axis])/delta,t2=(max-a[axis])/delta;
+      enter=Math.max(enter,Math.min(t1,t2));exit=Math.min(exit,Math.max(t1,t2));
+      if(enter>exit)return false;
+    }
+    return true;
+  }
+  function agreementLines(pairs,positions) {
+    return pairs.flatMap(([from,to])=>{const a=positions.get(from),b=positions.get(to);return a&&b?[{a,b}]:[];});
+  }
+  function placeLabel(anchor,width,height,index,placed,obstacles,bounds,scale,parties,lines) {
     const gap=8/scale,halfW=width/2,halfH=height/2;
     const preferred={x:anchor.x+(index%2?1:-1)*(halfW+24/scale),y:anchor.y};
     const candidates=[preferred,{x:anchor.x-(preferred.x-anchor.x),y:anchor.y}];
-    const blocks=[...obstacles,...placed];
+    const blocks=[...obstacles,...placed,...lines.map(({a,b})=>({left:Math.min(a.x,b.x),right:Math.max(a.x,b.x),top:Math.min(a.y,b.y),bottom:Math.max(a.y,b.y)}))];
     for(const b of blocks){
       const xs=[b.left-halfW-gap,b.right+halfW+gap],ys=[b.top-halfH-gap,b.bottom+halfH+gap];
       for(const x of xs){candidates.push({x,y:anchor.y});for(const y of ys)candidates.push({x,y});}
@@ -126,11 +140,16 @@
         if(Number.isFinite(bounds.bottom))y=Math.min(bounds.bottom-halfH-gap,y);
       }
       const box={left:x-halfW,right:x+halfW,top:y-halfH,bottom:y+halfH};
+      // A callout may move farther away, but must never hide an agreement segment.
+      if(lines.some(({a,b})=>lineCrossesBox(a,b,box,6/scale)))continue;
       let score=Math.hypot(x-anchor.x,y-anchor.y)+Math.hypot(x-preferred.x,y-preferred.y)*.15;
       for(const b of obstacles)score+=area(box,b)*(parties.includes(b.id)?1e6:1e4);
       for(const b of placed)score+=area(box,b)*1e7;
       if(score<bestScore){bestScore=score;best={x,y,...box};}
     }
+    // In a fully crowded viewport, leave the trade visible and its terms inspectable
+    // instead of placing an obstructing label. Zooming can expose a clear position.
+    if(!best)return null;
     placed.push({left:best.left-gap,right:best.right+gap,top:best.top-gap,bottom:best.bottom+gap});
     return {x:best.x,y:best.y};
   }
@@ -140,19 +159,22 @@
     const number=n=>Number(n).toFixed(2),placed=[];
     const names=Object.fromEntries(agents.map(a=>[a.id,`${name(a.id)} · ${a.id}${a.id===home?' (you)':''}`]));
     const obstacles=labelObstacles(positions,names,scale);
+    const lines=agreementLines(trades.map(t=>[t.seller_id,t.buyer_id]),positions);
     return trades.filter(t=>t.seller_id===home||t.buyer_id===home).sort((a,b)=>`${a.seller_id}|${a.buyer_id}|${a.delivery_start||''}`.localeCompare(`${b.seller_id}|${b.buyer_id}|${b.delivery_start||''}`)).flatMap((t,i)=>{
       const a=positions.get(t.seller_id),b=positions.get(t.buyer_id);if(!a||!b)return [];
       const title=`${name(t.seller_id)} → ${name(t.buyer_id)}`;
       const terms=`${number(t.quantity_kwh)} kWh · ₹${number(t.price)}/kWh`;
       const width=(Math.max(title.length,terms.length)*6.5+22)/scale,height=44/scale;
       const anchor={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
-      const {x,y}=placeLabel(anchor,width,height,i,placed,obstacles,bounds,scale,[t.seller_id,t.buyer_id]);
+      const location=placeLabel(anchor,width,height,i,placed,obstacles,bounds,scale,[t.seller_id,t.buyer_id],lines);if(!location)return [];
+      const {x,y}=location;
       return [{trade:t,title,terms,x,y,width,height,anchor}];
     });
   }
   function comparisonLabels(items,positions,scale=1,bounds=null,names={}) {
     const placed=[];
     const obstacles=labelObstacles(positions,names,scale);
+    const segments=agreementLines(items.map(t=>[t.seller,t.buyer]),positions);
     // Keep the controlled home's trades prominent; a selected edge takes priority.
     const shown=items.filter(t=>t.own||t.focused||t.kind!=='unchanged').sort((a,b)=>Number(b.focused)-Number(a.focused)||Number(b.own)-Number(a.own)||a.key.localeCompare(b.key)).slice(0,6);
     return shown.flatMap((item,i)=>{
@@ -160,7 +182,8 @@
       const title=`${item.title} · ${item.kind[0].toUpperCase()+item.kind.slice(1)}`;
       const lines=item.lines,width=(Math.max(title.length,...lines.map(s=>s.length))*6.2+22)/scale,height=64/scale;
       const anchor={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
-      const {x,y}=placeLabel(anchor,width,height,i,placed,obstacles,bounds,scale,[item.seller,item.buyer]);
+      const location=placeLabel(anchor,width,height,i,placed,obstacles,bounds,scale,[item.seller,item.buyer],segments);if(!location)return [];
+      const {x,y}=location;
       return [{...item,title,x,y,width,height,anchor}];
     });
   }
