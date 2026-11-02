@@ -163,8 +163,8 @@ function renderOutcome() {
   const difference=qty(after.trades)-qty(before.trades);
   const energy=Math.abs(difference)<.005?'The total energy shared is unchanged.':`After your change, homes share ${fmt(Math.abs(difference))} kWh ${difference>0?'more':'less'} energy.`;
   const homes=delta.affected.size?`${delta.affected.size} ${delta.affected.size===1?'home has':'homes have'} different agreements.`:'No homes changed their agreements.';
-  const ending=after.status==='locally_stable'?'No further admissible trade was found under the recorded strategy and bounded rules.':after.status==='cycle_detected'?'The simulation stopped because trades started repeating.':after.termination_reason==='max_messages'?'The simulation reached its message limit; further changes may be possible.':after.status==='round_limited'?'The simulation reached its round limit; further changes may be possible.':'The simulation stopped before its search was complete.';
-  $('simple-outcome').textContent=`${energy} ${homes} ${ending}`;
+  const ending=after.status==='locally_stable'?'':after.status==='cycle_detected'?'The simulation stopped because trades started repeating.':after.termination_reason==='max_messages'?'The simulation reached its message limit; further changes may be possible.':after.status==='round_limited'?'The simulation reached its round limit; further changes may be possible.':'The simulation stopped before its search was complete.';
+  $('simple-outcome').textContent=[energy,homes,ending].filter(Boolean).join(' ');
   $('affected-names').textContent=[...delta.affected].map(id=>`${agentById(id)?.name || 'Home'} (${id})`).join(', ');
 }
 function suggestedInstructions(agent) {
@@ -403,7 +403,7 @@ function renderImpactSummary() {
   const rows=householdChanges().filter(r=>Math.abs(r.energy)>.000001||Math.abs(r.payment)>.000001);
   const signed=n=>`${n>0?'+':''}${fmt(n)}`;
   rows.sort((a,b)=>Number(b.id===state.controlled)-Number(a.id===state.controlled)||Math.abs(b.energy)-Math.abs(a.energy)||Math.abs(b.payment)-Math.abs(a.payment));
-  $('impact-summary').innerHTML=rows.length?`<h3>Household impact · final comparison</h3><div class="impact-cards">${rows.slice(0,3).map(r=>`<article><strong>${esc(homeLabel(r.id))}</strong><p>${signed(r.energy)} kWh ${r.role==='seller'?'sold':'bought'}</p><small>${signed(r.payment)} rupees ${r.role==='seller'?'received':'spent'}</small></article>`).join('')}</div><p class="helper">Payment changes reflect both quantity and price. Lower spending alone does not mean a household is better off. All homes are listed in detailed results.</p>`:'';
+  $('impact-summary').innerHTML=rows.length?`<h3>Household impact · final comparison</h3><div class="impact-cards">${rows.slice(0,3).map(r=>`<article><strong>${esc(homeLabel(r.id))}</strong><p>${signed(r.energy)} kWh ${r.role==='seller'?'sold':'bought'}</p><small>${signed(r.payment)} rupees ${r.role==='seller'?'received':'spent'}</small></article>`).join('')}</div>`:'';
 }
 function quoteNumber(value) {return Number(value).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:8});}
 function sensitivityHTML(sensitivity) {
