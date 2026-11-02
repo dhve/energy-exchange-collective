@@ -679,15 +679,15 @@ test('replay differences and policy cards use the displayed frame, without leaki
     state.frames=[[old],[old],[revised]];state.view='intervention';state.index=0;renderReplayContext();
   `);
   assert.match(f.element('trade-differences').innerHTML,/No agreement differences/);
-  assert.match(f.element('focus-home').innerHTML,/original settings.*2.00 kWh/s);
+  assert.match(f.element('focus-home').innerHTML,/Original settings.*2.00 kWh/s);
   assert.doesNotMatch(f.element('focus-home').innerHTML,/₹5.00/);
   f.evaluate('state.index=2;renderReplayContext();');
   assert.match(f.element('trade-differences').innerHTML,/4.00 kWh.*3.00 kWh/s);
   assert.match(f.element('frame-summary').innerHTML,/3.00 kWh agreed/);
-  assert.match(f.element('focus-home').innerHTML,/settings at this step.*3.00 kWh.*₹5.00/s);
+  assert.match(f.element('focus-home').innerHTML,/Settings at this step.*3.00 kWh.*₹5.00/s);
   f.evaluate("state.stage='starting';renderReplayContext();");
   assert.match(f.element('trade-differences').innerHTML,/No agreement differences/);
-  assert.match(f.element('focus-home').innerHTML,/original settings.*2.00 kWh/s);
+  assert.match(f.element('focus-home').innerHTML,/Original settings.*2.00 kWh/s);
 });
 
 test('unchanged quantities with different prices remain visible in household impact cards', () => {
