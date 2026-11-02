@@ -35,7 +35,7 @@ patch('      sim.stop();\n    };\n  }, [derived]);','      sim.stop();\n    };\n
 patch('    <div className="space-y-4">','    <div className={energy ? "nanda-player" : "space-y-4"}>');
 patch('          ref={svgRef}','          ref={svgRef}\n          role="group" aria-label="Animated energy marketplace"');
 patch('            {/* Static edges', '            {energy?.overlay?.(positions)}\n            {/* Static edges');
-patch('          </g>\n        </svg>\n\n        {/* Tooltip */}', '            {energy?.agreementLabels?.(positions, view.k * (svgRef.current?.clientWidth || W) / W, {left:-view.x/view.k,right:(W-view.x)/view.k})}\n          </g>\n        </svg>\n\n        {/* Tooltip */}');
+patch('          </g>\n        </svg>\n\n        {/* Tooltip */}', '            {energy?.agreementLabels?.(positions, view.k * (svgRef.current?.clientWidth || W) / W, {left:-view.x/view.k,right:(W-view.x)/view.k,top:-view.y/view.k,bottom:(H-view.y)/view.k})}\n          </g>\n        </svg>\n\n        {/* Tooltip */}');
 patch('              {ripples.map(', '              {(energy?.reducedMotion ? [] : ripples).map(');
 patch('              {inFlight.map(', '              {(energy?.reducedMotion ? [] : inFlight).map(');
 patch('              const isFocus = focused === a.id;', '              const isFocus = energy ? energy.highlighted.includes(a.id) || energy.selected === a.id : focused === a.id;');

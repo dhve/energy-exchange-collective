@@ -25,7 +25,7 @@ function Town({model,callbacks}:any){
   const agreementNames=Object.fromEntries(model.agents.filter((a:any)=>ownIds.has(a.id)||a.id===model.controlled).map((a:any)=>[a.id,`${(a.name||a.id).split(' (')[0]} · ${a.id}${a.id===model.controlled?' (you)':''}`]));
   const energy={agreementNames,fit:replay.fitView,colors,labels,reducedMotion,selected:model.selected,controlled:model.controlled,highlighted:model.highlighted||[],onSelect:callbacks.onSelect,
     agreementLabels:(positions:Map<string,any>,scale:number,bounds:any)=>{scale=Math.max(.25,scale);
-      if(model.comparison)return <g className="comparison-labels" pointerEvents="none">{replay.comparisonLabels(model.comparison,positions,scale,bounds).map((l:any)=><g key={l.key} aria-label={l.description}>
+      if(model.comparison)return <g className="comparison-labels" pointerEvents="none">{replay.comparisonLabels(model.comparison,positions,scale,bounds,agreementNames).map((l:any)=><g key={l.key} aria-label={l.description}>
         <path d={`M${l.anchor.x},${l.anchor.y} L${l.x},${l.y}`} stroke={l.color} strokeWidth={1/scale}/>
         <rect x={l.x-l.width/2} y={l.y-l.height/2} width={l.width} height={l.height} rx={6/scale} fill="#fffef9" stroke={l.color} strokeWidth={1.5/scale}/>
         {[l.title,...l.lines].map((line:string,i:number)=><text key={i} x={l.x} y={l.y+(i-1)*17/scale+4/scale} textAnchor="middle" fontSize={12/scale} fontWeight={i===0?700:500} fill={l.color}>{line}</text>)}

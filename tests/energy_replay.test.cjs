@@ -17,6 +17,32 @@ test('comparison labels stay separate and include unchanged own trades and an in
   }
 });
 
+test('Omkar–Harish comparison labels avoid both households and their names at different zoom levels',()=>{
+  const points=new Map([['A17',{x:430,y:160}],['A18',{x:470,y:450}],['A27',{x:610,y:140}],['A22',{x:610,y:440}],['A02',{x:560,y:320}],['A06',{x:640,y:360}]]);
+  const names={A17:'Yash · A17 (you)',A18:'Tanvi · A18',A27:'Omkar · A27',A22:'Harish · A22'};
+  const items=[
+    {key:'A17|A18',seller:'A17',buyer:'A18',title:'Yash → Tanvi',kind:'removed',own:true,lines:['2.50 → 0.00 kWh','Agreement removed']},
+    {key:'A17|A22',seller:'A17',buyer:'A22',title:'Yash → Harish',kind:'removed',own:true,lines:['1.00 → 0.00 kWh','Agreement removed']},
+    {key:'A27|A22',seller:'A27',buyer:'A22',title:'Omkar → Harish',kind:'new',lines:['0.00 → 0.88 kWh','₹7.65/kWh']}
+  ];
+  const overlaps=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
+  for(const scale of [1,.6,.4])for(const moved of [false,true]){
+    points.set('A22',{x:moved?480:610,y:440});
+    const bounds={left:-400,right:1400,top:-150,bottom:1050};
+    const labels=replay.comparisonLabels(items,points,scale,bounds,names);
+    assert.equal(labels.length,3);
+    for(const l of labels){
+      const box={left:l.x-l.width/2,right:l.x+l.width/2,top:l.y-l.height/2,bottom:l.y+l.height/2};
+      assert.ok(box.left>=bounds.left&&box.right<=bounds.right&&box.top>=bounds.top&&box.bottom<=bounds.bottom);
+      for(const [id,p] of points){
+        assert.equal(overlaps(box,{left:p.x-22,right:p.x+22,top:p.y-22,bottom:p.y+22}),false,`${l.title} covers ${id}'s node`);
+        const half=names[id]?names[id].length*3.5:12;
+        assert.equal(overlaps(box,{left:p.x-half,right:p.x+half,top:p.y+22,bottom:p.y+38}),false,`${l.title} covers ${id}'s name`);
+      }
+    }
+  }
+});
+
 test('history includes every pair and survives termination, with no future messages after seek',()=>{
   const events=[quote(),quote({id:'q2',actor_id:'A03'}),{id:'done',type:'terminated'}];
   const cards=replay.messages(events,world);

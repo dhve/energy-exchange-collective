@@ -97,25 +97,62 @@
     }
     return [...merged.values()];
   }
+  function labelObstacles(positions,names,scale) {
+    const padding=6/scale;
+    return [...positions].map(([id,p])=>({id,left:p.x-Math.max(24,String(names[id]||id).length*3.8)-padding,
+      right:p.x+Math.max(24,String(names[id]||id).length*3.8)+padding,top:p.y-28-padding,bottom:p.y+46+padding}));
+  }
+  function placeLabel(anchor,width,height,index,placed,obstacles,bounds,scale,parties) {
+    const gap=8/scale,halfW=width/2,halfH=height/2;
+    const preferred={x:anchor.x+(index%2?1:-1)*(halfW+24/scale),y:anchor.y};
+    const candidates=[preferred,{x:anchor.x-(preferred.x-anchor.x),y:anchor.y}];
+    const blocks=[...obstacles,...placed];
+    for(const b of blocks){
+      const xs=[b.left-halfW-gap,b.right+halfW+gap],ys=[b.top-halfH-gap,b.bottom+halfH+gap];
+      for(const x of xs){candidates.push({x,y:anchor.y});for(const y of ys)candidates.push({x,y});}
+      for(const y of ys)candidates.push({x:preferred.x,y},{x:anchor.x,y});
+    }
+    if(bounds){
+      const xs=[bounds.left+halfW+gap,bounds.right-halfW-gap];
+      for(const x of xs){candidates.push({x,y:anchor.y});if(Number.isFinite(bounds.top)&&Number.isFinite(bounds.bottom))for(const y of [bounds.top+halfH+gap,bounds.bottom-halfH-gap])candidates.push({x,y});}
+    }
+    const area=(a,b)=>Math.max(0,Math.min(a.right,b.right)-Math.max(a.left,b.left))*Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top));
+    let best,bestScore=Infinity;
+    for(const candidate of candidates){
+      let {x,y}=candidate;
+      if(bounds){
+        x=Math.max(bounds.left+halfW+gap,Math.min(bounds.right-halfW-gap,x));
+        if(Number.isFinite(bounds.top))y=Math.max(bounds.top+halfH+gap,y);
+        if(Number.isFinite(bounds.bottom))y=Math.min(bounds.bottom-halfH-gap,y);
+      }
+      const box={left:x-halfW,right:x+halfW,top:y-halfH,bottom:y+halfH};
+      let score=Math.hypot(x-anchor.x,y-anchor.y)+Math.hypot(x-preferred.x,y-preferred.y)*.15;
+      for(const b of obstacles)score+=area(box,b)*(parties.includes(b.id)?1e6:1e4);
+      for(const b of placed)score+=area(box,b)*1e7;
+      if(score<bestScore){bestScore=score;best={x,y,...box};}
+    }
+    placed.push({left:best.left-gap,right:best.right+gap,top:best.top-gap,bottom:best.bottom+gap});
+    return {x:best.x,y:best.y};
+  }
   // Labels only for the controlled home's actual agreements at this replay step.
   function agreementLabels(trades,home,agents,positions,scale=1,bounds=null) {
     const name=id=>(agents.find(a=>a.id===id)?.name||id).split(' (')[0];
     const number=n=>Number(n).toFixed(2),placed=[];
+    const names=Object.fromEntries(agents.map(a=>[a.id,`${name(a.id)} · ${a.id}${a.id===home?' (you)':''}`]));
+    const obstacles=labelObstacles(positions,names,scale);
     return trades.filter(t=>t.seller_id===home||t.buyer_id===home).sort((a,b)=>`${a.seller_id}|${a.buyer_id}|${a.delivery_start||''}`.localeCompare(`${b.seller_id}|${b.buyer_id}|${b.delivery_start||''}`)).flatMap((t,i)=>{
       const a=positions.get(t.seller_id),b=positions.get(t.buyer_id);if(!a||!b)return [];
       const title=`${name(t.seller_id)} → ${name(t.buyer_id)}`;
       const terms=`${number(t.quantity_kwh)} kWh · ₹${number(t.price)}/kWh`;
       const width=(Math.max(title.length,terms.length)*6.5+22)/scale,height=44/scale;
       const anchor={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
-      let x=anchor.x+(i%2?1:-1)*(width/2+16/scale),y=anchor.y;
-      if(bounds)x=Math.max(bounds.left+width/2+8/scale,Math.min(bounds.right-width/2-8/scale,x));
-      while(placed.some(p=>Math.abs(x-p.x)<(width+p.width)/2+4/scale&&Math.abs(y-p.y)<height+6/scale))y+=height+8/scale;
-      placed.push({x,y,width});
+      const {x,y}=placeLabel(anchor,width,height,i,placed,obstacles,bounds,scale,[t.seller_id,t.buyer_id]);
       return [{trade:t,title,terms,x,y,width,height,anchor}];
     });
   }
-  function comparisonLabels(items,positions,scale=1,bounds=null) {
+  function comparisonLabels(items,positions,scale=1,bounds=null,names={}) {
     const placed=[];
+    const obstacles=labelObstacles(positions,names,scale);
     // Keep the controlled home's trades prominent; a selected edge takes priority.
     const shown=items.filter(t=>t.own||t.focused||t.kind!=='unchanged').sort((a,b)=>Number(b.focused)-Number(a.focused)||Number(b.own)-Number(a.own)||a.key.localeCompare(b.key)).slice(0,6);
     return shown.flatMap((item,i)=>{
@@ -123,10 +160,7 @@
       const title=`${item.title} · ${item.kind[0].toUpperCase()+item.kind.slice(1)}`;
       const lines=item.lines,width=(Math.max(title.length,...lines.map(s=>s.length))*6.2+22)/scale,height=64/scale;
       const anchor={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
-      let x=anchor.x+(i%2?1:-1)*(width/2+16/scale),y=anchor.y;
-      if(bounds)x=Math.max(bounds.left+width/2+8/scale,Math.min(bounds.right-width/2-8/scale,x));
-      while(placed.some(p=>Math.abs(x-p.x)<(width+p.width)/2+4/scale&&Math.abs(y-p.y)<height+6/scale))y+=height+8/scale;
-      placed.push({x,y,width});
+      const {x,y}=placeLabel(anchor,width,height,i,placed,obstacles,bounds,scale,[item.seller,item.buyer]);
       return [{...item,title,x,y,width,height,anchor}];
     });
   }
