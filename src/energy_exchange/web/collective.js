@@ -519,7 +519,6 @@ function updateTown() {
   });
   const showTown=!!state.town&&state.mapMode!=='agreements';
   $('energy-town').hidden=!showTown;$('graph').toggleAttribute('hidden',showTown);
-  $('town-legend').hidden=!showTown||state.view==='compare';
   $('graph-wrap').classList.toggle('town-mode',showTown);
   state.town?.update({events,agents:state.result.world.agents,index:starting?events.length-1:state.index,playing:!!state.townPlaying&&!starting&&showTown,speed:1,
     selected:state.selected,controlled:state.controlled,trades:frameTrades(),comparison:state.view==='compare'?comparisonTrades():null,highlighted:state.hoveredPair || (state.causal.size?[...new Set(events.filter(e=>state.causal.has(e.id)).flatMap(e=>[e.actor_id,e.counterparty_id]).filter(Boolean))]:[event?.actor_id,event?.counterparty_id].filter(Boolean))});
