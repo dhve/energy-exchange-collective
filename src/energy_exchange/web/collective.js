@@ -406,13 +406,6 @@ function renderImpactSummary() {
   $('impact-summary').innerHTML=rows.length?`<h3>Household impact · final comparison</h3><div class="impact-cards">${rows.slice(0,3).map(r=>`<article><strong>${esc(homeLabel(r.id))}</strong><p>${signed(r.energy)} kWh ${r.role==='seller'?'sold':'bought'}</p><small>${signed(r.payment)} rupees ${r.role==='seller'?'received':'spent'}</small></article>`).join('')}</div>`:'';
 }
 function quoteNumber(value) {return Number(value).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:8});}
-function sensitivityHTML(sensitivity) {
-  if(!sensitivity?.rules.length)return '';
-  const rules=sensitivity.rules.map(rule=>rule.kind==='quantity'
-    ? `₹${quoteNumber(rule.floor)}/kWh for at least ${quoteNumber(rule.minimum_kwh)} kWh`
-    : `₹${quoteNumber(rule.floor)}/kWh after ${timestamp(rule.after)}`);
-  return `<details class="message-policy"><summary>Why this price can change</summary><p>Seller's rule at this step, separate from the message:</p>${sensitivity.rules.map((rule,i)=>`<p>${esc(rules[i])}. <strong>${rule.eligible===null?(rule.kind==='time'?'Delivery time was not recorded, so eligibility is unknown.':'Quantity was not recorded, so eligibility is unknown.'):rule.eligible?'These terms qualify.':'These terms do not qualify.'}</strong></p>`).join('')}${sensitivity.floor===null?'<p>The applicable minimum cannot be determined from this event.</p>':`<p>Minimum allowed for these terms: ₹${quoteNumber(sensitivity.floor)}/kWh.${sensitivity.discounted?' This recorded price is below the regular minimum.':' A qualifying rule does not mean a discount was used.'}</p>`}</details>`;
-}
 function negotiationHTML(event) {
   const n=event.negotiation;if(n?.version!==1)return '';
   const previous=n.previous_terms,terms=event.trade || event,changes=Array.isArray(n.changed)?n.changed:[],badges=[];
@@ -426,7 +419,7 @@ function negotiationHTML(event) {
 }
 function historyEntry(card) {
   const t=card.terms,terms=[t.quantity_kwh!=null?`${quoteNumber(t.quantity_kwh)} kWh`:'',t.price!=null?`₹${quoteNumber(t.price)}/kWh`:''].filter(Boolean);
-  return `<article class="conversation-entry" tabindex="0" data-message="${card.index}" data-participants="${esc(card.actor)}|${esc(card.counterparty)}" style="--agent-color:${EnergyReplay.color(card.actor)}" aria-label="${esc(homeLabel(card.actor))} to ${esc(homeLabel(card.counterparty))}, ${esc(eventLabel(card.type))}"><div class="message-meta"><span>Step ${card.index+1} · Round ${card.event.round ?? 0}</span><b>${esc(eventLabel(card.type))}</b></div><strong class="message-parties"><span style="color:${EnergyReplay.color(card.actor)}">${esc(homeLabel(card.actor))}</span> → <span style="color:${EnergyReplay.color(card.counterparty)}">${esc(homeLabel(card.counterparty))}</span></strong>${terms.length?`<p class="message-terms">${terms.map(esc).join(' at ')}</p>`:''}${t.delivery_start&&t.delivery_end?`<p class="message-delivery">${esc(deliveryWindow(t))}</p>`:''}<p class="message-reason">${esc(negotiationExplanation(card.event))}</p>${negotiationHTML(card.event)}${sensitivityHTML(card.sensitivity)}</article>`;
+  return `<article class="conversation-entry" tabindex="0" data-message="${card.index}" data-participants="${esc(card.actor)}|${esc(card.counterparty)}" style="--agent-color:${EnergyReplay.color(card.actor)}" aria-label="${esc(homeLabel(card.actor))} to ${esc(homeLabel(card.counterparty))}, ${esc(eventLabel(card.type))}"><div class="message-meta"><span>Step ${card.index+1} · Round ${card.event.round ?? 0}</span><b>${esc(eventLabel(card.type))}</b></div><strong class="message-parties"><span style="color:${EnergyReplay.color(card.actor)}">${esc(homeLabel(card.actor))}</span> → <span style="color:${EnergyReplay.color(card.counterparty)}">${esc(homeLabel(card.counterparty))}</span></strong>${terms.length?`<p class="message-terms">${terms.map(esc).join(' at ')}</p>`:''}${t.delivery_start&&t.delivery_end?`<p class="message-delivery">${esc(deliveryWindow(t))}</p>`:''}<p class="message-reason">${esc(negotiationExplanation(card.event))}</p>${negotiationHTML(card.event)}</article>`;
 }
 const storyKinds={disrupted:'Existing agreement disrupted',renegotiated:'Agreement renegotiated',replacement:'Replacement sought',other:'Other trading opportunities'};
 function storyConsequence(story) {
