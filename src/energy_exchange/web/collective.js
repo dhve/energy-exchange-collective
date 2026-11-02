@@ -463,7 +463,7 @@ function renderStories() {
     const focused=document.activeElement?.dataset?.story,focusedKind=document.activeElement?.dataset?.storyKind;
     box.innerHTML=html;state.storyMarkup=html;
     box.querySelectorAll('details').forEach(d=>{d.open=expanded.includes(d.parentElement.querySelector('h4')?.textContent);});
-    box.querySelectorAll('[data-story-kind]').forEach(b=>{b.onclick=()=>{stop();state.storyKind=b.dataset.storyKind;selectStory(null);};if(b.dataset.storyKind===focusedKind)b.focus();});
+    box.querySelectorAll('[data-story-kind]').forEach(b=>{b.onclick=()=>selectStoryKind(b.dataset.storyKind);if(b.dataset.storyKind===focusedKind)b.focus();});
     box.querySelectorAll('[data-story]').forEach(b=>{b.onclick=()=>selectStory(b.dataset.story);if(b.dataset.story===focused)b.focus();});
   }
   const s=state.story;if(!s){detail.innerHTML='<p>Messages will appear here as the simulation proceeds.</p>';state.storyDetailMarkup=null;state.storyDetailId=null;return;}
@@ -471,11 +471,15 @@ function renderStories() {
   const detailHTML=`<span class="eyebrow">${esc(storyKinds[s.kind])}</span><h3>${esc(homeLabel(s.buyer))} ↔ ${esc(homeLabel(s.seller))}</h3><p>${explanation}</p><div class="story-consequence"><strong>${esc(s.outcome)}</strong><p>${esc(storyConsequence(s))}</p></div><p class="helper">Recorded offers below show quantity, price and delivery time. A declined offer is not an energy trade.</p><details class="story-messages"><summary>Read ${s.cards.length} recorded messages</summary>${s.cards.map(historyEntry).join('')}</details>`;
   if(detailHTML!==state.storyDetailMarkup){const open=state.storyDetailId===s.id&&detail.querySelector?.('details')?.open;detail.innerHTML=detailHTML;const messages=detail.querySelector?.('details');if(messages)messages.open=!!open;state.storyDetailMarkup=detailHTML;state.storyDetailId=s.id;}
 }
+function selectStoryKind(kind) {
+  stop();state.storyKind=kind;state.storyId=null;state.storyFocused=false;state.hoveredPair=null;
+  renderFrame();
+}
 function selectStory(id) {
-  stop();state.storyId=id;state.storyFocused=true;state.hoveredPair=null;state.mapMode='agreements';
+  stop();state.storyId=id;state.storyFocused=true;state.hoveredPair=null;
   renderStories();
   if(state.story){state.selected=state.story.buyer;state.focusedPair=`${state.story.seller}|${state.story.buyer}`;$('inspect-select').value=state.selected;}
-  renderFrame();$('graph-wrap').scrollIntoView?.({block:'start',behavior:'smooth'});
+  renderFrame();
 }
 function renderConversation() {
   const box=$('conversation'),event=activeEvent(),events=state.stage==='starting'?state.result.baseline.events:currentEvents();
@@ -521,7 +525,7 @@ function updateTown() {
   $('energy-town').hidden=!showTown;$('graph').toggleAttribute('hidden',showTown);
   $('graph-wrap').classList.toggle('town-mode',showTown);
   state.town?.update({events,agents:state.result.world.agents,index:starting?events.length-1:state.index,playing:!!state.townPlaying&&!starting&&showTown,speed:1,
-    selected:state.selected,controlled:state.controlled,trades:frameTrades(),comparison:state.view==='compare'?comparisonTrades():null,highlighted:state.hoveredPair || (state.causal.size?[...new Set(events.filter(e=>state.causal.has(e.id)).flatMap(e=>[e.actor_id,e.counterparty_id]).filter(Boolean))]:[event?.actor_id,event?.counterparty_id].filter(Boolean))});
+    selected:state.selected,controlled:state.controlled,trades:frameTrades(),comparison:state.view==='compare'?comparisonTrades():null,highlighted:state.hoveredPair || (state.storyFocused&&state.story?[state.story.seller,state.story.buyer]:null) || (state.causal.size?[...new Set(events.filter(e=>state.causal.has(e.id)).flatMap(e=>[e.actor_id,e.counterparty_id]).filter(Boolean))]:[event?.actor_id,event?.counterparty_id].filter(Boolean))});
 }
 function renderFrame() {
   const events=currentEvents(), stage=state.stage?replayStages().find(s=>s.id===state.stage):null, event=stage?stage.event:events[state.index];

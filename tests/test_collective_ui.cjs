@@ -918,3 +918,30 @@ test('a declined conversation remains inspectable as a dashed connection at the 
   assert.match(line.getAttribute('aria-label'),/Declined, 0.50 kWh/);
   assert.ok(all.some(n=>n.textContent==='Declined · 0.50 kWh'));
 });
+
+test('conversation selection keeps the current map, replay position and viewport',()=>{
+  const f=fixture();replayFixture(f);
+  f.evaluate(`
+    state.town={update(m){globalThis.townModel=m;}};
+    state.view='intervention';state.stage='final';state.index=state.result.intervention.events.length-1;
+    state.mapMode='animation';state.zoom=1.4;state.pan={x:12,y:24};
+    globalThis.scrolls=0;$('graph-wrap').scrollIntoView=()=>globalThis.scrolls++;
+    renderInspector=()=>{};renderDecisionAudit=()=>{};renderLog=()=>{};
+    globalThis.previousIndex=state.index;
+    selectStory(null);
+  `);
+  assert.equal(f.evaluate('state.mapMode'),'animation');
+  assert.equal(f.element('energy-town').hidden,false);
+  assert.equal(f.evaluate('state.index'),f.context.previousIndex);
+  assert.equal(f.evaluate('state.zoom'),1.4);
+  assert.equal(f.evaluate('state.pan.x'),12);
+  assert.equal(f.context.scrolls,0);
+  assert.equal(f.context.townModel.playing,false);
+  assert.ok(f.evaluate('state.story'), 'A real conversation is selected');
+  assert.deepEqual(Array.from(f.context.townModel.highlighted),Array.from(f.evaluate('[state.story.seller,state.story.buyer]')));
+  f.evaluate("selectStoryKind('replacement');");
+  assert.equal(f.evaluate('state.mapMode'),'animation');
+  assert.equal(f.evaluate('state.index'),f.context.previousIndex);
+  assert.equal(f.evaluate('state.storyFocused'),false);
+  assert.equal(f.context.scrolls,0);
+});
