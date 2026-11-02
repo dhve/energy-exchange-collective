@@ -483,15 +483,13 @@ function preferenceMessage(f, metadata = true) {
   `);
 }
 
-test('counteroffer history shows actual price, amount and delivery changes with a separate same-home comparison', () => {
+test('counteroffer history shows actual price, amount and delivery changes without an explanation disclosure', () => {
   const f=fixture();preferenceMessage(f);
   const html=f.element('conversation').innerHTML;
   assert.match(html,/₹7\.50 → ₹7\.00\/kWh/);
   assert.match(html,/4\.00 → 2\.00 kWh/);
   assert.match(html,/Different time/);
-  assert.match(html,/Why this offer/);
-  assert.match(html,/Previous offer.*2–3 PM.*New offer.*3–4 PM/s);
-  assert.match(html,/this home.*previous time and amount.*₹8\.00\/kWh/i);
+  assert.doesNotMatch(html,/Why this offer|Previous offer|previous time and amount/);
   assert.match(html,/I can offer a lower price at this time\. &lt;script&gt;unsafe&lt;\/script&gt;/);
   assert.doesNotMatch(html,/<script>/);
 });
@@ -510,7 +508,7 @@ test('acceptance explains recorded compromises and does not present preference c
   const html=f.element('conversation').innerHTML;
   assert.match(html,/Accepted a different time/);
   assert.match(html,/Accepted a different amount/);
-  assert.match(html,/values this offer ₹2\.00 less/);
+  assert.doesNotMatch(html,/Why this offer|values this offer/);
   assert.doesNotMatch(html,/extra payment/i);
   assert.doesNotMatch(html,/₹7\.50 →/);
 });

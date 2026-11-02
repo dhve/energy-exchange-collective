@@ -422,11 +422,7 @@ function negotiationHTML(event) {
   if(previous&&changed('delivery')&&(previous.delivery_start!==terms.delivery_start||previous.delivery_end!==terms.delivery_end))badges.push('Different time');
   const compromises=Array.isArray(n.compromises)?n.compromises:[];
   for(const [field,name] of [['delivery','time'],['quantity','amount']])if(compromises.includes(field))badges.push(n.kind==='accept'?`Accepted a different ${name}`:`Flexible on ${name}`);
-  let detail='';
-  if(previous&&n.kind==='counter')detail+=`<p><strong>Previous offer</strong><br>${esc(eventTerms(previous))}</p><p><strong>New offer</strong><br>${esc(eventTerms(event))}</p>`;
-  if(n.kind==='counter'&&n.same_terms_quote!=null)detail+=`<p>At this same bargaining step, this home's quote for the previous time and amount would be ₹${quoteNumber(n.same_terms_quote)}/kWh.</p>`;
-  if(n.preference_cost>0)detail+=`<p>The home values this offer ₹${fmt(n.preference_cost)} less because it misses its preferred time or amount.</p>`;
-  return `${badges.length?`<div class="negotiation-changes" aria-label="Offer changes and compromises">${badges.map(b=>`<span>${esc(b)}</span>`).join('')}</div>`:''}${detail?`<details class="message-policy"><summary>Why this offer</summary>${detail}</details>`:''}`;
+  return badges.length?`<div class="negotiation-changes" aria-label="Offer changes and compromises">${badges.map(b=>`<span>${esc(b)}</span>`).join('')}</div>`:'';
 }
 function historyEntry(card) {
   const t=card.terms,terms=[t.quantity_kwh!=null?`${quoteNumber(t.quantity_kwh)} kWh`:'',t.price!=null?`₹${quoteNumber(t.price)}/kWh`:''].filter(Boolean);
