@@ -191,6 +191,10 @@
       return [{...item,title,x,y,width,height,anchor}];
     });
   }
-  const api={messages,visible,color,toDerived,fitView,stories,agreementLabels,comparisonLabels};
+  function comparisonOverflow(items,placedKeys) {
+    const placed=new Set(placedKeys);
+    return items.filter(t=>(t.own||t.focused||t.kind!=='unchanged')&&!placed.has(t.key));
+  }
+  const api={messages,visible,color,toDerived,fitView,stories,agreementLabels,comparisonLabels,comparisonOverflow};
   if(typeof module==='object')module.exports=api;else root.EnergyReplay=api;
 })(typeof window==='object'?window:globalThis);

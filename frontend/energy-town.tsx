@@ -2,8 +2,19 @@ import React, {useEffect,useMemo,useRef,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {Player} from './generated/NandaTown';
 const replay=(window as any).EnergyReplay;
+function ComparisonLabels({items,positions,scale,bounds,names,onPlaced}:any){
+  const labels=replay.comparisonLabels(items,positions,scale,bounds,names);
+  const keys=labels.map((l:any)=>l.key).sort().join('\n');
+  useEffect(()=>onPlaced(keys),[keys,onPlaced]);
+  return <g className="comparison-labels" pointerEvents="none">{labels.map((l:any)=><g key={l.key} aria-label={l.description}>
+    <path d={`M${l.anchor.x},${l.anchor.y} L${l.x},${l.y}`} stroke={l.color} strokeWidth={1/scale}/>
+    <rect x={l.x-l.width/2} y={l.y-l.height/2} width={l.width} height={l.height} rx={6/scale} fill="#fffef9" stroke={l.color} strokeWidth={1.5/scale}/>
+    {[l.title,...l.lines].map((line:string,i:number)=><text key={i} x={l.x} y={l.y+(i-1)*17/scale+4/scale} textAnchor="middle" fontSize={12/scale} fontWeight={i===0?700:500} fill={l.color}>{line}</text>)}
+  </g>)}</g>;
+}
 function Town({model,callbacks}:any){
   const [time,setTime]=useState(model.index),[playing,setPlaying]=useState(model.playing);
+  const [placedKeys,setPlacedKeys]=useState('');
   const lastReported=useRef(model.index);
   const [reducedMotion,setReducedMotion]=useState(matchMedia('(prefers-reduced-motion: reduce)').matches);
   useEffect(()=>{const query=matchMedia('(prefers-reduced-motion: reduce)');const change=()=>setReducedMotion(query.matches);query.addEventListener('change',change);return()=>query.removeEventListener('change',change);},[]);
@@ -25,11 +36,7 @@ function Town({model,callbacks}:any){
   const agreementNames=Object.fromEntries(model.agents.filter((a:any)=>ownIds.has(a.id)||a.id===model.controlled).map((a:any)=>[a.id,`${(a.name||a.id).split(' (')[0]} · ${a.id}${a.id===model.controlled?' (you)':''}`]));
   const energy={agreementNames,fit:replay.fitView,colors,labels,reducedMotion,selected:model.selected,controlled:model.controlled,highlighted:model.highlighted||[],onSelect:callbacks.onSelect,
     agreementLabels:(positions:Map<string,any>,scale:number,bounds:any)=>{scale=Math.max(.25,scale);
-      if(model.comparison)return <g className="comparison-labels" pointerEvents="none">{replay.comparisonLabels(model.comparison,positions,scale,bounds,agreementNames).map((l:any)=><g key={l.key} aria-label={l.description}>
-        <path d={`M${l.anchor.x},${l.anchor.y} L${l.x},${l.y}`} stroke={l.color} strokeWidth={1/scale}/>
-        <rect x={l.x-l.width/2} y={l.y-l.height/2} width={l.width} height={l.height} rx={6/scale} fill="#fffef9" stroke={l.color} strokeWidth={1.5/scale}/>
-        {[l.title,...l.lines].map((line:string,i:number)=><text key={i} x={l.x} y={l.y+(i-1)*17/scale+4/scale} textAnchor="middle" fontSize={12/scale} fontWeight={i===0?700:500} fill={l.color}>{line}</text>)}
-      </g>)}</g>;
+      if(model.comparison)return <ComparisonLabels items={model.comparison} positions={positions} scale={scale} bounds={bounds} names={agreementNames} onPlaced={setPlacedKeys}/>;
       return <g className="own-agreement-labels" pointerEvents="none">{replay.agreementLabels(model.trades,model.controlled,model.agents,positions,scale,bounds).map((l:any,i:number)=><g key={l.trade.id||i} aria-label={`${l.title}: ${l.terms}`}>
       <path d={`M${l.anchor.x},${l.anchor.y} L${l.x},${l.y}`} stroke="#315d49" strokeWidth={1/scale}/>
       <rect x={l.x-l.width/2} y={l.y-l.height/2} width={l.width} height={l.height} rx={6/scale} fill="#fffef9" stroke="#315d49" strokeWidth={1.5/scale}/>
@@ -52,7 +59,12 @@ function Town({model,callbacks}:any){
     })}</g>};
   // Upstream's clock is 18 seconds per trace. Scale playback to leave messages readable.
   const duration=Math.max(30,Math.min(180,model.events.length*.45));
-  return <Player derived={derived} simTime={time} setSimTime={setTime} playing={playing} setPlaying={setPlaying} speed={model.speed*18/duration} setSpeed={()=>{}} energy={energy}/>;
+  const overflow=replay.comparisonOverflow(model.comparison||[],placedKeys.split('\n'));
+  return <><Player derived={derived} simTime={time} setSimTime={setTime} playing={playing} setPlaying={setPlaying} speed={model.speed*18/duration} setSpeed={()=>{}} energy={energy}/>
+    {overflow.length>0&&<div className="comparison-overflow" aria-label="Trade labels below the map">{overflow.map((t:any)=><button key={t.key} type="button" aria-label={t.description} style={{borderColor:t.color,color:t.color}} onClick={()=>callbacks.onPair(t.key)}>
+      <strong>{t.title} · {t.kind[0].toUpperCase()+t.kind.slice(1)}</strong>{t.lines.map((line:string,i:number)=><span key={i}>{line}</span>)}
+    </button>)}</div>}
+  </>;
 }
 (window as any).EnergyTown={mount(element:HTMLElement,callbacks:any){
   const root=createRoot(element);let previousEvents:any=null,runKey=0;

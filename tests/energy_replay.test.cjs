@@ -17,6 +17,19 @@ test('comparison labels stay separate and include unchanged own trades and an in
   }
 });
 
+test('a comparison box that cannot fit on the graph remains below it without duplicating placed boxes',()=>{
+  const items=[
+    {key:'yash-tanvi',kind:'removed',own:true},
+    {key:'yash-harish',kind:'removed',own:true},
+    {key:'omkar-harish',kind:'new'},
+    {key:'unrelated',kind:'unchanged'}
+  ];
+  assert.deepEqual(replay.comparisonOverflow(items,['yash-tanvi','omkar-harish']).map(t=>t.key),['yash-harish']);
+  assert.equal(replay.comparisonOverflow(items,items.map(t=>t.key)).length,0);
+  assert.equal(replay.comparisonOverflow(items,[]).length,3,'All three boxes remain available even when none fits');
+  assert.equal(replay.comparisonOverflow([],['yash-harish']).length,0,'Leaving Compare clears the extra boxes');
+});
+
 test('Omkar–Harish comparison labels avoid households, names, and every agreement line at different zoom levels',()=>{
   const points=new Map([['A17',{x:430,y:160}],['A18',{x:470,y:450}],['A27',{x:610,y:140}],['A22',{x:610,y:440}],['A02',{x:560,y:320}],['A06',{x:640,y:360}]]);
   const names={A17:'Yash · A17 (you)',A18:'Tanvi · A18',A27:'Omkar · A27',A22:'Harish · A22'};
