@@ -159,7 +159,7 @@ function renderOutcome() {
     $('simple-outcome').textContent='The simulation could not complete. No final energy agreements were produced. Open detailed results for the reason.';
     return;
   }
-  if(!after){$('simple-outcome').textContent='Write an instruction to see how the agreements change.';return;}
+  if(!after){$('simple-outcome').textContent='';return;}
   const difference=qty(after.trades)-qty(before.trades);
   const energy=Math.abs(difference)<.005?'The total energy shared is unchanged.':`After your change, homes share ${fmt(Math.abs(difference))} kWh ${difference>0?'more':'less'} energy.`;
   const homes=delta.affected.size?`${delta.affected.size} ${delta.affected.size===1?'home has':'homes have'} different agreements.`:'No homes changed their agreements.';
